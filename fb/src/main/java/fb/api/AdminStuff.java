@@ -44,7 +44,7 @@ public class AdminStuff {
 		if (user.level<100) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","You must be an admin to do that")).build();
 		
 		String oldDonateButton = "";
-		
+		 
 		Session session = DB.openSession();
 		try {
 			DBSiteSetting button = session.get(DBSiteSetting.class, "donate_button");
