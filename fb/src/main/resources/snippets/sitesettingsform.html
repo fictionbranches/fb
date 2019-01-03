@@ -1,0 +1,52 @@
+<html lang="en">
+<head> 
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<title>Fiction Branches</title>
+<link rel="stylesheet" href="/static/css/base14.css">
+<link rel="stylesheet" href="/static/css/$STYLE.css">
+<link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/favicon-120x120.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
+<script src=/static/all_pages3.js></script></head>
+<body>
+
+<div class="topcorner">
+<a href="/"><img alt="Fiction Branches" src="/images/fblogo.png" class="fblogo" /></a>
+<br/>
+$ACCOUNT
+</div>
+
+	<h1>Site settings</h1><br/><hr/>
+	<h2>Email setup</h2>
+	<form action= "/fb/admin/emailsettings" method="post">
+		<p>Note: backend assumes email address is also SMTP username, and assumes STARTTLS on port 587.<br/>
+		If your email setup will not accept these settings, you will have to modify the source and rebuild.</p>
+		<p>SMTP server: <br/><input type= "text" name= "smtp_server" size="33"></input></p>
+		<p>SMTP email address: <br/><input type= "text" name= "smtp_email" size="33"></input></p>
+		<p>SMTP password: <br/><input type= "password" name= "smtp_password1" size="33"></input></p>
+		<p>confirm password: <br/><input type= "password" name= "smtp_password2" size="33"></input></p>
+		<input type= "submit" value= "Submit"/>
+	</form>
+	
+	<hr/>
+	
+	<h2>Domain</h2>
+	<form action= "/fb/admin/domainsettings" method="post">
+		<p>Domain: <input type= "text" name= "domain_name" size="33" ></input></p>
+		<input type= "submit" value= "Submit"/>
+	</form>
+	<hr/>
+	
+	<h2>RECAPTCHA</h2>
+	<form action= "/fb/admin/recaptchasettings" method="post">
+		<p>Sitekey (public): <input type= "text" name= "recaptcha_sitekey" size="33" ></input></p>
+		<p>Secret (private): <input type= "text" name= "recaptcha_secret" size="33" ></input></p>
+		<input type= "submit" value= "Submit"/>
+	</form>
+
+</body>
+</html>

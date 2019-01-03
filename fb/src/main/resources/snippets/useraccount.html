@@ -1,0 +1,62 @@
+<html lang="en">
+<head> 
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<title>Fiction Branches</title>
+<link rel="stylesheet" href="/static/css/base14.css">
+<link rel="stylesheet" href="/static/css/$STYLE.css">
+<link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/favicon-120x120.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
+<script src=/static/all_pages3.js></script></head>
+<body>
+
+<div class="topcorner">
+<a href="/"><img alt="Fiction Branches" src="/images/fblogo.png" class="fblogo" /></a>
+<br/>
+$ACCOUNT
+</div>
+
+	<h1>Modify your account</h1>
+	
+	<p>
+	<hr/><h2>Notification settings</h2>
+	<form action="/fb/notificationsettings" method="post">
+		<table>
+			<thead><tr>
+				<th>Get notified when:</th>
+				<th>on-site</th>
+				<th>email</th>
+			</tr></thead><tbody>
+			<tr>
+				<td>Someone comments on an episode you wrote </td>
+				<td><input type="checkbox" name="comment_site" value="true" $COMMENT_SITE_CHECKED /></td>
+				<td><input type="checkbox" name="comment_mail" value="true" $COMMENT_MAIL_CHECKED /></td>
+			</tr>
+			<tr>
+				<td>Someone writes a new child episode on episode you wrote </td>
+				<td><input type="checkbox" name="child_site" value="true" $CHILD_SITE_CHECKED /></td>
+				<td><input type="checkbox" name="child_mail" value="true" $CHILD_MAIL_CHECKED /></td>
+			</tr>
+		</table>
+		<input type= "submit" value= "Submit"/>
+	</form>
+	</p><hr/>
+	
+	<p><a href=/fb/changeauthor>Change Author name</a></p>
+	<p><a href=/fb/changeemail>Change email address</a></p>
+	<p><a href=/fb/changepassword>Change password</a></p>
+	<p><a href=/fb/changetheme>Change theme</a></p>
+	<p><a href=/fb/changebio>Change bio</a></p>
+	<p><a href=/fb/changeavatar>Change avatar</a></p>
+	<br/><br/>
+	<p><a href=/fb/user/$ID>View your account</a></p>
+	
+	
+<br/><br/><br/>
+$DONATEBUTTON
+</body>
+</html>

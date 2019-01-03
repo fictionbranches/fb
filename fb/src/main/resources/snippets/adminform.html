@@ -1,0 +1,79 @@
+<html lang="en">
+<head> 
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<title>Fiction Branches</title>
+<link rel="stylesheet" href="/static/css/base14.css">
+<link rel="stylesheet" href="/static/css/$STYLE.css">
+<link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/favicon-120x120.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
+<script src=/static/all_pages3.js></script></head>
+<body>
+
+<div class="topcorner">
+<a href="/"><img alt="Fiction Branches" src="/images/fblogo.png" class="fblogo" /></a>
+<br/>
+$ACCOUNT
+</div>
+
+	<h1>Admin stuff</h1><br/><p>$EXTRA</p><hr/>
+	<form action= "/fb/admin/makemod" method="post">
+		<p>
+			Make moderator (will also revoke adminship): <br/><input type= "text" name= "id" size="33" placeholder=username></input>
+		</p>
+		<input type= "submit" value= "Submit"/>
+	</form>
+	<hr/>
+	
+	<form action= "/fb/admin/makeadmin" method="post">
+		<p>
+			Make admin (and moderator): <br/><input type= "text" name= "id" size="33" placeholder=username></input>
+		</p>
+		<input type= "submit" value= "Submit"/>
+	</form>
+	<hr/>
+	
+	<form action= "/fb/admin/makenormal" method="post">
+		<p>
+			Revoke admin/moderator: <br/><input type= "text" name= "id" size="33" placeholder=username></input>
+		</p>
+		<input type= "submit" value= "Submit"/>
+	</form>
+	<hr/>
+	Merge accounts<br/>
+	<form action="/fb/admin/mergeaccounts" method="post">
+		<p>
+			Username A: <input type="text" name="usera" size="33"></input>
+			<br/>This account will inherit all of B's episodes
+		</p>
+                <p>
+                        Username B: <input type="text" name="userb" size="33"></input>
+			<br/>This account will be deleted
+                </p>
+		<input type="submit" value="Submit"/>
+	</form>
+	
+	<p><a href="/fb/admin/sitesettings">Site settings</a></p>
+
+	<p><a href="/fb/admin/newroot">Create new story</a></p>
+
+	<p><a href="/fb/admin/archivetokens">Archive API tokens</a></p> 
+
+	<hr/><p>Create announcement (markdown supported)</p>
+	<form action="/fb/admin/createannouncementpost" method="post">
+		<p><textarea name= "body" placeholder="Announcement" rows= "40" maxlength="100000"></textarea></p>
+		<p><input type="submit" value="Submit"/></p>
+	</form>
+	
+	<hr/><p>Change donate button</p>
+	<form action="/fb/admin/changedonatebutton" method="post">
+		<p><textarea name= "body" placeholder="put some html here" rows= "40" maxlength="100000">$OLDDONATEBUTTON</textarea></p>
+		<p><input type="submit" value="Submit"/></p>
+	</form>
+
+</body>
+</html>

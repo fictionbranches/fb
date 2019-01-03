@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--this is a test comment-->
+<html lang="en">
+<head> 
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<title>$TITLE</title>
+<link rel="stylesheet" href="/static/css/base14.css">
+<link rel="stylesheet" href="/static/css/$STYLE.css">
+<link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/favicon-120x120.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
+<meta property="og:title" content="$TITLE" />
+<meta property="og:site_name" content="Fiction Branches" />
+<script  src="/static/formatting0.js"></script>
+<script  src="/static/sorttable.js"></script>
+<script src=/static/all_pages3.js></script></head>
+<body>
+
+<div class="topcorner">
+<a href="/"><img alt="Fiction Branches" src="/images/fblogo.png" class="fblogo" /></a>
+<br/>
+$ACCOUNT
+<br/>
+	<div class="pathbox">
+		<h4 align=center>Path</h4>
+		$PATHTOHERE
+	</div>
+</div>
+
+<article class="hentry">
+<header>
+	<h1 class="entry-title">$TITLE</h1>
+	<p>$AVATARURL <span class="author"><a href='/fb/user/$AUTHORID' rel='author'>$AUTHORNAME</a></span> on <span class="published">$DATE</span></p>
+	<p><a href=/fb/mosthits>$HITS</a> hits, <a href=/fb/mostviews>$VIEWS</a> views, <a href=/fb/mostupvotes>$UPVOTES</a> upvotes.</p>
+	<a href="$PARENTID" rel="parent">Return to Parent Episode</a><br/>
+	<a href="#children">Jump to child episodes</a><br/>
+	<a href="#comments">Jump to comments</a> <br/> $MODIFY
+	<hr />
+</header>
+<div class="entry-content fbepisodebody">
+	$BODY
+</div>
+<a name="children"/>
+<footer>
+	<hr />
+	<select id="fbtableorder">
+		<option value="">Choose default sort order</option>
+		<option value="/fb/get/$ID?sort=oldest">Oldest first (default)</option>
+		<option value="/fb/get/$ID?sort=newest">Newest first</option>
+		<option value="/fb/get/$ID?sort=mostfirst">Children (descending)</option>
+		<option value="/fb/get/$ID?sort=leastfirst">Children (ascending)</option>
+		<option value="/fb/get/$ID?sort=random">Random</option>
+	</select>
+	Current default: <em>$SORTORDER</em>
+	<hr />
+	<p>$ADDEP</p>
+	<hr/>
+	$CHILDREN
+	<hr />
+	<p>
+		$ADDEP
+	</p>
+	<hr/>
+	<a name="comments"/>
+	<div class="fbcommentsection">
+		$COMMENTS
+	</div>
+</footer>
+</article>
+<br/><br/><br/>
+$DONATEBUTTON
+</body>
+</html>

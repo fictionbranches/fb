@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /fb/complete/
+Disallow: /fb/path/
+Disallow: /fb/outline/
+Disallow: /fb/feed/
+Disallow: /fb/search/
+Disallow: /fb/searchpost/
+Disallow: /fb/mostviews/
+Disallow: /fb/mosthits/
+Disallow: /fb/mostupvotes/

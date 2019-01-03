@@ -1,0 +1,15 @@
+body {
+	font-family: 'Helvetica', 'Arial', sans-serif;
+	word-wrap: break-word;
+	background-color: #4e98fc;
+	text-color: #000000
+	margin: 0px;
+        padding: 0px;
+}
+.topcorner{
+        float: right;
+}
+textarea{
+	font-family: 'Helvetica', 'Arial', sans-serif;
+	width:100%;
+}

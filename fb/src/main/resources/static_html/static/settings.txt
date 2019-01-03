@@ -1,0 +1,7 @@
+1  Heading
+2  ThematicBreak
+4  BlockQuote
+8  ListBlock
+16 IndentedCodeBlock
+32 FencedCodeBlock
+64 HtmlBlock

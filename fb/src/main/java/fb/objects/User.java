@@ -1,0 +1,25 @@
+package fb.objects;
+
+import java.util.Date;
+
+/**
+ * Immutable user object. Includes basic info, plus episode count, and total number of hits/view/upvotes on owned episodes. Used for special cases. 
+ */
+public class User {
+	public final String username;
+	public final String author;
+	public final Date date;
+	public final long episodes;
+	public final long hits;
+	public final long views;
+	public final long upvotes;
+	public User(String username, String author, Date date, long episodes, long hits, long views, long upvotes) {
+		this.username = username;
+		this.author = author;
+		this.date = date;
+		this.episodes = episodes;
+		this.hits = hits;
+		this.views = views;
+		this.upvotes = upvotes;
+	}
+}

@@ -1,0 +1,14 @@
+body {
+	font-family: 'Consolas', 'Courier', monospace;
+	background-color: #000000;
+	color: #00ce2c;
+}
+a:link {
+    color: #00c62b;
+}
+a:visited {
+    color: #007c1b;
+}
+textarea{
+	font-family: 'Consolas', 'Courier', sans-serif;
+}

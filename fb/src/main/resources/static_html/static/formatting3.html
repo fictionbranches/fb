@@ -1,0 +1,113 @@
+<html><head>
+<script type="text/javascript" src="/static/iframestyle.js"></script>
+</head><body>
+<hr/>
+<h1>Formatting help</h1>
+Episodes on Fiction Branches are formatted using Markdown.<br/>
+HTML tags will be escaped and presented as entered in the episode (and thus should <strong><em>not</em></strong> be used).<br/>
+Fiction Branches implements most basic features of Markdown (specifically the CommonMark specification). Some Markdown features (such as HTML blocks) may not be enabled.
+<br />
+<br/>
+You can create headers like: <br/><br/>
+# Header 1<br/>
+## Header 2<br/>
+### Header 3<br/>
+#### Header 4<br/>
+<br/>
+They will output like:<br/>
+<h1>Header 1</h1>
+<h2>Header 2</h2>
+<h3>Header 3</h3>
+<h4>Header 4</h4>
+<br/><br/>
+You can also make a header by underlining the text with hyphens:<br/><br/>
+This is a header<br/>-----
+<br/></br>
+becomes:
+<br/><br/>
+<h1>This is a header</h1>
+<br/><br/>
+To insert a horizontal rule, use an empty line followed by a line of hyphens:<br/><br/>
+This is not a header<br/><br/>
+-----
+<br/><br/>
+becomes:<br/><br/>
+This is not a header<hr/><br/>
+Text surrounded by single *asterisks* or _underscores_ will become <em>italicized</em>.
+<br /><br />
+Text surrounded by double **asterisks** or __underscores__ will become <strong>bold</strong>.
+<br /><br />
+To insert a link: <br/>
+[This is a link](https://google.com) becomes <a href="https://google.com">This is a link</a>.<br/>
+Or just us a bare link: https://google.com becomes <a href="https://google.com">https://google.com</a>.<br/>
+<br /><br />
+To embed an image in the episode: <br/>
+![alt text is optional](https://test.fictionbranches.net/images/fblogo.png) becomes:
+<br/><img src="https://test.fictionbranches.net/images/fblogo.png" alt="alt text is optional"/><br/>
+<br/><br/>
+<h4>Table example</h4>
+<p>Colons can be used to align columns.</p>
+<p>There must be at least 3 dashes separating each header cell.</p><p>The outer pipes (|) are optional, and you don't need to make the raw Markdown line up prettily.</p><p>You can also use inline Markdown.</p>
+<pre lang="no-highlight">
+<code>
+
+| Tables        | Are           | Cool  |
+| ------------- |:-------------:| -----:|
+| col 3 is      | right-aligned | $1600 |
+| col 2 is      | centered      |   $12 |
+| zebra stripes | are neat      |    $1 |
+
+Markdown | Less | Pretty
+--- | --- | ---
+*Still* | `renders` | **nicely**
+1 | 2 | 3
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Tables</th>
+<th align="center">Are</th>
+<th align="right">Cool</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>col 3 is</td>
+<td align="center">right-aligned</td>
+<td align="right">$1600</td>
+</tr>
+<tr>
+<td>col 2 is</td>
+<td align="center">centered</td>
+<td align="right">$12</td>
+</tr>
+<tr>
+<td>zebra stripes</td>
+<td align="center">are neat</td>
+<td align="right">$1</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Markdown</th>
+<th>Less</th>
+<th>Pretty</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Still</em></td>
+<td><code>renders</code></td>
+<td><strong>nicely</strong></td>
+</tr>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+</body></html>

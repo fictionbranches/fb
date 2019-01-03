@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<title>Fiction Branches</title>
+<link rel="stylesheet" href="/static/css/base14.css">
+<link rel="stylesheet" href="/static/css/$STYLE.css">
+<link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/favicon-120x120.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
+<script src=/static/all_pages3.js></script></head>
+<body>
+<div class="topcorner">
+<a href="/"><img alt="Fiction Branches" src="/images/fblogo.png" class="fblogo" /></a>
+<br/>
+$ACCOUNT
+</div>
+
+<h1>Search Fiction Branches</h1>
+<p><a href=/fb/usersearch>Search Authors</a></p>
+<p>There is a link at the top of each episode to search from that episode's subtree, or you may use the links below to search entire stories:</p>
+<p>$EPISODES</p>
+
+<h2>Advanced Search</h2>
+<p><code>+</code> specifies <code>AND</code> operation: <code>token1+token2</code><br />
+<code>|</code> specifies <code>OR</code> operation: <code>token1|token2</code><br />
+<code>-</code> negates a single token: <code>-token0</code><br />
+<code>&quot;</code> creates phrases of terms: <code>&quot;term1 term2 ...&quot;</code><br />
+<code>*</code> at the end of terms specifies prefix query: <code>term*</code><br />
+<code>~N</code> at the end of terms specifies fuzzy query: <code>term~1</code><br />
+<code>~N</code> at the end of phrases specifies near query: <code>&quot;term1 term2&quot;~5</code><br />
+<code>(</code> and <code>)</code> specifies precedence: <code>token1 + (token2 | token3)</code></p>
+</p>
+<p>The default operator is OR if no other operator is specified. For example, the following will OR token1 and token2 together: token1 token2</p>
+
+<p>Normal operator precedence will be simple order from right to left. For example, the following will evaluate token1 OR token2 first, then AND with token3:</p>
+
+<p><code>token1 | token2 + token3</code></p>
+
+
+<br/><br/><br/>
+$DONATEBUTTON
+</body>
+</html>
