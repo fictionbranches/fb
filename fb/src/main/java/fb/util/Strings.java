@@ -57,7 +57,8 @@ public class Strings {
 	private static String RECAPTCHA_SECRET;
 	private static String RECAPTCHA_SITEKEY;
 	private static String DISCORD_TOKEN;
-	private static String DISCORD_CHANNEL;
+	private static String DISCORD_ERROR_CHANNEL;
+	private static String DISCORD_NEW_EPISODE_HOOK;
 	private static String DONATE_BUTTON;
 
 	static {
@@ -109,8 +110,13 @@ public class Strings {
 			else DISCORD_TOKEN = "";
 			
 			setting = session.get(DBSiteSetting.class, "discord_channel");
-			if (setting != null) DISCORD_CHANNEL = setting.getValue();
-			else DISCORD_CHANNEL = "";
+			if (setting != null) DISCORD_ERROR_CHANNEL = setting.getValue();
+			else DISCORD_ERROR_CHANNEL = "";
+			
+			setting = session.get(DBSiteSetting.class, "discord_new_episode_hook");
+			if (setting != null) DISCORD_NEW_EPISODE_HOOK = setting.getValue();
+			else DISCORD_NEW_EPISODE_HOOK = "";
+			
 			
 		} finally {
 			DB.closeSession(session);
@@ -145,9 +151,13 @@ public class Strings {
 		return DISCORD_TOKEN;
 	}
 
-	public static String getDISCORD_CHANNEL() {
-		return DISCORD_CHANNEL;
-	}	
+	public static String getDISCORD_ERROR_CHANNEL() {
+		return DISCORD_ERROR_CHANNEL;
+	}
+	
+	public static String getDISCORD_NEW_EPISODE_HOOK() {
+		return DISCORD_NEW_EPISODE_HOOK;
+	}
 	
 	public static String getDONATE_BUTTON() {
 		return DONATE_BUTTON;

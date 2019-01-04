@@ -34,7 +34,7 @@ public class JSONStuff {
 			return new GsonBuilder().setPrettyPrinting().create();
 		}
 	};
-	private Gson g() {
+	public Gson g() {
 		return g.get();
 	}
 	private final ThreadLocal<DateFormat> jdf = new ThreadLocal<DateFormat>() {

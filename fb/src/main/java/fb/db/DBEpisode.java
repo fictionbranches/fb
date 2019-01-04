@@ -40,7 +40,7 @@ public class DBEpisode {
 	
 	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES)
 	private String link;
-	
+		
 	private int depth;
 	
 	private int childCount;
@@ -132,6 +132,7 @@ public class DBEpisode {
 	public void setLink(String link) {
 		this.link = link;
 	}
+
 	public int getDepth() {
 		return depth;
 	}

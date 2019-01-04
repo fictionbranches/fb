@@ -14,8 +14,10 @@ public class Episode {
 	public final long hits;
 	public final long views;
 	public final long upvotes;
+	public final String authorId;
+	public final String authorName;
 	
-	public Episode(String id, String link, String title, Date date, int childCount, long hits, long views, long upvotes) {
+	public Episode(String id, String link, String title, Date date, int childCount, long hits, long views, long upvotes, String authorId, String authorName) {
 		this.id = id;
 		this.link = link;
 		this.title = title;
@@ -24,6 +26,8 @@ public class Episode {
 		this.upvotes = upvotes;
 		this.views = views;
 		this.childCount = childCount;
+		this.authorId = authorId;
+		this.authorName = authorName;
 	}
 
 	public String getId() {

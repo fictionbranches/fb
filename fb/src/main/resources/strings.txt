@@ -25,11 +25,11 @@ story_downvote~Upvoted! <a href=/fb/get/$ID?vote=down>Undo upvote</a>
 
 story_editor~<br/>Episode last modified by <a href='/fb/user/$EDITORID' rel='editor'>$EDITORNAME</a> on $EDITDATE
 
-#story_childtable_head~<table class="fbchildtable sortable"><thead><tr><th class="fbchildtable sorttable_nosort">Next episode</th><th class="fbchildtablenumeric">Children</th><th class="fbchildtablenumeric">Date</th><th class="fbchildtablenumeric">Upvotes</th><th class="fbchildtablenumeric">Views</th><th class="fbchildtablenumeric">Hits</th></tr></thead><tbody>
+story_childtable_head_advanced~<table class="fbchildtable sortable"><thead><tr><th class="fbchildtable sorttable_nosort">Next episode</th><th class="fbchildtablenumeric">Children</th><th class="fbchildtablenumeric">Date</th><th class="fbchildtable sorttable_nosort">Author</th><th class="fbchildtablenumeric">Upvotes</th><th class="fbchildtablenumeric">Views</th><th class="fbchildtablenumeric">Hits</th></tr></thead><tbody>
 
-#story_childtable_row~<tr><td class="fbchildtable"><a href='$ID' rel='child'>$LINK</a></td><td class="fbchildtablenumeric" sorttable_customkey="-$CHILDCOUNT">$CHILDCOUNT</td><td class="fbchildtablenumeric" sorttable_customkey="$COMPLETEDATE">$DATE</td><td class="fbchildtablenumeric" sorttable_customkey="-$UPVOTES">$UPVOTES</td><td class="fbchildtablenumeric" sorttable_customkey="-$VIEWS">$VIEWS</td><td class="fbchildtablenumeric" sorttable_customkey="-$HITS">$HITS</td></tr>
+story_childtable_row_advanced~<tr><td class="fbchildtable"><a href='$ID' rel='child'>$LINK</a></td><td class="fbchildtablenumeric" sorttable_customkey="-$CHILDCOUNT">$CHILDCOUNT</td><td class="fbchildtablenumeric" sorttable_customkey="$COMPLETEDATE">$DATE</td><td class="fbchildtable"><a href="/fb/user/$AUTHORID">$AUTHORNAME</a></td><td class="fbchildtablenumeric" sorttable_customkey="-$UPVOTES">$UPVOTES</td><td class="fbchildtablenumeric" sorttable_customkey="-$VIEWS">$VIEWS</td><td class="fbchildtablenumeric" sorttable_customkey="-$HITS">$HITS</td></tr>
 
-#story_childtable_foot~</tbody></table>
+story_childtable_foot_advanced~</tbody></table>
 
 story_childtable_row~<p><a href=/fb/get/$ID>$LINK</a> ($CHILDCOUNT)</p>
 

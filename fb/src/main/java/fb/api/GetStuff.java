@@ -118,7 +118,7 @@ public class GetStuff {
 	@GET
 	@Path("get/{id}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response get(@Context UriInfo uriInfo, @PathParam("id") String id, @QueryParam("sort") String sort, @QueryParam("vote") String vote, @CookieParam("fbchildsort") Cookie fbchildsort, @CookieParam("fbtoken") Cookie fbtoken) {
+	public Response get(@Context UriInfo uriInfo, @PathParam("id") String id, @QueryParam("sort") String sort, @QueryParam("vote") String vote, @CookieParam("fbchildsort") Cookie fbchildsort, @CookieParam("fbadvancedchildren") Cookie fbadvancedchildren, @CookieParam("fbtoken") Cookie fbtoken) {
 		if (vote != null && fbtoken != null) {
 			Response ret = Response.seeOther(GetStuff.createURI("/fb/get/" + id)).build();
 			String username;
@@ -144,6 +144,9 @@ public class GetStuff {
 			}
 			return ret;
 		}
+		
+		boolean advancedChildren = false;
+		if (fbadvancedchildren != null && fbadvancedchildren.getValue().equals("true")) advancedChildren = true;
 		
 		if (sort != null) {
 			ResponseBuilder ret = Response.seeOther(createURI("/fb/get/" + id + "#children"));
@@ -176,7 +179,7 @@ public class GetStuff {
 			sortNum = 4;
 			break;
 		}
-		return Response.ok(Story.getHTML(id, sortNum, fbtoken)).build();
+		return Response.ok(Story.getHTML(id, sortNum, InitWebsite.DEV_MODE||advancedChildren /* TODO advancedChildren*/, fbtoken)).build();
 	}
 	
 	/**

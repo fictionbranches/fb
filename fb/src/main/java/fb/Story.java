@@ -57,7 +57,7 @@ public class Story {
 	 * @param id id of episode
 	 * @return HTML episode
 	 */
-	public static String getHTML(String id, int sort, Cookie token) {
+	public static String getHTML(String id, int sort, boolean advancedChildren, Cookie token) {
 		EpisodeWithChildren ep;
 		try {
 			ep = DB.getFullEp(id, Accounts.getUsernameFromCookie(token));
@@ -125,19 +125,32 @@ public class Story {
 		
 		StringBuilder childHTML = new StringBuilder();
 		if (!children.isEmpty()) {
-			childHTML.append(Strings.getString("story_childtable_head"));
-			for (Episode child : children) {
-				childHTML.append(Strings.getString("story_childtable_row")
-						.replace("$ID", child.id)
-						.replace("$LINK", Strings.escape(child.link))
-						.replace("$COMPLETEDATE", escape(Dates.completeSimpleDateFormat(child.date)))
-						.replace("$DATE", escape(Dates.simpleDateFormat(child.date)))
-						.replace("$CHILDCOUNT", Long.toString(child.childCount))
-						.replace("$HITS", Long.toString(child.hits))
-						.replace("$VIEWS", Long.toString(child.views))
-						.replace("$UPVOTES", Long.toString(child.upvotes)) + "\n");
+			String head, row, foot;
+			if (advancedChildren) {
+				head = "story_childtable_head_advanced";
+				row = "story_childtable_row_advanced";
+				foot = "story_childtable_foot_advanced";
+			} else {
+				head = "story_childtable_head";
+				row = "story_childtable_row";
+				foot = "story_childtable_foot";
 			}
-			childHTML.append(Strings.getString("story_childtable_foot"));
+			childHTML.append(Strings.getString(head));
+			for (Episode child : children) {
+				//child.
+				childHTML.append(Strings.getString(row)
+					.replace("$AUTHORID", child.authorId)
+					.replace("$AUTHORNAME", Strings.escape(child.authorName))
+					.replace("$ID", child.id)
+					.replace("$LINK", Strings.escape(child.link))
+					.replace("$COMPLETEDATE", escape(Dates.completeSimpleDateFormat(child.date)))
+					.replace("$DATE", escape(Dates.simpleDateFormat(child.date)))
+					.replace("$CHILDCOUNT", Long.toString(child.childCount))
+					.replace("$HITS", Long.toString(child.hits))
+					.replace("$VIEWS", Long.toString(child.views))
+					.replace("$UPVOTES", Long.toString(child.upvotes)) + "\n");
+			}
+			childHTML.append(Strings.getString(foot));
 		}
 		
 		StringBuilder commentHTML = new StringBuilder();
@@ -170,6 +183,7 @@ public class Story {
 		return Strings.getFile("story.html", user)
 				.replace("$TITLE", escape(ep.title))
 				.replace("$BODY", formatBody(ep.body))
+				.replace("$RAWBODY", Strings.escape(ep.body))
 				.replace("$AUTHORID", ep.authorId)
 				.replace("$AUTHORNAME", escape(ep.authorName))
 				.replace("$AVATARURL", (ep.authorAvatar==null)?"":(Strings.getString("story_avatar").replace("$AVATARURL", Strings.escape(ep.authorAvatar))))
@@ -496,13 +510,16 @@ public class Story {
 			sb = new StringBuilder("<p>" + asdf + "</p>");
 		}
 		String prevNext = sb.toString();
-		
-		sb.append("<table class=\"fbtable\">");
-		for (FlatEpisode ep : result) {
-			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/get/" + ep.id + ">" + Strings.escape(ep.link) + "</a></td><td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + 
-				Strings.escape(ep.authorName) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td></tr>\n");
+		if (result.size() > 0) {
+			sb.append("<table class=\"fbtable\">");
+			for (FlatEpisode ep : result) {
+				sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/get/" + ep.id + ">" + Strings.escape(ep.link) + "</a></td><td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + 
+						Strings.escape(ep.authorName) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td></tr>\n");
+			}
+			sb.append("</table>");
+		} else {
+			sb.append("No results (<a href=\"/fb/search\">search help</a>)");
 		}
-		sb.append("</table>");
 		sb.append(prevNext);
 		return Strings.getFile("searchform.html", user).replace("$SEARCHTERM", Strings.escape(search)).replace("$TITLE", "Search results").replace("$ID", id).replace("$EXTRA", sb.toString());
 	}

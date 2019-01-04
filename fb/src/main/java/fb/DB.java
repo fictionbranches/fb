@@ -72,6 +72,7 @@ import fb.objects.FlatUser;
 import fb.objects.ModEpisode;
 import fb.objects.Notification;
 import fb.objects.User;
+import fb.util.Discord;
 import fb.util.Strings;
 
 public class DB {
@@ -364,12 +365,14 @@ public class DB {
 			child.setEditDate(date);
 			child.setEditor(author);
 		
-			StringBuilder sb = new StringBuilder("update DBEpisode ep set ep.childCount=(ep.childCount+1) where ");
-			for (String s : getPathIds(parentId)) {
-				if (parentId.equals(child.getId())) continue;
-				sb.append("ep.id='" + mapToId(s) + "' or ");
-			}
-			String updateCounts = sb.substring(0, sb.length() - 4);
+			String updateCounts;{
+					StringBuilder sb = new StringBuilder("update DBEpisode ep set ep.childCount=(ep.childCount+1) where ");
+					for (String s : getPathIds(parentId)) {
+						if (parentId.equals(child.getId())) continue;
+						sb.append("ep.id='" + mapToId(s) + "' or ");
+					}
+					updateCounts = sb.substring(0, sb.length() - 4);
+				}
 			
 			boolean sendSiteNotification = false;
 			boolean sendMailNotification = false;
@@ -399,6 +402,17 @@ public class DB {
 				}).start();
 				
 				session.getTransaction().commit();
+				
+				
+				
+				
+				if (Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
+					String rootId = Integer.toString(DB.keyToArr(childId)[0]);
+					DBEpisode root = DB.getEpById(session, rootId);
+					final String rootTitle = root.getLink();
+					final String epId = child.getMap();
+					new Thread(()->Discord.notifyHook(rootTitle, "https://" + Strings.getDOMAIN() + "/fb/get/" + epId, Strings.getDISCORD_NEW_EPISODE_HOOK())).start();
+				}
 			} catch (Exception e) {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
@@ -860,7 +874,9 @@ public class DB {
 				long hits = ((BigInteger)arr[7]).longValue();
 				long views = ((BigInteger)arr[8]).longValue();
 				long childUpvotes = ((BigInteger)arr[9]).longValue();
-				return (new Episode(childId,link,title,date,childcount,hits,views,childUpvotes));
+				String authorId = (String)arr[10];
+				String authorName = (String)arr[11];
+				return (new Episode(childId,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName));
 			}).collect(Collectors.toCollection(ArrayList::new));
 			
 			/*ArrayList<Episode> children = new ArrayList<>();
@@ -900,23 +916,23 @@ public class DB {
 		}
 	}
 	
-	private static final String CHILD_QUERY = "select parent_generatedid,generatedid,id,link,title,date,childcount, max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes\n" + 
+	private static final String CHILD_QUERY = "select parent_generatedid,generatedid,episodeid,link,title,episodedate,childcount, max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes, author_id, fbusers.author as author_name\n" + 
 			"from (\n" + 
-			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.id,fbepisodes.link,fbepisodes.title,fbepisodes.date, fbepisodes.childcount, fbepisodes.viewcount as hitscount, count(*) as viewscount, 0 as upvotescount\n" + 
+			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.id as episodeid,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, count(*) as viewscount, 0 as upvotescount\n" + 
 			"        from fbepisodes, fbepisodeviews\n" + 
 			"        where fbepisodes.generatedid=fbepisodeviews.episode_generatedid\n" + 
 			"        group by fbepisodes.generatedid)\n" + 
 			"    union\n" + 
-			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.id,fbepisodes.link,fbepisodes.title,fbepisodes.date, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, count(*) as upvotescount\n" + 
+			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.id as episodeid,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, count(*) as upvotescount\n" + 
 			"        from fbepisodes,fbupvotes\n" + 
 			"        where fbepisodes.generatedid=fbupvotes.episode_generatedid\n" + 
 			"        group by fbepisodes.generatedid)\n" + 
-			"    union\n" +
-			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.id,fbepisodes.link,fbepisodes.title,fbepisodes.date, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, 0 as upvotescount\n" + 
-			"    from fbepisodes)\n" +
-			"    ) as countstuff\n" + 
-			"where parent_generatedid=";
-	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,id,link,title,date,childcount";
+			"    union\n" + 
+			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.id as episodeid,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, 0 as upvotescount\n" + 
+			"    from fbepisodes)\n" + 
+			"    ) as countstuff, fbusers\n" + 
+			"where fbusers.id=countstuff.author_id and countstuff.parent_generatedid=";
+	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,episodeid,link,title,episodedate,childcount,author_id,author_name";
 	
 	public static void upvote(String id, String username) throws DBException {
 		Session session = openSession();
@@ -2521,7 +2537,7 @@ public class DB {
 				long hits = ((BigInteger)x[6]).longValue();
 				long views = ((BigInteger)x[7]).longValue();
 				long upvotes = ((BigInteger)x[8]).longValue();
-				return (new Episode(id,link,title,date,childCount,hits,views,upvotes));
+				return (new Episode(id,link,title,date,childCount,hits,views,upvotes, null, null /*TODO*/));
 			}).collect(Collectors.toCollection(ArrayList::new));
 		} finally {
 			closeSession(session);
