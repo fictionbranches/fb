@@ -1015,11 +1015,12 @@ public class Story {
 
 	public static final Set<String> replacers = Collections
 			.unmodifiableSet(new HashSet<>(Stream.of(
-							"$PATHTOHERE", "$COMMENTS", "$AUTHORNAME", "$AUTHORID", "$HITS", "$VIEWS", "$CHILDCOUNT",
-							"$DATE", "$COMPLETEDATE", "$TOKEN", "$RECAPTCHASITEKEY", "$SEARCHTERM", "$PREVNEXT",
-							"$OLDBODY", "$PAGECOUNT", "$AVATARURL", "$SORTORDER", "$ACCOUNT", "$TITLE", "$AUTHOR",
-							"$DATE", "$MODIFY", "$BODY", "$CHILDREN", "$ID", "$PARENTID", "$LINK", "$EXTRA",
-							"$EPISODES", "$STYLE", "$EDITORID", "$EDITORNAME", "$EDITDATE")
+					"$ACCOUNT", "$ADDEP", "$AUTHOR", "$AUTHORID", "$AUTHORNAME", "$AVATARURL", "$BODY", "$CHILD", 
+					"$CHILDCOUNT", "$CHILDREN", "$COMMENT", "$COMMENTS", "$COMPLETEDATE", "$DATE", "$DONATEBUTTON", 
+					"$EDITDATE", "$EDITORID", "$EDITORNAME", "$EPISODES", "$EXTRA", "$HITS", "$ID", "$LINK", 
+					"$MODERATORSTATUS", "$MODIFY", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
+					"$PATHTOHERE", "$PREVNEXT", "$RAWBODY", "$RECAPTCHASITEKEY", "$SEARCHTERM", "$SORTORDER", 
+					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS")
 					.collect(Collectors.toSet())));
 	
 	/**

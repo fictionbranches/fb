@@ -409,7 +409,7 @@ public class DB {
 				if (Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
 					String rootId = Integer.toString(DB.keyToArr(childId)[0]);
 					DBEpisode root = DB.getEpById(session, rootId);
-					final String rootTitle = root.getLink();
+					final String rootTitle = root.getLink() + " - " + author.getAuthor();
 					final String epId = child.getMap();
 					new Thread(()->Discord.notifyHook(rootTitle, "https://" + Strings.getDOMAIN() + "/fb/get/" + epId, Strings.getDISCORD_NEW_EPISODE_HOOK())).start();
 				}
