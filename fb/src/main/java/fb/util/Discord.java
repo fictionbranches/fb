@@ -46,6 +46,7 @@ public class Discord {
 	}
 	public static void notifyHook(String username, String message, String hookURL) {
 		try {
+			if (username.length() > 32) username = username.substring(0,32);
 			if (message.length() > 2000) message = message.substring(0,2000);
 			URL url = new URL(hookURL);
 			Map<String, String> jsonMap = new LinkedHashMap<>();
