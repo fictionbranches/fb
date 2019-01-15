@@ -183,7 +183,7 @@ public class Story {
 		return Strings.getFile("story.html", user)
 				.replace("$TITLE", escape(ep.title))
 				.replace("$BODY", formatBody(ep.body))
-				.replace("$RAWBODY", Strings.escape(ep.body))
+				.replace("$RAWBODY", Strings.escape("By " + ep.authorName + System.lineSeparator() + ep.body))
 				.replace("$AUTHORID", ep.authorId)
 				.replace("$AUTHORNAME", escape(ep.authorName))
 				.replace("$AVATARURL", (ep.authorAvatar==null)?"":(Strings.getString("story_avatar").replace("$AVATARURL", Strings.escape(ep.authorAvatar))))
