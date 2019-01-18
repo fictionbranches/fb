@@ -491,4 +491,24 @@ public class AdminStuff {
 			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "You are not authorized to do that")).build();			
 		}
 	}
+	
+	@POST
+	@Path("admin/movetoroot") 
+	@Produces(MediaType.TEXT_HTML) 
+	public Response moveToRootPost(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("epid") String epid) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "You are not authorized to do that")).build();
+		}
+		if (user.level < 100) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "You are not authorized to do that")).build();
+		String newId;
+		try {
+			newId = DB.moveEpisodeToRoot(epid);
+		} catch (DBException e) {
+			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", e.getMessage())).build();
+		}
+		return Response.seeOther(GetStuff.createURI("/fb/get/" + newId)).build();
+	}
 }

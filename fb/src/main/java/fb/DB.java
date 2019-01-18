@@ -2959,12 +2959,78 @@ public class DB {
 		}
 	}
 	
+	/**
+	 * Turns a branch into a new story root
+	 * @param id id of top episode in branch, to become new root episode
+	 * @return new id of new root episode
+	 * @throws DBException if ep does not exist, ep is already a root, or
+	 */
+	public static String moveEpisodeToRoot(String oldMapId) throws DBException {
+		Session session = openSession();
+		try {
+			
+			DBEpisode ep = DB.getEpById(session, oldMapId);
+			if (ep == null) throw new DBException("not found: " + oldMapId);
+			if (ep.getDepth() == 1) return ep.getMap();
+			
+			synchronized (epLock) {
+				final int oldParentDepth = ep.getDepth()-1;
+				
+				final int newRootId = DB.getRoots(session).stream()
+						.map(root->DB.keyToArr(root.getMap())[0])
+						.reduce((a,b)->a>b?a:b).get()+1;
+				
+				final String oldId = ep.getId();
+				final String newId = "A" + newRootId;
+				
+				final int branchSize = ep.getChildCount();
+				
+				session.beginTransaction();
+				try {
+					session.createNativeQuery(
+							"UPDATE fbepisodes\n" + 
+							"SET parent_generatedid = null\n" + 
+							"WHERE id='"+oldId+"';").executeUpdate();
+					session.createNativeQuery("UPDATE fbepisodes\n" + 
+							"SET id = replace(id,'"+oldId+"','"+newId+"'), depth = depth - "+oldParentDepth+"\n" + 
+							"WHERE id LIKE '"+oldId+"%';").executeUpdate();
+					int[] arr = DB.keyToArr(DB.idToMap(oldId));
+					ArrayList<String> path = new ArrayList<>();
+					StringBuilder sb = new StringBuilder();
+					sb.append("A" + arr[0]);
+					for (int i=1; i<arr.length; ++i) {
+						path.add(sb.toString());
+						sb.append("B" + arr[i]);
+					}
+					String where = path.stream().map(s->"id='" + s + "'").collect(Collectors.joining(" OR "));
+					session.createNativeQuery("UPDATE fbepisodes\n" + 
+							"SET childcount = childcount - "+branchSize+"\n" + 
+							"WHERE " + where + ";").executeUpdate();
+					session.getTransaction().commit();
+				} catch (Exception e) {
+					e.printStackTrace();
+					session.getTransaction().rollback();
+					throw new DBException("rollback");
+				}
+				return Integer.toString(newRootId);
+			}
+		} finally {
+			closeSession(session);
+		}
+	}
+	
  	private static String newToken() {
 		StringBuilder token = new StringBuilder();
 		for (int i=0; i<32; ++i) token.append((char)('a'+Strings.r.nextInt(26)));
 		return token.toString();
 	}
  	
+ 	/**
+ 	 * Converts an map id ("1-2-3") to an int[] ({1,2,3})
+ 	 * @param s
+ 	 * @return
+ 	 * @throws NumberFormatException
+ 	 */
  	public static int[] keyToArr(String s) throws NumberFormatException {
 		String[] arr = s.split("-");
 		int[] ret = new int[arr.length];

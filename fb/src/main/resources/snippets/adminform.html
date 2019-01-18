@@ -44,6 +44,18 @@ $ACCOUNT
 		<input type= "submit" value= "Submit"/>
 	</form>
 	<hr/>
+	
+	Promote branch to root
+	<form action="/fb/admin/movetoroot" method="post">
+		<p>
+			Episode id: <input type="text" name="epid" size="33" placeholder="1-2-3-4-5"></input>
+		</p>
+		<input type="submit" value="Submit"/> (be careful, this is irrevocable)
+		<p>It will take up to 5 minutes for the new root to become visible</p>
+	</form>
+	
+	
+	<hr/>
 	Merge accounts<br/>
 	<form action="/fb/admin/mergeaccounts" method="post">
 		<p>
