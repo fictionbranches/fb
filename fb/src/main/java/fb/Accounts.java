@@ -48,6 +48,9 @@ import fb.util.Dates;
 import fb.util.Strings;
 
 public class Accounts {
+	
+	public static final int AUTHOR_LENGTH_LIMIT = 32;
+	
 	private static ConcurrentHashMap<String,UserSession> active = new ConcurrentHashMap<>(); //<loginToken>, user>
 	
 	private static final String sessionPath = InitWebsite.BASE_DIR + "/fbtemp/sessions/";
@@ -485,23 +488,27 @@ public class Accounts {
 	 * @param password password
 	 * @param password2 confirm password
 	 * @param author author name
-	 * @return Success as plaintext or form with error 
+	 * @return HTML with success or form with error 
 	 */
 	public static String create(String email, String password, String password2, String author, String username, String domain) {
 		{
-			if (email == null || email.length() == 0) return Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", "Email address is required");
+			String htmlForm = Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY());
+			if (email == null || email.length() == 0) return htmlForm.replace("$EXTRA", "Email address is required");
 			
 			email = email.toLowerCase();
 			
-			if (DB.emailInUse(email)) return Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", "Email address " + email + " is already in use");
-			if (!EmailValidator.getInstance().isValid(email)) return Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", "Invalid email address " + email);
-			if (!password.equals(password2)) return Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", "Passwords do not match");
-			if (password.length() < 8) return Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", "Password must be at least 8 characters long");
-			if (author == null || author.trim().length() == 0) return Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", "Author name is required");
-			if (username == null || username.length() == 0) return Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", "Username is required");
+			if (DB.emailInUse(email)) return htmlForm.replace("$EXTRA", "Email address " + email + " is already in use");
+			if (!EmailValidator.getInstance().isValid(email)) return htmlForm.replace("$EXTRA", "Invalid email address " + email);
+			if (!password.equals(password2)) return htmlForm.replace("$EXTRA", "Passwords do not match");
+			if (password.length() < 8) return htmlForm.replace("$EXTRA", "Password must be at least 8 characters long");
+			if (author == null) return htmlForm.replace("$EXTRA", "Author name is required");
+			author = author.trim();
+			if (author.length() == 0) return htmlForm.replace("$EXTRA", "Author name is required");
+			if (author.length() > Accounts.AUTHOR_LENGTH_LIMIT) return htmlForm.replace("$EXTRA", "Author name cannot be longer than 32 characters");
+			if (username == null || username.length() == 0) return htmlForm.replace("$EXTRA", "Username is required");
 			username = username.toLowerCase();
-			if (DB.userIdInUse(username)) return Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", "Username " + username + " is already in use");
-			for (char c : username.toCharArray()) if (!allowedUsernameChars.contains(c)) return Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", "Username may not contain " + c);
+			if (DB.userIdInUse(username)) return htmlForm.replace("$EXTRA", "Username " + username + " is already in use");
+			for (char c : username.toCharArray()) if (!allowedUsernameChars.contains(c)) return htmlForm.replace("$EXTRA", "Username may not contain " + c);
 		}
 		String createToken = DB.addPotentialUser(username, email, BCrypt.hashpw(password, BCrypt.gensalt(10)), author);
 		if (InitWebsite.DEV_MODE) {
@@ -534,7 +541,7 @@ public class Accounts {
 		}
 		if (user.id.equals(DB.ROOT_ID)) throw new FBLoginException(Strings.getFile("changeauthorform.html", user).replace("$EXTRA", "This user account may not be modified"));
 		if (author.length() == 0) throw new FBLoginException(Strings.getFile("changeauthorform.html", user).replace("$EXTRA", "Author cannot be empty"));
-		if (author.length() > 200) throw new FBLoginException(Strings.getFile("changeauthorform.html", user).replace("$EXTRA", "Author cannot be longer than 200 character"));
+		if (author.length() > Accounts.AUTHOR_LENGTH_LIMIT) throw new FBLoginException(Strings.getFile("changeauthorform.html", user).replace("$EXTRA", "Author cannot be longer than "+Accounts.AUTHOR_LENGTH_LIMIT+" characters"));
 		try {
 			DB.changeAuthorName(user.id, author);
 		} catch (DBException e) {
