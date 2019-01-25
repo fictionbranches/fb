@@ -68,24 +68,39 @@ public class JSONStuff {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getEpisode(String json) {
-		JSONGetEpisodeRequest jepreq = g.get().fromJson(json, JSONGetEpisodeRequest.class);
-		String token = null;
-		String id;
-		if (jepreq != null) {
-			if (jepreq.token != null) token = jepreq.token;
-			if (jepreq.id != null) id = jepreq.id;
-			else return Response.ok(g().toJson(new JSONError("Invalid episode id"))).build();
-		} else return Response.ok(g().toJson(new JSONError("Invalid json"))).build();
-		FlatUser user = null;
-		try { user = Accounts.getFlatUserUsingTokenString(token); } catch (Exception e) {}
-		EpisodeWithChildren ep;
 		try {
-			ep = DB.getFullEp(id, (user==null)?null:user.author);
-		} catch (DBException e1) {
-			return Response.ok(g().toJson(new JSONError("Not found: " + id))).build();
+			System.out.println("jsongetepisode: " + json);
+			JSONGetEpisodeRequest jepreq = g.get().fromJson(json, JSONGetEpisodeRequest.class);
+			String token = null;
+			String id;
+			boolean sendhtml = false;
+			if (jepreq != null) {
+				if (jepreq.token != null) token = jepreq.token;
+				if (jepreq.id != null) id = jepreq.id;
+				else return Response.ok(g().toJson(new JSONError("Invalid episode id"))).build();
+				if (jepreq.sendhtml != null) {
+					if (jepreq.sendhtml.trim().toLowerCase().equals("true")) {
+						sendhtml = true;
+					}
+				}
+			} else return Response.ok(g().toJson(new JSONError("Invalid json"))).build();
+			FlatUser user = null;
+			try {
+				user = Accounts.getFlatUserUsingTokenString(token);
+			} catch (Exception e) {
+			}
+			EpisodeWithChildren ep;
+			try {
+				ep = DB.getFullEp(id, (user == null) ? null : user.author);
+			} catch (DBException e1) {
+				return Response.ok(g().toJson(new JSONError("Not found: " + id))).build();
+			}
+
+			return Response.ok(g().toJson(new JSONGetEpisodeResponse(ep, user, sendhtml))).build();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return Response.ok(g().toJson(new JSONError(e.getMessage()))).build();
 		}
-		
-		return Response.ok(g().toJson(new JSONGetEpisodeResponse(ep,user))).build();
 	}
 	
 	class JSONError {
@@ -100,12 +115,13 @@ public class JSONStuff {
 	class JSONGetEpisodeRequest {
 		public String token;
 		public String id;
+		public String sendhtml;
 	}
 	class JSONGetEpisodeResponse {
 		public JSONEpisode episode;
 		public JSONSimpleUser user;
-		public JSONGetEpisodeResponse(EpisodeWithChildren ep, FlatUser user) {
-			this.episode = new JSONEpisode(ep);
+		public JSONGetEpisodeResponse(EpisodeWithChildren ep, FlatUser user, boolean sendhtml) {
+			this.episode = new JSONEpisode(ep, sendhtml);
 			this.user = (user==null)?null:new JSONSimpleUser(user);
 		}
 	}
@@ -126,7 +142,7 @@ public class JSONStuff {
 		public String parentId;
 		public long hits;
 		public List<JSONChildEpisode> children;
-		public JSONEpisode(EpisodeWithChildren ep) {
+		public JSONEpisode(EpisodeWithChildren ep, boolean sendhtml) {
 			this.id = ep.id;
 			this.title=ep.title;
 			this.link=ep.link;
@@ -141,7 +157,7 @@ public class JSONStuff {
 			this.depth=ep.depth;
 			this.parentId=ep.parentId;
 			this.hits=ep.hits;
-			this.body=ep.body;
+			this.body=sendhtml?Story.formatBody(ep.body):ep.body;
 			this.children = ep.children.stream().map(child -> new JSONChildEpisode(child)).collect(Collectors.toList());
 		}
 	}
