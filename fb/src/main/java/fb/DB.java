@@ -1,6 +1,7 @@
 package fb;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -103,20 +104,41 @@ public class DB {
 	
 	private static SessionFactory newSessionFactory() {
 		Configuration configuration = new Configuration();//.configure();
-		
+		String dbSettingsFilename = InitWebsite.BASE_DIR + "/dbsettings.txt";
+		File dbSettingsFile = new File(dbSettingsFilename);
+		String connectionURL = "";
+		String connectionUsername = "";
+		String connectionPassword = "";
+		if (dbSettingsFile.exists() && dbSettingsFile.isFile()) {
+			try (Scanner scan = new Scanner(dbSettingsFile)) {
+				if (scan.hasNextLine()) connectionURL = scan.nextLine().trim();
+				else throw new RuntimeException(dbSettingsFilename + " does not contain connection URL");
+				if (scan.hasNextLine()) connectionUsername = scan.nextLine().trim();
+				if (scan.hasNextLine()) connectionPassword = scan.nextLine().trim();
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.exit(1);
+				throw new RuntimeException(e);
+			}
+		} else {
+			RuntimeException e = new RuntimeException(dbSettingsFilename + " not found");
+			e.printStackTrace();
+			System.exit(1);
+			throw e;
+		}
 		
 		configuration.setProperty("hibernate.search.default.indexBase", InitWebsite.BASE_DIR + "/search-indexes");
 		configuration.setProperty("hibernate.search.default.directory_provider", "filesystem");
 
 		configuration.setProperty("hibernate.connection.driver_class", "org.postgresql.Driver");
 		configuration.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-		configuration.setProperty("hibernate.connection.url", "jdbc:postgresql://localhost:5432/fictionbranches");
+		configuration.setProperty("hibernate.connection.url", "jdbc:postgresql://" + connectionURL);
 		configuration.setProperty("hibernate.c3p0.min_size", "1");
 		configuration.setProperty("hibernate.c3p0.max_size", "3");
 		configuration.setProperty("hibernate.c3p0.timeout", "1800");
 
-		configuration.setProperty("hibernate.connection.username", "fictionbranches");
-		configuration.setProperty("hibernate.connection.password", "");
+		configuration.setProperty("hibernate.connection.username", connectionUsername);
+		configuration.setProperty("hibernate.connection.password", connectionPassword);
 		configuration.setProperty("hibernate.show_sql", "false");
 		configuration.setProperty("hibernate.hbm2ddl.auto", "update");
 		configuration.setProperty("hibernate.temp.use_jdbc_metadata_defaults", "false");

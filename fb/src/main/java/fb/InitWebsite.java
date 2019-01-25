@@ -113,8 +113,14 @@ public class InitWebsite {
 		
 			Strings.log("Starting server");
 			
+			int port; try {
+				port = Integer.parseInt(Strings.getBACKEND_PORT());
+			} catch (Exception e) {
+				port = 8080;
+			}
+			
 			server = GrizzlyHttpServerFactory.createHttpServer(
-					UriBuilder.fromUri("https://0.0.0.0/").port(8080).build(), jaxrsConfig(), true,
+					UriBuilder.fromUri("https://0.0.0.0/").port(port).build(), jaxrsConfig(), true,
 					new SSLEngineConfigurator(sslConfig()).setClientMode(false), false);
 
 			setupTCPNIOTransport(server);
