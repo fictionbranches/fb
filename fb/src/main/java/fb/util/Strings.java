@@ -36,6 +36,7 @@ import fb.DB;
 import fb.InitWebsite;
 import fb.db.DBSiteSetting;
 import fb.objects.FlatUser;
+import fb.objects.Theme;
 
 public class Strings {
 	
@@ -46,7 +47,6 @@ public class Strings {
 	
 	private static final Map<String,String> files;
 	private static final Map<String,String> strings;
-	private static final Map<String,String> styles; // <HTML name, css file name (without .css)>
 	
 	private static final Object logLock;
 	
@@ -69,7 +69,7 @@ public class Strings {
 		refreshSiteSettings();
 
 		files = readInFilesMap();
-		styles = readInStylesMap();
+		//styles = readInStylesMap();
 		strings = readInStringsMap();
 	}
 	
@@ -230,19 +230,6 @@ public class Strings {
 		}
 	}
 	
-	private static Map<String,String> readInStylesMap() {
-		HashMap<String,String> stylesMap = new HashMap<>();
-		try (Scanner scan = new Scanner(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream("styles.txt")))) { 
-			Strings.log("Updating styles");
-			while (scan.hasNext()) {
-				String key = scan.nextLine();
-				String val = scan.nextLine();
-				stylesMap.put(key, val);
-			}
-		}
-		return Collections.unmodifiableMap(stylesMap);
-	}
-	
 	private static Map<String,String> readInStringsMap() {
 		HashMap<String,String> stringsMap = new HashMap<>();
 		try (Scanner scan = new Scanner(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream("strings.txt")))) {
@@ -296,15 +283,20 @@ public class Strings {
 	
 	public static String getFile(String name, FlatUser user) {
 		
-		String theme = null;
+		/*String theme = null;
 		if (user != null) theme = styles.get(user.theme);
-		if (theme == null) theme = "default";
+		if (theme == null) theme = "default";*/
 		String account = Accounts.getAccount(user);
 		if (InitWebsite.DEV_MODE) account = "<h3>This site is in dev mode.</h3><p>Any changes you make <em><string>will</strong></em> be deleted.</p>" + account;
 		return files.get(name)
 				.replace("$DONATEBUTTON", Strings.getDONATE_BUTTON())
 				.replace("$ACCOUNT", account)
-				.replace("$STYLE", theme);
+				.replace("$STYLE", themeToCss(user.theme));
+	}
+	
+	public static String themeToCss(Theme theme) {
+		if (theme == null) return "";
+		return "<style>" + theme.css + "</style>";
 	}
 	
 	public static String readTextFile(String path) {
@@ -372,7 +364,7 @@ public class Strings {
 	}
 	
 	public static String getSelectThemes() {
-		ArrayList<String> list = new ArrayList<>(styles.keySet());
+		ArrayList<String> list = DB.getThemeNames(); //new ArrayList<>(styles.keySet());
 		Collections.sort(list);
 		StringBuilder sb = new StringBuilder();
 		for (String theme : list) sb.append(String.format("<option value=\"%s\">%s</option>%n", theme, theme));

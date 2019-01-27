@@ -60,6 +60,7 @@ import fb.db.DBNotification;
 import fb.db.DBPasswordReset;
 import fb.db.DBPotentialUser;
 import fb.db.DBSiteSetting;
+import fb.db.DBTheme;
 import fb.db.DBUpvote;
 import fb.db.DBUser;
 import fb.objects.Announcement;
@@ -160,6 +161,7 @@ public class DB {
 		configuration.addAnnotatedClass(DBAnnouncement.class);
 		configuration.addAnnotatedClass(DBAnnouncementView.class);
 		configuration.addAnnotatedClass(DBNotification.class);
+		configuration.addAnnotatedClass(DBTheme.class);
 
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -1438,7 +1440,10 @@ public class DB {
 		try {
 			DBUser user = getUserById(session, id);
 			if (user == null) throw new DBException("User id does not exist");
-			user.setTheme(newTheme);
+			//user.setTheme(newTheme);
+			DBTheme theme = session.get(DBTheme.class, newTheme);
+			if (theme == null) throw new DBException("Theme " + newTheme + " does not exist"); // TODO maybe do this better?
+			user.setTheme(theme);
 			try {
 				session.beginTransaction();
 				session.merge(user);
@@ -3079,6 +3084,19 @@ public class DB {
 				}
 				return Integer.toString(newRootId);
 			}
+		} finally {
+			closeSession(session);
+		}
+	}
+	
+	/**
+	 * Gets a list of names (primary keys) of all themes
+	 * @return
+	 */
+	public static ArrayList<String> getThemeNames() {
+		Session session = openSession();
+		try {
+			return session.createQuery("from DBTheme", DBTheme.class).stream().map(t->t.getName()).collect(Collectors.toCollection(ArrayList::new));
 		} finally {
 			closeSession(session);
 		}

@@ -187,7 +187,7 @@ public class JSONStuff {
 			this.author = user.author;
 			this.date = toUTC(user.date);
 			this.level = user.level;
-			this.theme = user.theme;
+			this.theme = user.theme.name;
 			this.avatar = user.avatar;
 		}
 	}

@@ -13,7 +13,7 @@ public class FlatUser {
 	public final Date date;
 	public final String bio;
 	public final byte level;
-	public final String theme; // HTML theme name
+	public final Theme theme; // HTML theme name
 	public final String email;
 	public final String hashedPassword;
 	public final String avatar;
@@ -33,7 +33,7 @@ public class FlatUser {
 		this.date = user.getDate();
 		this.bio = user.getBio();
 		this.level = user.getLevel();
-		this.theme = user.getTheme();
+		this.theme = new Theme(user.getTheme());
 		this.email = user.getEmail();
 		this.avatar = user.getAvatar();
 		this.hashedPassword = user.getPassword();

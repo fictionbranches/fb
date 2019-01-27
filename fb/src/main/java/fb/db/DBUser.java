@@ -5,6 +5,7 @@ import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
@@ -43,7 +44,8 @@ public class DBUser {
 	
 	private byte level; // 1=user, 10=mod, 100=admin, 
 	
-	private String theme = "Default";
+	@ManyToOne
+	private DBTheme theme;// = "Default";
 	
 	@OneToOne(mappedBy = "user")
 	private DBEmailChange emailChange;
@@ -120,11 +122,11 @@ public class DBUser {
 		this.level = level;
 	}
 
-	public String getTheme() {
+	public DBTheme getTheme() {
 		return theme;
 	}
 
-	public void setTheme(String theme) {
+	public void setTheme(DBTheme theme) {
 		this.theme = theme;
 	}
 
