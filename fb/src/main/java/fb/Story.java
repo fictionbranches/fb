@@ -360,7 +360,7 @@ public class Story {
 		
 		List<FlatEpisode> episodes;
 		try {
-			episodes = DB.getRecents(root, page, reverse).episodes;
+			episodes = DB.getRecents(root, page, reverse).episodes; // TODO this should call a different, lighter-weight db request
 		} catch (DBException e) {
 			return "";
 		}
