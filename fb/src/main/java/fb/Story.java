@@ -443,7 +443,11 @@ public class Story {
 			pn = prevNext.toString();
 		}
 		 
-		return Strings.getFile("recents.html", user).replace("$CHILDREN", theActualTable).replace("$PREVNEXT", pn).replace("$TITLE", reverse?"Oldest":"Recent");
+		return Strings.getFile("recents.html", user)
+				.replace("$CHILDREN", theActualTable)
+				.replace("$PREVNEXT", pn)
+				.replace("$NUMPAGES", Integer.toString(prof.numPages))
+				.replace("$TITLE", reverse?"Oldest":"Recent");
 	}
 	
 	public static ConcurrentHashMap<String,String> rootNames = new ConcurrentHashMap<>();
@@ -1087,7 +1091,7 @@ public class Story {
 					"$ACCOUNT", "$ADDEP", "$AUTHOR", "$AUTHORID", "$AUTHORNAME", "$AVATARURL", "$BODY", "$CHILD", 
 					"$CHILDCOUNT", "$CHILDREN", "$COMMENT", "$COMMENTS", "$COMPLETEDATE", "$DATE", "$DONATEBUTTON", 
 					"$EDITDATE", "$EDITORID", "$EDITORNAME", "$EPISODES", "$EXTRA", "$HITS", "$ID", "$LINK", 
-					"$MODERATORSTATUS", "$MODIFY", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
+					"$MODERATORSTATUS", "$MODIFY", "$NUMPAGES", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
 					"$PATHTOHERE", "$PREVNEXT", "$RAWBODY", "$RECAPTCHASITEKEY", "$SEARCHTERM", "$SORTORDER", 
 					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS")
 					.collect(Collectors.toSet())));
