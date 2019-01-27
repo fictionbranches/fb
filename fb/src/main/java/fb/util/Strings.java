@@ -283,15 +283,12 @@ public class Strings {
 	
 	public static String getFile(String name, FlatUser user) {
 		
-		/*String theme = null;
-		if (user != null) theme = styles.get(user.theme);
-		if (theme == null) theme = "default";*/
 		String account = Accounts.getAccount(user);
 		if (InitWebsite.DEV_MODE) account = "<h3>This site is in dev mode.</h3><p>Any changes you make <em><string>will</strong></em> be deleted.</p>" + account;
 		return files.get(name)
 				.replace("$DONATEBUTTON", Strings.getDONATE_BUTTON())
 				.replace("$ACCOUNT", account)
-				.replace("$STYLE", themeToCss(user.theme));
+				.replace("$STYLE", user==null?"":themeToCss(user.theme));
 	}
 	
 	public static String themeToCss(Theme theme) {
