@@ -15,7 +15,34 @@ $(document).ready(function(event) {
 		}
 	}
 	
-	function displayEpisode(obj) {
+	function getRoots(operator) {
+		let req = new XMLHttpRequest();
+		req.open( "POST", "/fbapi/getroots", true );
+		req.setRequestHeader("Content-type", "application/json");
+		req.onload = function() {
+			let resultString = req.responseText;
+			let result = JSON.parse(resultString);
+			operator(result);
+		}
+		req.send(); 
+	}
+	
+	function getEpisodeById(epid,operator) {
+		let req = new XMLHttpRequest();
+		req.open( "POST", "/fbapi/getepisode", true );
+		req.setRequestHeader("Content-type", "application/json");
+		req.onload = function() {
+			let resultString = req.responseText;
+			result = JSON.parse(resultString);
+			operator(result);
+		}
+		let obj = {};
+		obj.id = epid;
+		obj.sendhtml = 'true';
+		req.send(JSON.stringify(obj));
+	}
+	
+	function initDisplayEpisode(obj) {
 		let ep = obj.episode;
 		let html = "";
 		html += '<p><h1>' + escapeHtml(ep.link) + '</h1>';
@@ -28,12 +55,13 @@ $(document).ready(function(event) {
 		html += ep.body;
 		html += '<br/><hr/><br/>';
 		for (child of ep.children) { 
-			html += '<p><a href="?ep=' + child.id + '">' + escapeHtml(child.link) + '</a> (' + child.childCount + ')</p>';
+			html += '<p><a id="link' + child.id + '" href="?ep=' + child.id + '">' + escapeHtml(child.link) + '</a> (' + child.childCount + ')</p>';
 		}
 		$("#resultDiv").html(html);
+		
 	}
 	
-	function displayRoots(roots) {
+	function initDisplayRoots(roots) {
 		var html = "";
 		for (ep of roots.episodes) {
 			html += '<p><h1><a href="?ep=' + ep.id + '">' + escapeHtml(ep.link) + '</a> (' + ep.childCount + ')</h1>';
@@ -43,28 +71,6 @@ $(document).ready(function(event) {
 	}
 	
 	let epid = getUrlParameter('ep');
-	if (epid) {
-		let req = new XMLHttpRequest();
-		req.open( "POST", "/fbapi/getepisode", true );
-		req.setRequestHeader("Content-type", "application/json");
-		
-		req.onload = function() {
-			let resultString = req.responseText;
-			displayEpisode(JSON.parse(resultString));
-		}
-		let obj = {};
-		obj.id = epid;
-		obj.sendhtml = 'true';
-		req.send(JSON.stringify(obj));
-		
-	} else {
-		let req = new XMLHttpRequest();
-		req.open( "POST", "/fbapi/getroots", true );
-		req.setRequestHeader("Content-type", "application/json");
-		req.onload = function() {
-			let resultString = req.responseText;
-			displayRoots(JSON.parse(resultString));
-		}
-		req.send(); 
-	}
+	if (epid) getEpisodeById(epid, initDisplayEpisode);
+	else getRoots(initDisplayRoots);
 });

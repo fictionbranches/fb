@@ -36,6 +36,7 @@ import fb.api.GetStuff;
 import fb.api.JSONStuff;
 import fb.api.LegacyStuff;
 import fb.api.MyErrorPageGenerator;
+import fb.api.NotFoundExceptionMapper;
 import fb.api.RssStuff;
 import fb.objects.FlatEpisode;
 import fb.util.Strings;
@@ -192,6 +193,7 @@ public class InitWebsite {
 		}
 		ResourceConfig resourceConfig = new ResourceConfig(list.toArray(new Class<?>[0]));
 		resourceConfig.register(CharsetResponseFilter.class);
+		resourceConfig.register(NotFoundExceptionMapper.class);
 		return resourceConfig;
 	}
 	

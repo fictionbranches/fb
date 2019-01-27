@@ -103,6 +103,12 @@ public class JSONStuff {
 		}
 	}
 	
+	class JSONRecentsRequest {
+		public Integer story;
+		public Integer page;
+		public Boolean reverse;
+	}
+	
 	class JSONError {
 		public String error;
 		public JSONError(String error) {
