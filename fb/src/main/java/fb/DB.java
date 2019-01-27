@@ -1,6 +1,7 @@
 package fb;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -103,20 +104,41 @@ public class DB {
 	
 	private static SessionFactory newSessionFactory() {
 		Configuration configuration = new Configuration();//.configure();
-		
+		String dbSettingsFilename = InitWebsite.BASE_DIR + "/dbsettings.txt";
+		File dbSettingsFile = new File(dbSettingsFilename);
+		String connectionURL = "";
+		String connectionUsername = "";
+		String connectionPassword = "";
+		if (dbSettingsFile.exists() && dbSettingsFile.isFile()) {
+			try (Scanner scan = new Scanner(dbSettingsFile)) {
+				if (scan.hasNextLine()) connectionURL = scan.nextLine().trim();
+				else throw new RuntimeException(dbSettingsFilename + " does not contain connection URL");
+				if (scan.hasNextLine()) connectionUsername = scan.nextLine().trim();
+				if (scan.hasNextLine()) connectionPassword = scan.nextLine().trim();
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.exit(1);
+				throw new RuntimeException(e);
+			}
+		} else {
+			RuntimeException e = new RuntimeException(dbSettingsFilename + " not found");
+			e.printStackTrace();
+			System.exit(1);
+			throw e;
+		}
 		
 		configuration.setProperty("hibernate.search.default.indexBase", InitWebsite.BASE_DIR + "/search-indexes");
 		configuration.setProperty("hibernate.search.default.directory_provider", "filesystem");
 
 		configuration.setProperty("hibernate.connection.driver_class", "org.postgresql.Driver");
 		configuration.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-		configuration.setProperty("hibernate.connection.url", "jdbc:postgresql://localhost:5432/fictionbranches");
+		configuration.setProperty("hibernate.connection.url", "jdbc:postgresql://" + connectionURL);
 		configuration.setProperty("hibernate.c3p0.min_size", "1");
 		configuration.setProperty("hibernate.c3p0.max_size", "3");
 		configuration.setProperty("hibernate.c3p0.timeout", "1800");
 
-		configuration.setProperty("hibernate.connection.username", "fictionbranches");
-		configuration.setProperty("hibernate.connection.password", "");
+		configuration.setProperty("hibernate.connection.username", connectionUsername);
+		configuration.setProperty("hibernate.connection.password", connectionPassword);
 		configuration.setProperty("hibernate.show_sql", "false");
 		configuration.setProperty("hibernate.hbm2ddl.auto", "update");
 		configuration.setProperty("hibernate.temp.use_jdbc_metadata_defaults", "false");
@@ -1032,7 +1054,7 @@ public class DB {
 				System.out.println("Got results list");
 				boolean hasNext = list.size() > PAGE_SIZE;
 				System.out.println("Got hasNext: " + hasNext);
-				EpisodeResultList ret = new EpisodeResultList(null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext);
+				EpisodeResultList ret = new EpisodeResultList(null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
 				System.out.println("Got return value");
 				return ret;
 			} catch (Exception e) {
@@ -1124,11 +1146,13 @@ public class DB {
 	 * @return
 	 * @throws DBException
 	 */
-	public static EpisodeResultList getRecents(int rootId, int page, boolean reverse) throws DBException {
+	/*public static EpisodeResultList getRecents(int rootId, int page, boolean reverse) throws DBException {
 		Session session = openSession();
 		page-=1;
 		try {
 			if (rootId != 0) if (DB.getEpById(session, ""+rootId) == null) throw new DBException("Not found: " + rootId);
+			
+			String sql = "SELECT * FROM fbepisodes ORDER BY date " + (reverse?"ASC":"DESC") + " LIMIT " + PAGE_SIZE + 
 			
 			CriteriaBuilder cb = session.getCriteriaBuilder();
 			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
@@ -1146,6 +1170,41 @@ public class DB {
 			List<FlatEpisode> list = (List<FlatEpisode>)session.createQuery(query).setFirstResult(PAGE_SIZE*page).setMaxResults(PAGE_SIZE+1).stream().map(e->new FlatEpisode((DBEpisode)e)).collect(Collectors.toCollection(ArrayList::new));
 			boolean hasNext = list.size() > PAGE_SIZE;
 			return new EpisodeResultList(null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext);
+		}finally {
+			closeSession(session);
+		}
+	}*/
+	
+	public static EpisodeResultList getRecents(int rootId, int page, boolean reverse) throws DBException {
+		Session session = openSession();
+		page-=1;
+		try {
+			if (rootId != 0) if (DB.getEpById(session, ""+rootId) == null) throw new DBException("Not found: " + rootId);
+			
+			String sql = "SELECT COUNT(*) FROM fbepisodes";
+			
+			if (rootId != 0) {
+				sql += " WHERE id='" + EP_PREFIX+Integer.toString(rootId) + "' OR id LIKE '" + EP_PREFIX + Integer.toString(rootId) + EP_INFIX + "%" + "'";
+			}
+						
+			int totalCount = ((BigInteger)(session.createNativeQuery(sql).list().get(0))).intValue();
+			
+			CriteriaBuilder cb = session.getCriteriaBuilder();
+			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
+			Root<DBEpisode> root = query.from(DBEpisode.class);
+			
+			query.select(root).orderBy(reverse?cb.asc(root.get("date")):cb.desc(root.get("date")));
+			
+			if (rootId != 0) {
+				Predicate idPredicate = cb.or(
+						cb.like(root.get("id"), EP_PREFIX + Integer.toString(rootId) + EP_INFIX + "%"), 
+						cb.equal(root.get("id"), EP_PREFIX+Integer.toString(rootId)));
+				query = query.where(idPredicate);
+			}
+			
+			List<FlatEpisode> list = (List<FlatEpisode>)session.createQuery(query).setFirstResult(PAGE_SIZE*page).setMaxResults(PAGE_SIZE+1).stream().map(e->new FlatEpisode((DBEpisode)e)).collect(Collectors.toCollection(ArrayList::new));
+			boolean hasNext = list.size() > PAGE_SIZE;
+			return new EpisodeResultList(null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext, totalCount/PAGE_SIZE+1);
 		}finally {
 			closeSession(session);
 		}
@@ -1527,20 +1586,26 @@ public class DB {
 			
 			List<FlatEpisode> list = (List<FlatEpisode>)session.createQuery(query).setFirstResult(PAGE_SIZE*page).setMaxResults(PAGE_SIZE+1).stream().map(e->new FlatEpisode((DBEpisode)e)).collect(Collectors.toCollection(ArrayList::new));
 			boolean hasNext = list.size() > PAGE_SIZE;
-			return new EpisodeResultList(new FlatUser(user), hasNext?list.subList(0, PAGE_SIZE):list, hasNext);
+			return new EpisodeResultList(new FlatUser(user), hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
 		} finally {
 			closeSession(session);
 		}
 	}
 	
+	/**
+	 * List of FlatEpisodes, along with a FlatUser and boolean.
+	 * Serves multiple purposes
+	 */
 	public static class EpisodeResultList {
 		public final FlatUser user;
 		public final List<FlatEpisode> episodes;
 		public final boolean morePages;
-		public EpisodeResultList(FlatUser user, List<FlatEpisode> episodes, boolean morePages) {
+		public final int numPages;
+		public EpisodeResultList(FlatUser user, List<FlatEpisode> episodes, boolean morePages, int numPages) {
 			this.user = user;
 			this.episodes = episodes;
 			this.morePages = morePages;
+			this.numPages = numPages;
 		}
 	}
 	

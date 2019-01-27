@@ -311,6 +311,63 @@ public class Story {
 		return Strings.getFile("searchhelp.html", user).replace("$EPISODES", sb.toString());
 	}
 	
+	private static String getRecentsTable(List<FlatEpisode> recents, int root) {
+		StringBuilder sb = new StringBuilder(Strings.getString("recents_table_head"));
+		for (FlatEpisode child : recents) if (child != null){
+			String storyNum = child.id.split("-")[0];
+			String story;
+			if (root==0){
+				story = rootNames.get(storyNum);
+				if (story == null) story = "";
+				else story = Strings.getString("recents_table_head_story_column").replace("$TITLE", story);
+			} else story = "";
+			
+			String row;
+			if (child.title.toLowerCase().trim().equals(child.link.toLowerCase().trim())) row = Strings.getString("recents_table_row_same_linktitle");
+			else row = Strings.getString("recents_table_row_different_linktitle");
+			
+			row = row.replace("$ID", child.id)
+					.replace("$TITLE", escape(child.title))
+					.replace("$AUTHORID", child.authorId)
+					.replace("$AUTHORNAME", escape(child.authorName))
+					.replace("$DATE", escape(Dates.simpleDateFormat(child.date)))
+					.replace("$STORY", story)
+					.replace("$LINK", escape(child.link));
+			sb.append(row);
+		}
+		sb.append("</table>");
+		return sb.toString();
+	}
+	
+	/**
+	 * Get just the HTML for the recents table (not the entire page)
+	 * @param rootId
+	 * @param page
+	 * @param reverse
+	 * @return empty string if parameters are wrong
+	 */
+	public static String getRecentsTable(String rootId, int page, boolean reverse) {
+		int root = -1;
+		{ // Check rootId is actually a root Id
+			if (rootId == null || rootId.length() == 0) root = 0;
+			for (char c : rootId.toCharArray()) if (c<'0' || c>'9') root = 0;
+			if (root == -1) try {
+				root = Integer.parseInt(rootId);
+			} catch (NumberFormatException e) {
+				root = 0;
+			}
+		}
+		
+		List<FlatEpisode> episodes;
+		try {
+			episodes = DB.getRecents(root, page, reverse).episodes; // TODO this should call a different, lighter-weight db request
+		} catch (DBException e) {
+			return "";
+		}
+		
+		return getRecentsTable(episodes, root);
+	}
+	
 	/**
 	 * Gets an list of recent episodes
 	 * 
@@ -342,39 +399,55 @@ public class Story {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
 		}
 		recents = prof.episodes;
-				
-		StringBuilder sb = new StringBuilder(Strings.getString("recents_table_head"));
-		for (FlatEpisode child : recents) if (child != null){
-			String storyNum = child.id.split("-")[0];
-			String story;
-			if (root==0){
-				story = rootNames.get(storyNum);
-				if (story == null) story = "";
-				else story = Strings.getString("recents_table_head_story_column").replace("$TITLE", story);
-			} else story = "";
 			
-			String row;
-			if (child.title.toLowerCase().trim().equals(child.link.toLowerCase().trim())) row = Strings.getString("recents_table_row_same_linktitle");
-			else row = Strings.getString("recents_table_row_different_linktitle");
+		String theActualTable = getRecentsTable(recents, root);
+		String pn; {
+			StringBuilder prevNext = new StringBuilder();
+			prevNext.append("<div id=recentcontainer>");
+			if (prof.numPages <= 8) {
+				for (int i=1; i<=prof.numPages; ++i) {
+					if (i == page) prevNext.append(i + " ");
+					else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse?"&reverse":"") + ">" + i + "</a> ");
+				}
+			} else {
+				if (page <= 3) { // 1 2 3 4 ... n
+					for (int i=1; i<=4; ++i) {
+						if (i == page) prevNext.append(i + " ");
+						else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse?"&reverse":"") + ">" + i + "</a> ");
+					}
+					prevNext.append("... ");
+					prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + prof.numPages + (reverse?"&reverse":"") + ">" + prof.numPages + "</a> ");
+				} else if (page >= prof.numPages-3) { // 1 ... n-3 n-2 n-1 n
+					prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + 1 + (reverse?"&reverse":"") + ">" + 1 + "</a> ");
+					prevNext.append("... ");
+					for (int i=prof.numPages-3; i<=prof.numPages; ++i) {
+						if (i == page) prevNext.append(i + " ");
+						else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse?"&reverse":"") + ">" + i + "</a> ");
+					}
+				} else { // 1 ... x-2 x-1 x x+1 x+2 ... n
+					prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + 1 + (reverse?"&reverse":"") + ">" + 1 + "</a> ");
+					prevNext.append("... ");
+					for (int i=page-2; i<=page+2; ++i) {
+						if (i == page) prevNext.append(i + " ");
+						else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse?"&reverse":"") + ">" + i + "</a> ");
+					}
+					prevNext.append("... ");
+					prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + prof.numPages + (reverse?"&reverse":"") + ">" + prof.numPages + "</a> ");
+				}
+			}
 			
-			row = row.replace("$ID", child.id)
-					.replace("$TITLE", escape(child.title))
-					.replace("$AUTHORID", child.authorId)
-					.replace("$AUTHORNAME", escape(child.authorName))
-					.replace("$DATE", escape(Dates.simpleDateFormat(child.date)))
-					.replace("$STORY", story)
-					.replace("$LINK", escape(child.link));
-			sb.append(row);
+			prevNext.append("</div></p><p>");
+			
+			if (reverse) prevNext.append("<a href=?story=" + root + ">Recent episodes</a>");
+			else prevNext.append("<a href=?story=" + root + "?reverse>Oldest episodes</a>");
+			pn = prevNext.toString();
 		}
-		sb.append("</table>");
-		StringBuilder prevNext = new StringBuilder();
-		if (page > 1) prevNext.append("<a href=/fb/recent/" + root + "/" + (page-1) + (reverse?"?reverse":"") + ">Prev</a> ");
-		if (prof.morePages) prevNext.append("<a href=/fb/recent/" + root + "/" + (page+1) + (reverse?"?reverse":"") + ">Next</a>");
-		if (prevNext.length() > 0) prevNext.append("</p><p>");
-		if (reverse) prevNext.append("<a href=/fb/recent/" + root + "/1" + ">Recent episodes</a>");
-		else prevNext.append("<a href=/fb/recent/" + root + "/1" + "?reverse>Oldest episodes</a>");
-		String pn = prevNext.toString();
-		return Strings.getFile("recents.html", user).replace("$CHILDREN", sb.toString()).replace("$PREVNEXT", pn).replace("$TITLE", reverse?"Oldest":"Recent");
+		 
+		return Strings.getFile("recents.html", user)
+				.replace("$CHILDREN", theActualTable)
+				.replace("$PREVNEXT", pn)
+				.replace("$NUMPAGES", Integer.toString(prof.numPages))
+				.replace("$TITLE", reverse?"Oldest":"Recent");
 	}
 	
 	public static ConcurrentHashMap<String,String> rootNames = new ConcurrentHashMap<>();
@@ -545,7 +618,7 @@ public class Story {
 				
 		StringBuilder sb = new StringBuilder();
 		for (FlatEpisode ep : getRoots()) {
-			sb.append("<h3><a href=/fb/get/" + ep.id + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/feed/" + ep.id + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent/" + ep.id + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
+			sb.append("<h3><a href=/fb/get/" + ep.id + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/feed/" + ep.id + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent?story=" + ep.id + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
 		}
 		return Strings.getFile("welcome.html", user).replace("$EPISODES", sb.toString());
 		
@@ -1018,7 +1091,7 @@ public class Story {
 					"$ACCOUNT", "$ADDEP", "$AUTHOR", "$AUTHORID", "$AUTHORNAME", "$AVATARURL", "$BODY", "$CHILD", 
 					"$CHILDCOUNT", "$CHILDREN", "$COMMENT", "$COMMENTS", "$COMPLETEDATE", "$DATE", "$DONATEBUTTON", 
 					"$EDITDATE", "$EDITORID", "$EDITORNAME", "$EPISODES", "$EXTRA", "$HITS", "$ID", "$LINK", 
-					"$MODERATORSTATUS", "$MODIFY", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
+					"$MODERATORSTATUS", "$MODIFY", "$NUMPAGES", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
 					"$PATHTOHERE", "$PREVNEXT", "$RAWBODY", "$RECAPTCHASITEKEY", "$SEARCHTERM", "$SORTORDER", 
 					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS")
 					.collect(Collectors.toSet())));

@@ -60,6 +60,7 @@ public class Strings {
 	private static String DISCORD_ERROR_CHANNEL;
 	private static String DISCORD_NEW_EPISODE_HOOK;
 	private static String DONATE_BUTTON;
+	private static String BACKEND_PORT;
 
 	static {
 		logLock = new Object();
@@ -117,6 +118,10 @@ public class Strings {
 			if (setting != null) DISCORD_NEW_EPISODE_HOOK = setting.getValue();
 			else DISCORD_NEW_EPISODE_HOOK = "";
 			
+			setting = session.get(DBSiteSetting.class, "backend_port");
+			if (setting != null) BACKEND_PORT = setting.getValue();
+			else BACKEND_PORT = "8080";
+			
 			
 		} finally {
 			DB.closeSession(session);
@@ -161,6 +166,10 @@ public class Strings {
 	
 	public static String getDONATE_BUTTON() {
 		return DONATE_BUTTON;
+	}
+	
+	public static String getBACKEND_PORT() {
+		return BACKEND_PORT;
 	}
 
 	private static Map<String,String> readInFilesMap() {

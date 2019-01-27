@@ -36,6 +36,7 @@ import fb.api.GetStuff;
 import fb.api.JSONStuff;
 import fb.api.LegacyStuff;
 import fb.api.MyErrorPageGenerator;
+import fb.api.NotFoundExceptionMapper;
 import fb.api.RssStuff;
 import fb.objects.FlatEpisode;
 import fb.util.Strings;
@@ -113,8 +114,14 @@ public class InitWebsite {
 		
 			Strings.log("Starting server");
 			
+			int port; try {
+				port = Integer.parseInt(Strings.getBACKEND_PORT());
+			} catch (Exception e) {
+				port = 8080;
+			}
+			
 			server = GrizzlyHttpServerFactory.createHttpServer(
-					UriBuilder.fromUri("https://0.0.0.0/").port(8080).build(), jaxrsConfig(), true,
+					UriBuilder.fromUri("https://0.0.0.0/").port(port).build(), jaxrsConfig(), true,
 					new SSLEngineConfigurator(sslConfig()).setClientMode(false), false);
 
 			setupTCPNIOTransport(server);
@@ -186,6 +193,7 @@ public class InitWebsite {
 		}
 		ResourceConfig resourceConfig = new ResourceConfig(list.toArray(new Class<?>[0]));
 		resourceConfig.register(CharsetResponseFilter.class);
+		resourceConfig.register(NotFoundExceptionMapper.class);
 		return resourceConfig;
 	}
 	
