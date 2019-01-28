@@ -301,24 +301,17 @@ public class GetStuff {
 		return sb.toString();
 	}
 
-	/*@GET
-	@Path("recent")
-	@Produces(MediaType.TEXT_HTML)
-	public Response recentstory(@CookieParam("fbtoken") Cookie fbtoken) {
-		return Response.seeOther(GetStuff.createURI("/fb/recent")).build();
-	}
-	
 	@GET
 	@Path("recent/{id}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response recentstory(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id) {
-		return Response.seeOther(GetStuff.createURI("/fb/recent/"+id+"/1")).build();
+	public Response recentbak(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id) {
+		return Response.seeOther(GetStuff.createURI("/fb/recent?story=" + id)).build();
 	}
 	
 	@GET
 	@Path("recent/{id}/{page}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response recent(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id, @PathParam("page") String page, @QueryParam("reverse") String reverseString) {
+	public Response recentbak2(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id, @PathParam("page") String page, @QueryParam("reverse") String reverseString) {
 		int pageNum;
 		try {
 			pageNum = Integer.parseInt(page);
@@ -327,8 +320,8 @@ public class GetStuff {
 			pageNum = 1;
 		}
 		boolean reverse = reverseString!=null;
-		return Response.ok(Story.getRecents(fbtoken, id, pageNum, reverse)).build();
-	}*/
+		return Response.seeOther(GetStuff.createURI("/fb/recent?story=" + id + "&page=" + pageNum + (reverse?"&reverse":""))).build();
+	}
 	
 	@GET
 	@Path("recent")
