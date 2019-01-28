@@ -1147,14 +1147,16 @@ public class DB {
 		try {
 			if (rootId != 0) if (DB.getEpById(session, ""+rootId) == null) throw new DBException("Not found: " + rootId);
 			
-			return Collections.unmodifiableList(session.createNativeQuery(
+			ArrayList<FlatEpisode> alist = session.createNativeQuery(
 					"SELECT * FROM fbepisodes " + 
-					(rootId==0?"":" WHERE id='" + rootId + "' OR id LIKE '" + rootId + "%' ") + 
+					(rootId==0?"":" WHERE id='" + EP_PREFIX + rootId + "' OR id LIKE '" + EP_PREFIX + rootId + "%' ") + 
 					" ORDER BY date " +(reverse?"ASC":"DESC") + 
 					" OFFSET " + (PAGE_SIZE*page) + 
 					" LIMIT " + PAGE_SIZE, 
 				DBEpisode.class
-			).stream().map(ep->new FlatEpisode(ep)).collect(Collectors.toCollection(ArrayList::new)));
+			).stream().map(ep->new FlatEpisode(ep)).collect(Collectors.toCollection(ArrayList::new));
+						
+			return Collections.unmodifiableList(alist);
 			 
 		}finally {
 			closeSession(session);
@@ -1169,6 +1171,7 @@ public class DB {
 	 * @throws DBException
 	 */
 	public static EpisodeResultList getRecents(int rootId, int page, boolean reverse) throws DBException {
+		System.out.println("recents");
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1178,15 +1181,18 @@ public class DB {
 			if (rootId != 0) sql += " WHERE id='" + EP_PREFIX+Integer.toString(rootId) + "' OR id LIKE '" + EP_PREFIX + Integer.toString(rootId) + EP_INFIX + "%" + "'";		
 			int totalCount = ((BigInteger)(session.createNativeQuery(sql).list().get(0))).intValue();
 			
-			List<FlatEpisode> list = Collections.unmodifiableList(session.createNativeQuery(
+			ArrayList<FlatEpisode> alist = session.createNativeQuery(
 					"SELECT * FROM fbepisodes " + 
-					(rootId==0?"":" WHERE id='" + rootId + "' OR id LIKE '" + rootId + "%' ") + 
+					(rootId==0?"":" WHERE id='" + EP_PREFIX + rootId + "' OR id LIKE '" + EP_PREFIX + rootId + "%' ") + 
 					" ORDER BY date " +(reverse?"ASC":"DESC") + 
 					" OFFSET " + (PAGE_SIZE*page) + 
 					" LIMIT " + PAGE_SIZE, 
 				DBEpisode.class
-			).stream().map(ep->new FlatEpisode(ep)).collect(Collectors.toCollection(ArrayList::new)));
+			).stream().map(ep->new FlatEpisode(ep)).collect(Collectors.toCollection(ArrayList::new));
+						
+			List<FlatEpisode> list = Collections.unmodifiableList(alist);
 			
+			System.out.println("Found " + totalCount + " episodes");
 			
 			return new EpisodeResultList(null, list, false, totalCount/PAGE_SIZE+1);
 		}finally {
