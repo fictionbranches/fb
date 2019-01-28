@@ -153,11 +153,11 @@ public class Story {
 			childHTML.append(Strings.getString(foot));
 		}
 		
-		final String commentFormHTML = "<h4>Add a comment</h4><form action= \"/fb/addcommentpost/"+ep.id+"\" method=\"post\">\n" + 
+		final String commentFormHTML = "<h4>Add a comment</h4><form id='fbcommentform' action= \"/fb/addcommentpost/"+ep.id+"\" method=\"post\">\n" + 
 				"		<p>\n" + 
-				"			<a name=\"addcomment\" /><textarea name= \"body\" placeholder=\"Comment\" ></textarea>\n" + 
+				"			<a name=\"addcomment\" /><textarea id='fbcommenttext' name= \"body\" placeholder=\"Comment\" ></textarea>\n" + 
 				"		</p>\n" + 
-				"		<input type= \"submit\" value= \"Submit\"/>\n" + 
+				"		<input id='fbcommentbutton' type= \"submit\" value= \"Submit\"/>\n" + 
 				"	</form>";
 		
 		StringBuilder commentHTML = new StringBuilder();
