@@ -74,6 +74,7 @@ import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.objects.ModEpisode;
 import fb.objects.Notification;
+import fb.objects.Theme;
 import fb.objects.User;
 import fb.util.Discord;
 import fb.util.Strings;
@@ -2242,8 +2243,21 @@ public class DB {
 			user.setPassword(pu.getPasswordHash());
 			user.setId(pu.getUsername());
 			user.setDate(new Date());
+			DBTheme defaultTheme; 
+			boolean addDefaultTheme = false;
+			{
+				defaultTheme = session.get(DBTheme.class, Theme.DEFAULT_NAME);
+				if (defaultTheme == null) {
+					defaultTheme = new DBTheme();
+					defaultTheme.setName(Theme.DEFAULT_NAME);
+					defaultTheme.setCss(Theme.DEFAULT_CSS);
+					addDefaultTheme = true;
+				}
+				user.setTheme(defaultTheme);
+			}
 			try {
 				session.beginTransaction();
+				if (addDefaultTheme) session.save(defaultTheme);
 				session.save(user);
 				session.delete(pu);
 				session.getTransaction().commit();
