@@ -1142,6 +1142,7 @@ public class DB {
 	}
 	
 	public static List<FlatEpisode> getRecentsPage(int rootId, int page, boolean reverse) throws DBException {
+		try {Thread.sleep(5000);}catch(Exception e) {}
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1171,7 +1172,6 @@ public class DB {
 	 * @throws DBException
 	 */
 	public static EpisodeResultList getRecents(int rootId, int page, boolean reverse) throws DBException {
-		System.out.println("recents");
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1191,9 +1191,7 @@ public class DB {
 			).stream().map(ep->new FlatEpisode(ep)).collect(Collectors.toCollection(ArrayList::new));
 						
 			List<FlatEpisode> list = Collections.unmodifiableList(alist);
-			
-			System.out.println("Found " + totalCount + " episodes");
-			
+						
 			return new EpisodeResultList(null, list, false, totalCount/PAGE_SIZE+1);
 		}finally {
 			closeSession(session);

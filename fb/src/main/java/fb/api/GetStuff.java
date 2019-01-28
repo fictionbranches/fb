@@ -121,27 +121,18 @@ public class GetStuff {
 	public Response get(@Context UriInfo uriInfo, @PathParam("id") String id, @QueryParam("sort") String sort, @QueryParam("vote") String vote, @CookieParam("fbchildsort") Cookie fbchildsort, @CookieParam("fbadvancedchildren") Cookie fbadvancedchildren, @CookieParam("fbtoken") Cookie fbtoken) {
 		if (vote != null && fbtoken != null) {
 			Response ret = Response.seeOther(GetStuff.createURI("/fb/get/" + id)).build();
-			String username;
-			switch (vote.toLowerCase()) {
-			case "up":
-				username = Accounts.getUsernameFromCookie(fbtoken);
-				if (username == null) return ret;
-				try {
+			String username = Accounts.getUsernameFromCookie(fbtoken);
+			if (username == null) return ret;
+			try {
+				switch (vote.toLowerCase()) {
+				case "up":
 					DB.upvote(id, username);
-				} catch (DBException e) {
-					return ret;
-				}
-				break;
-			case "down":
-				username = Accounts.getUsernameFromCookie(fbtoken);
-				if (username == null) return ret;
-				try {
+					break;
+				case "down":
 					DB.downvote(id, username);
-				} catch (DBException e) {
-					return ret;
+					break;
 				}
-				break;
-			}
+			} catch (DBException e) { }
 			return ret;
 		}
 		
