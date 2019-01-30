@@ -157,7 +157,8 @@ public class Story {
 				"		<p>\n" + 
 				"			<a name=\"addcomment\" /><textarea id='fbcommenttext' name= \"body\" placeholder=\"Comment\" ></textarea>\n" + 
 				"		</p>\n" + 
-				"		<input id='fbcommentbutton' type= \"submit\" value= \"Submit\"/>\n" + 
+				"       <p><div id='fbcommentformextra' ></div></p>\n" +
+				"		<input id='fbcommentbutton' type= \"submit\" value= \"Submit\"/>\n" +  
 				"	</form>";
 		
 		StringBuilder commentHTML = new StringBuilder();
