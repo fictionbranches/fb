@@ -98,7 +98,7 @@ public class InitWebsite {
 	private static void runServer() {
 		HttpServer server;
 		{
-			checkBaseDirAndIndexes();
+			Thread searchIndexer = checkBaseDirAndIndexes();
 			Strings.log("Started. Connecting to postgres"); // This line also starts the file watcher threads
 			checkDatabase();
 		
@@ -111,7 +111,13 @@ public class InitWebsite {
 				}
 			});
 			
-		
+			
+			if (searchIndexer != null) {
+				System.out.println("Starting search indexer");
+				searchIndexer.start();
+				System.out.println("Search indexer started");
+			}
+			
 			Strings.log("Starting server");
 			
 			int port; try {
@@ -143,6 +149,7 @@ public class InitWebsite {
 	}
 	
 	private static void checkDatabase() {
+		System.out.println("Checking database");
 		try {
 			for (FlatEpisode rootEp : DB.getRoots()) {
 				Strings.log("Found root episode: " + rootEp.id + " " + rootEp.link);
@@ -155,7 +162,8 @@ public class InitWebsite {
 		Strings.log("Postgres connected successfully");
 	}
 	
-	private static void checkBaseDirAndIndexes() {
+	private static Thread checkBaseDirAndIndexes() {
+		System.out.println("Checking base dir");
 		File baseDir = new File(InitWebsite.BASE_DIR);
 		if (baseDir.exists()) {
 			if (!baseDir.isDirectory()) {
@@ -180,8 +188,12 @@ public class InitWebsite {
 				}
 			};
 			t.setName("SearchIndexerThread");
-			t.start();
+			//t.start();
+			System.out.println("Started search indexer thread");
+			return t;
 		}
+		System.out.println("Finished check base dir");
+		return null;
 	}
 	
 	private static ResourceConfig jaxrsConfig() {
