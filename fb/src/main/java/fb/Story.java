@@ -165,7 +165,7 @@ public class Story {
 		if (!ep.comments.isEmpty()) commentHTML.append("<h3>Comments</h3>\n");
 		if (!InitWebsite.READ_ONLY_MODE && user != null && !ep.comments.isEmpty()) commentHTML.append("<p><a href=#addcomment>Add comment</a></p>");
 		for (Comment c : ep.comments) {
-			commentHTML.append("<div class=\"fbcomment\">\n");
+			commentHTML.append("<div id='comment" + c.id + "' class=\"fbcomment\">\n");
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
 			commentHTML.append("<p>" + Story.formatBody(c.text) + "</p><hr/>");
 			commentHTML.append(((c.user.avatar==null)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" />"))+"<a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a><br/>\n");
