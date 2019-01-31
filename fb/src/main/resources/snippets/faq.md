@@ -4,7 +4,7 @@
     - Use the `Flag episode` link at the top of the episode to report the issue to moderators. (At this time we don't have a nice way for you to know the results of these flags, sorry).
 
 - I found a problem with the site itself (something isn't working the way it's supposed to). What should I do? 
-    - Report the problem in `#dev_bugreports` on our [Discord server](https://discord.gg/eGPxp5A).
+    - Report the problem in `#bugreports` on our [Discord server](https://discord.gg/eGPxp5A).
 
 - There are a *lot* of episodes, how can I search for particular one? 
     - You can search any story or subtree using the `Search from here` link at the top of an episode. Fiction Branches search also supports some [advanced features](/fb/search).

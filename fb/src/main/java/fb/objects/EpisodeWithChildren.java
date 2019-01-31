@@ -10,7 +10,9 @@ import fb.db.DBUser;
  * Immutable episode object. Contains all info, and all info for all children.
  */
 public class EpisodeWithChildren {
-	public final String id;
+	public final long generatedId;
+	public final String newMap;
+	public final String oldMap;
 	public final String title;
 	public final String link;
 	public final String authorId;
@@ -30,7 +32,7 @@ public class EpisodeWithChildren {
 	public final FlatUser viewer;
 	public final boolean viewerCanUpvote;
 	public final List<Episode> children;
-	public final String parentId;
+	public final Long parentId;
 	public final List<Comment> comments;
 	public final List<FlatEpisode> pathbox;
 	
@@ -39,7 +41,9 @@ public class EpisodeWithChildren {
 	 * @param ep
 	 */
 	public EpisodeWithChildren(DBEpisode ep, long views, long upvotes, DBUser viewer, boolean viewerCanUpvote, List<Episode> children, List<Comment> comments, List<FlatEpisode> pathbox) {
-		this.id = ep.getMap();
+		this.generatedId = ep.getGeneratedId();
+		this.newMap = ep.getNewMap();
+		this.oldMap = ep.getOldMap();
 		this.title = ep.getTitle();
 		this.link = ep.getLink();
 		this.authorId = ep.getAuthor().getId();
@@ -57,7 +61,7 @@ public class EpisodeWithChildren {
 		this.views = views;
 		this.upvotes = upvotes;
 		this.children = children;
-		this.parentId = (ep.getParent() == null) ? null : ep.getParent().getMap();
+		this.parentId = (ep.getParent() == null) ? null : ep.getParent().getGeneratedId();
 		this.viewer = (viewer==null)?null:(new FlatUser(viewer));
 		this.viewerCanUpvote = viewerCanUpvote;
 		this.comments = comments;

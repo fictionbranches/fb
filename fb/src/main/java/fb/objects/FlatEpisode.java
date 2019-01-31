@@ -8,7 +8,9 @@ import fb.db.DBEpisode;
  * Immutable episode object
  */
 public class FlatEpisode {
-	public final String id;
+	public final long generatedId;
+	public final String oldMap;
+	public final String newMap;
 	public final String title;
 	public final String link;
 	public final String authorId;
@@ -21,7 +23,7 @@ public class FlatEpisode {
 	public final String editorName;
 	public final int childCount;
 	public final int depth;
-	public final String parentId;
+	public final Long parentId;
 	public final long hits;
 	
 	/**
@@ -29,7 +31,9 @@ public class FlatEpisode {
 	 * @param ep
 	 */
 	public FlatEpisode(DBEpisode ep) {
-		this.id = ep.getMap();
+		this.generatedId = ep.getGeneratedId();
+		this.newMap = ep.getNewMap();
+		this.oldMap = ep.getOldMap();
 		this.title = ep.getTitle();
 		this.link = ep.getLink();
 		this.authorId = ep.getAuthor().getId();
@@ -43,6 +47,6 @@ public class FlatEpisode {
 		this.depth = ep.getDepth();
 		this.childCount = ep.getChildCount();
 		this.hits = ep.getViewCount();
-		this.parentId = (ep.getParent() == null) ? null : ep.getParent().getMap();
+		this.parentId = (ep.getParent() == null) ? null : ep.getParent().getGeneratedId();
 	}
 }

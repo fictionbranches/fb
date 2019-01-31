@@ -9,7 +9,8 @@ import fb.db.DBUser;
 public class ModEpisode {
 
 	public final long id;
-	public final String episodeId;
+	public final String newMap;
+	public final String oldMap;
 	public final String body;
 	public final Date date;
 	public final String link;
@@ -25,7 +26,8 @@ public class ModEpisode {
 		link = ep.getLink();
 		title = ep.getTitle();
 		DBEpisode episode = ep.getEpisode();
-		episodeId = episode.getMap();
+		newMap = episode.getNewMap();
+		oldMap = episode.getOldMap();
 		oldLink = episode.getLink();
 		DBUser user = episode.getAuthor();
 		userId = user.getId();

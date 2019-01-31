@@ -99,7 +99,7 @@ public class RssStuff {
 		list.put(0, generate(0));
 		try {
 			for (FlatEpisode root : DB.getRoots()) {
-				int id = Integer.parseInt(root.id);
+				long id = root.generatedId;
 				list.put(id, generate(id));
 			}
 		} catch (DBException e) {
@@ -112,7 +112,7 @@ public class RssStuff {
 		}
 	}
 	
-	private static String generate(int story) {
+	private static String generate(long story) {
 		final SyndFeed feed = new SyndFeedImpl();
 		feed.setFeedType("rss_2.0");
 		feed.setTitle("Fiction Branches");

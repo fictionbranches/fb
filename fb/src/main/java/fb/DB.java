@@ -350,11 +350,12 @@ public class DB {
 	 * @return 1-2-3 id of newly added episode
 	 * @throws DBException if parent ep or author does not exist, or if new keystring is too long
 	 */
-	public static String addEp(String parentId, String link, String title, String body, String authorId, Date date) throws DBException {
+	public static String addEp(long parentId, String link, String title, String body, String authorId, Date date) throws DBException {
 		synchronized (epLock) {
 		Session session = openSession();
 		try {
-			DBEpisode parent = getEpById(session, parentId);
+			DBEpisode parent = session.get(DBEpisode.class, parentId);
+			//DBEpisode parent = getEpById(session, parentId);
 			DBUser author = getUserById(session, authorId);
 
 			if (parent == null) throw new DBException("Not found: " + parentId);
@@ -362,24 +363,6 @@ public class DB {
 
 			DBEpisode child;
 			child = new DBEpisode();
-			
-			String childId;
-			{
-				List<DBEpisode> children = session.createQuery("from DBEpisode ep where ep.parent.generatedId=" + parent.getGeneratedId(), DBEpisode.class).list();
-				ArrayList<String> list = new ArrayList<>();
-				//for (DBEpisode ep : parent.getChildren()) list.add(ep.getMap());
-				for (DBEpisode ep : children) list.add(ep.getMap());
-				if (list.size() == 0) {
-					childId = parent.getMap() + "-1";
-				} else {
-					Collections.sort(list, DB.keyStringComparator);
-					int[] arr = DB.keyToArr(list.get(list.size()-1));
-					childId = parent.getMap() + "-" + (arr[arr.length-1]+1);
-				}
-			}
-			
-			child.setMap(childId);
-			child.setDepth(DB.keyToArr(childId).length);
 			
 			child.setTitle(title);
 			child.setLink(link);
@@ -390,6 +373,35 @@ public class DB {
 			child.setChildCount(1);
 			child.setEditDate(date);
 			child.setEditor(author);
+			
+			Long childId;
+			try {
+				session.beginTransaction();
+				childId = (Long) session.save(child);
+				session.getTransaction().commit();
+			}
+			
+			/*String oldChildId;
+			{
+				List<DBEpisode> children = session.createQuery("from DBEpisode ep where ep.parent.generatedId=" + parent.getGeneratedId(), DBEpisode.class).list();
+				ArrayList<String> list = new ArrayList<>();
+				//for (DBEpisode ep : parent.getChildren()) list.add(ep.getMap());
+				for (DBEpisode ep : children) list.add(ep.getMap());
+				if (list.size() == 0) {
+					oldChildId = parent.getMap() + "-1";
+				} else {
+					Collections.sort(list, DB.keyStringComparator);
+					int[] arr = DB.keyToArr(list.get(list.size()-1));
+					oldChildId = parent.getMap() + "-" + (arr[arr.length-1]+1);
+				}
+			}
+			
+			child.setMap(oldChildId);*/
+			
+			child.setNewMap(parent.getNewMap() + DB.EP_INFIX + childId);
+			child.setDepth(parent.getDepth()+1);
+			
+			
 		
 			String updateCounts;{
 					StringBuilder sb = new StringBuilder("update DBEpisode ep set ep.childCount=(ep.childCount+1) where ");
@@ -433,7 +445,7 @@ public class DB {
 				
 				
 				if (Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
-					String rootId = Integer.toString(DB.keyToArr(childId)[0]);
+					String rootId = Integer.toString(DB.keyToArr(oldChildId)[0]);
 					DBEpisode root = DB.getEpById(session, rootId);
 					final String rootTitle = root.getLink();// + " - " + author.getAuthor();
 					final String authorName = author.getAuthor();
@@ -1166,25 +1178,25 @@ public class DB {
 	
 	/**
 	 * Get num most recent episodes of a particular story, or of all stories
-	 * @param rootId root id for story, or 0 to get all stories
+	 * @param story root id for story, or 0 to get all stories
 	 * @param num number of episodes to get
 	 * @return
 	 * @throws DBException
 	 */
-	public static EpisodeResultList getRecents(int rootId, int page, boolean reverse) throws DBException {
+	public static EpisodeResultList getRecents(long story, int page, boolean reverse) throws DBException {
 		System.out.println("recents");
 		Session session = openSession();
 		page-=1;
 		try {
-			if (rootId != 0) if (DB.getEpById(session, ""+rootId) == null) throw new DBException("Not found: " + rootId);
+			if (story != 0) if (DB.getEpById(session, ""+story) == null) throw new DBException("Not found: " + story);
 			
 			String sql = "SELECT COUNT(*) FROM fbepisodes";
-			if (rootId != 0) sql += " WHERE id='" + EP_PREFIX+Integer.toString(rootId) + "' OR id LIKE '" + EP_PREFIX + Integer.toString(rootId) + EP_INFIX + "%" + "'";		
+			if (story != 0) sql += " WHERE id='" + EP_PREFIX+Integer.toString(story) + "' OR id LIKE '" + EP_PREFIX + Integer.toString(story) + EP_INFIX + "%" + "'";		
 			int totalCount = ((BigInteger)(session.createNativeQuery(sql).list().get(0))).intValue();
 			
 			ArrayList<FlatEpisode> alist = session.createNativeQuery(
 					"SELECT * FROM fbepisodes " + 
-					(rootId==0?"":" WHERE id='" + EP_PREFIX + rootId + "' OR id LIKE '" + EP_PREFIX + rootId + "%' ") + 
+					(story==0?"":" WHERE id='" + EP_PREFIX + story + "' OR id LIKE '" + EP_PREFIX + story + "%' ") + 
 					" ORDER BY date " +(reverse?"ASC":"DESC") + 
 					" OFFSET " + (PAGE_SIZE*page) + 
 					" LIMIT " + PAGE_SIZE, 
@@ -1358,8 +1370,8 @@ public class DB {
 		return episodeList;
 	}
 	
-	private static List<String> getPathIds(String id) {
-		String[] arr = id.split("-");
+	/*private static List<String> getPathIds(String parentId) {
+		String[] arr = parentId.split("-");
 		List<String> ret = new ArrayList<>(arr.length);
 		for (int i=0; i<arr.length; ++i) {
 			StringBuilder sb = new StringBuilder();
@@ -1367,6 +1379,15 @@ public class DB {
 			ret.add(sb.substring(0, sb.length()-1));
 		}
 		return ret;
+	}*/
+	
+	private static List<Long> newMapToIdList(String newMap) {
+		String[] arr = newMap.substring(1,newMap.length()).split(""+EP_INFIX);
+		ArrayList<Long> list = new ArrayList<>();
+		for (String id : arr) {
+			list.add(Long.parseLong(id));
+		}
+		return list;
 	}
 	
 	public static FlatEpisode[] getRoots() throws DBException {

@@ -17,9 +17,6 @@ import org.hibernate.search.annotations.Index;
 import org.hibernate.search.annotations.Indexed;
 import org.hibernate.search.annotations.Store;
 
-import fb.DB;
-
-
 @Entity
 @Table(name="fbepisodes")
 @Indexed
@@ -31,7 +28,11 @@ public class DBEpisode {
 	
 	@Column(columnDefinition = "text", unique=true)
 	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES)
-	private String id;
+	private String oldMap;
+	
+	@Column(columnDefinition = "text", unique=true)
+	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES)
+	private String newMap;
 			
 	private String legacyId = null;
 	
@@ -77,39 +78,21 @@ public class DBEpisode {
 	public void setGeneratedId(long generatedId) {
 		this.generatedId = generatedId;
 	}
-	
-	/**
-	 * DO NOT USE - for Hibernate's use only
-	 * @return
-	 */
-	public String getId() {
-		return id;
-	}
-	
-	/**
-	 * DO NOT USE - for Hibernate's use only
-	 * @param id
-	 */
-	public void setId(String id) {
-		this.id = id;
+
+	public String getOldMap() {
+		return oldMap;
 	}
 
-	/**
-	 * Get an episode map, which is it's ID without the prefixed '$'
-	 * @return
-	 */
-	public String getMap() {
-		return DB.idToMap(id);
-		//return id.substring(1, id.length());
+	public void setOldMap(String oldMap) {
+		this.oldMap = oldMap;
 	}
-	
-	/**
-	 * Set an episode map, which sets this.id='$'+id
-	 * @param id
-	 */
-	public void setMap(String id) {
-		//this.id = "$" + id;
-		this.id = DB.mapToId(id);
+
+	public String getNewMap() {
+		return newMap;
+	}
+
+	public void setNewMap(String newMap) {
+		this.newMap = newMap;
 	}
 
 	public String getLegacyId() {
@@ -207,7 +190,7 @@ public class DBEpisode {
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(id + ": " + title);
+		sb.append(generatedId + ": " + title);
 		sb.append(" [" + ((parent==null)?"root":parent.getTitle()) + "]");
 		return sb.toString();
 	}
@@ -215,10 +198,10 @@ public class DBEpisode {
 	public boolean equals(Object o) {
 		if (!(o instanceof DBEpisode)) return false;
 		DBEpisode that = (DBEpisode)o;
-		return this.id.equals(that.id);
+		return this.generatedId == that.generatedId;
 	}
 	
 	public int hashCode() {
-		return id.hashCode();
+		return Long.hashCode(generatedId);
 	}
 }
