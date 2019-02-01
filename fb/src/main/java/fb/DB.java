@@ -599,18 +599,18 @@ public class DB {
 	 * @param id
 	 * @throws DBException if episodes does not exist, or has children
 	 */
-	public static void deleteEp(String id, String username) throws DBException {
+	public static void deleteEp(long generatedId, String username) throws DBException {
 		synchronized(epLock) {
 			Session session = openSession();
 			try {				
-				DBEpisode ep = DB.getEpById(session, id);
-				if (ep == null) throw new DBException("Not found: " + id);
-				if (session.createQuery("select count(*) from DBEpisode ep where ep.parent.generatedId=" + ep.getGeneratedId(), Long.class).uniqueResult() > 0l) throw new DBException("Episode " + id + " has children");
+				//DBEpisode ep = DB.getEpById(session, id);
+				DBEpisode ep = session.get(DBEpisode.class, generatedId);
+				if (ep == null) throw new DBException("Not found: " + generatedId);
+				if (session.createQuery("select count(*) from DBEpisode ep where ep.parent.generatedId=" + ep.getGeneratedId(), Long.class).uniqueResult() > 0l) throw new DBException("Episode " + generatedId + " has children");
 				
-				long generatedId = ep.getGeneratedId();
+				//long generatedId = ep.getGeneratedId();
 				
-				String parentMap = ep.getParent().getMap();
-				String childMap = ep.getMap();
+				String parentMap = ep.getParent().getNewMap();
 				
 				DBUser actor = DB.getUserById(session, username);
 				if (actor == null || (actor.getLevel() < 10 && !actor.getId().equals(ep.getAuthor().getId()))) throw new DBException("You are not authorized to delete this episode.");
@@ -660,9 +660,8 @@ public class DB {
 					
 					StringBuilder sb = new StringBuilder("update DBEpisode ep set ep.childCount=(ep.childCount-1) where "); 
 
-					for (String s : getPathIds(parentMap)) {
-						if (s.equals(childMap)) continue;
-						sb.append("ep.id='" + mapToId(s) + "' or ");
+					for (long pathId : DB.newMapToIdList(parentMap)) {
+						sb.append("ep.generatedId=" + pathId + " or ");
 					}
 					String updateCounts = sb.substring(0, sb.length() - 4);
 					session.createQuery(updateCounts).executeUpdate();
@@ -693,7 +692,7 @@ public class DB {
 	 * @return child DBEpisode object
 	 * @throws DBException if parent ep or author does not exist, or if new keystring is too long
 	 */
-	public static String addRootEp(String link, String title, String body, String authorId, Date date) throws DBException {
+	public static long addRootEp(String link, String title, String body, String authorId, Date date) throws DBException {
 		synchronized (epLock) {
 		Session session = openSession();
 		try {
@@ -705,10 +704,10 @@ public class DB {
 
 			DBEpisode child = new DBEpisode();
 			
-			String childId = "" + (Integer.parseInt(roots.get(roots.size()-1).getMap()) + 1);
+			//String childId = "" + (Integer.parseInt(roots.get(roots.size()-1).getMap()) + 1);
 
-			child.setMap(childId);
-			child.setDepth(DB.keyToArr(childId).length);
+			//child.setMap(childId);
+			child.setDepth(1);
 			
 			child.setTitle(title);
 			child.setLink(link);
@@ -719,20 +718,32 @@ public class DB {
 			child.setChildCount(1);
 			child.setEditDate(date);
 			child.setEditor(author);
-		
+			
+			Long childId;
 			try {
 				session.beginTransaction();
-				session.save(child);
+				childId = (Long) session.save(child);
 				session.merge(author);
 				session.getTransaction().commit();
-				Story.rootNames.put(childId, link);
 			} catch (Exception e) {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
 			}
-			Strings.log(String.format("New: <%s> %s %s", author, title, child.getMap()));
+			
+			child.setNewMap(EP_PREFIX + "" + childId);
+		
+			try {
+				session.beginTransaction();
+				session.merge(child);
+				session.getTransaction().commit();
+				Story.rootNames.put(childId+"", link);
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+				throw new DBException("Database error");
+			}
+			Strings.log(String.format("New: <%s> %s %s", author, title, childId+""));
 			//return new FlatEpisode(child);
-			return child.getMap();
+			return childId;
 		} finally {
 			closeSession(session);
 		}
@@ -770,45 +781,46 @@ public class DB {
 	 * @param author new author of new episode
 	 * @throws DBException if id not found
 	 */
-	public static void modifyEp(String id, String link, String title, String body, String editorId) throws DBException {
+	public static void modifyEp(long generatedId, String link, String title, String body, String editorId) throws DBException {
 		Session session = openSession();
 		try {
 			session.beginTransaction();
-			DB.modifyEp(session, id, link, title, body, editorId);
+			DB.modifyEp(session, generatedId, link, title, body, editorId);
 			session.getTransaction().commit();
 		} catch (Exception e) {
 			session.getTransaction().rollback();
-			Strings.log(String.format("Database error modifying: %s", id));
+			Strings.log(String.format("Database error modifying: %s", generatedId+""));
 			throw new DBException("Database error");
 		} finally {
 			closeSession(session);
 		}
 	}
 	
-	private static void modifyEp(Session session, String id, String link, String title, String body, String editorId) throws DBException {
-			DBEpisode ep = getEpById(session, id);
-			if (ep == null) throw new DBException("Not found: " + id);
-			DBUser editor = getUserById(session, editorId);
-			if (editor == null) throw new DBException("Editor not found: " + editorId);
-			DBUser oldEditor = ep.getEditor();
-			ep.setTitle(title);
-			ep.setLink(link);
-			ep.setBody(body);
-			ep.setEditDate(new Date());
-			ep.setEditor(editor);
+	private static void modifyEp(Session session, long generatedId, String link, String title, String body, String editorId) throws DBException {
+		// DBEpisode ep = getEpById(session, id);
+		DBEpisode ep = session.get(DBEpisode.class, generatedId);
+		if (ep == null) throw new DBException("Not found: " + generatedId);
+		DBUser editor = getUserById(session, editorId);
+		if (editor == null) throw new DBException("Editor not found: " + editorId);
+		DBUser oldEditor = ep.getEditor();
+		ep.setTitle(title);
+		ep.setLink(link);
+		ep.setBody(body);
+		ep.setEditDate(new Date());
+		ep.setEditor(editor);
 
-			session.merge(ep);
-			session.merge(oldEditor);
-			session.merge(editor);
+		session.merge(ep);
+		session.merge(oldEditor);
+		session.merge(editor);
 
-			Strings.log(String.format("Modified: <%s> %s", title, ep.getMap()));
+		Strings.log(String.format("Modified: <%s> %s", title, generatedId));
 	}
 		
-	public static void newEpisodeMod(String id, String link, String title, String body) throws DBException {
+	public static void newEpisodeMod(long generatedId, String link, String title, String body) throws DBException {
 		Session session = openSession();
 		try {
-			DBEpisode ep = getEpById(session, id);
-			if (ep == null) throw new DBException("Not found: " + id);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException("Not found: " + generatedId);
 			DBModEpisode newMod = new DBModEpisode();
 			newMod.setBody(body);
 			newMod.setDate(new Date());
@@ -824,7 +836,7 @@ public class DB {
 			} catch (Exception e) {
 				session.getTransaction().rollback();
 				Strings.log(e);
-				Strings.log(String.format("Database error submitting new modify: %s", ep.getMap()));
+				Strings.log(String.format("Database error submitting new modify: %s", generatedId+""));
 				throw new DBException("Database error");
 			}
 		} finally {
@@ -835,30 +847,37 @@ public class DB {
 	public static final String MOD_KEYWORD = "MOD";
 	
 	/**
-	 * If specified episode already has a mod request submitted, return DB.MOD_KEYWORD.
+	 * If specified episode already has a mod request submitted, return -2.
 	 * Else if a child episodes is not owned by owner of the specified episode (or if no children exist), return child's id.
-	 * Else return empty string
+	 * Else return -1
 	 * @param id id of episode
 	 * @return
 	 * @throws DBException if episode does not exist
 	 */
-	public static String checkIfEpisodeCanBeModified(String id) throws DBException {
+	public static long checkIfEpisodeCanBeModified(long generatedId) throws DBException {
 		Session session = openSession();
 		try {
-			DBEpisode episode = getEpById(session, id);
-			if (episode == null) throw new DBException("Not found: " + id);
+			DBEpisode episode = session.get(DBEpisode.class, generatedId);
+			if (episode == null) throw new DBException("Not found: " + generatedId);
 			
-			if (episode.getMod() != null) return MOD_KEYWORD;
+			if (episode.getMod() != null) return -2l;
 			
+			String q = "SELECT * FROM fbepisodes WHERE author_id!='" + episode.getAuthor().getId() + "' AND newmap LIKE '" + episode.getNewMap() + "%';";
+			
+			
+			/*
 			CriteriaBuilder cb = session.getCriteriaBuilder();
 			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
 			Root<DBEpisode> root = query.from(DBEpisode.class);
 			
 			query.select(root).where(cb.and(cb.notEqual(root.join("author").get("id"), episode.getAuthor().getId()), cb.like(root.get("id"), mapToId(id)+EP_INFIX+"%")));
 			
-			List<DBEpisode> result = session.createQuery(query).setMaxResults(1).list();
-			if (result.size() > 0) return result.get(0).getMap();
-			return "";
+			List<DBEpisode> result = session.createQuery(query).setMaxResults(1).list();*/
+			
+			
+			List<DBEpisode> result = session.createNativeQuery(q, DBEpisode.class).setMaxResults(1).list();
+			if (result.size() > 0) return result.get(0).getGeneratedId();
+			return -1l;
 		} finally {
 			closeSession(session);
 		}
@@ -871,13 +890,13 @@ public class DB {
 	 * @throws DBException if episode id does not exist
 	 */
 	@SuppressWarnings("unchecked")
-	public static EpisodeWithChildren getFullEp(String id, String username) throws DBException {
+	public static EpisodeWithChildren getFullEp(long generatedId, String username) throws DBException {
 		boolean canUpvote = false;
 		Session session = openSession();
 		try {
 			DBUser user = null;
-			DBEpisode ep = getEpById(session, id);
-			if (ep == null) throw new DBException("Not found: " + id);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException("Not found: " + generatedId);
 			
 			long visitorCount = (Long)session.createQuery("select count(*) from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId()).uniqueResult();
 			long upvotes = (Long)session.createQuery("select count(*) from DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId()).uniqueResult();
@@ -937,7 +956,7 @@ public class DB {
 				long childUpvotes = ((BigInteger)arr[9]).longValue();
 				String authorId = (String)arr[10];
 				String authorName = (String)arr[11];
-				return (new Episode(childId,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName));
+				return new Episode(childId,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName);
 			}).collect(Collectors.toCollection(ArrayList::new));
 			
 			/*ArrayList<Episode> children = new ArrayList<>();
@@ -959,10 +978,10 @@ public class DB {
 			
 			ArrayList<String> pathIds = new ArrayList<>();
 			{
-				LinkedList<String> list = Arrays.stream(ep.getId().substring(1,ep.getId().length()).split("B")).collect(Collectors.toCollection(LinkedList::new));
+				LinkedList<Long> list = new LinkedList<>(DB.newMapToIdList(ep.getNewMap()));
+				
 				while (pathIds.size() < 20 && !list.isEmpty()) {
-					pathIds.add("ep.id='A"+list.stream().collect(Collectors.joining("B"))+"'");
-					list.removeLast();
+					pathIds.add("ep.generatedId="+list.removeLast());
 				}
 			}
 			
@@ -995,13 +1014,13 @@ public class DB {
 			"where fbusers.id=countstuff.author_id and countstuff.parent_generatedid=";
 	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,episodeid,link,title,episodedate,childcount,author_id,author_name";
 	
-	public static void upvote(String id, String username) throws DBException {
+	public static void upvote(long generatedId, String username) throws DBException {
 		Session session = openSession();
 		try {
 			DBUser user = DB.getUserById(session, username);
 			if (user == null) throw new DBException("Not found: " + username);
-			DBEpisode ep = DB.getEpById(session, id);
-			if (ep == null) throw new DBException ("Not found: " + id);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException ("Not found: " + generatedId);
 			
 			try {
 				session.beginTransaction();
