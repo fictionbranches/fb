@@ -21,6 +21,9 @@ div.fbcomment {
 	border: 1px solid;
 }
 
+div.fboutline {
+	white-space: nowrap;
+}
 
 table {
     border-collapse: collapse;

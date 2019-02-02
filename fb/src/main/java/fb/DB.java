@@ -1038,9 +1038,15 @@ public class DB {
 		try {
 			if (DB.getEpById(session, id) == null) throw new DBException("Not found: " + id);
 			FullTextSession sesh = Search.getFullTextSession(session);
-			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class).get();
+			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class)
+					//.overridesForField("title","fbEpisodeAnalyzer")
+					//.overridesForField("link","fbEpisodeAnalyzer")
+					//.overridesForField("body","fbEpisodeAnalyzer")
+					.get();
 						
 			RegexpQuery idQuery = new RegexpQuery(new Term("id", (mapToId(id)+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
+
+			
 			
 			Query searchQuery = qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery();
 			Query combinedQuery = qb.bool().must(searchQuery).must(idQuery).createQuery();
@@ -1262,7 +1268,7 @@ public class DB {
 								returnedSomething.set();
 							});
 
-							if (returnedSomething.get()) writer.write("<div class=\"next\"><a href=\"/fb/outline/" + rootId + "?page=" + (page + 2) + "\">next</a></div>");
+							if (returnedSomething.get()) writer.write("<div class=\"next fboutline\"><a href=\"/fb/outline/" + rootId + "?page=" + (page + 2) + "\">next</a></div>");
 
 						} catch (BreakException e) {
 							writer.flush();
