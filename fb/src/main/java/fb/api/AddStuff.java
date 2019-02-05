@@ -128,15 +128,6 @@ public class AddStuff {
 		
 	}
 	
-	@GET
-	@Path("addcomment/{id}")
-	@Produces(MediaType.TEXT_HTML)
-	public Response addcomment(@PathParam("id") String id, @CookieParam("fbtoken") Cookie fbtoken) {
-		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
-		
-		return Response.ok(Story.commentForm(id, fbtoken)).build();
-	}
-	
 	@POST
 	@Path("addcommentpost/{id}")
 	@Produces(MediaType.TEXT_HTML)

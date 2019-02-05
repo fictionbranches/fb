@@ -1038,9 +1038,15 @@ public class DB {
 		try {
 			if (DB.getEpById(session, id) == null) throw new DBException("Not found: " + id);
 			FullTextSession sesh = Search.getFullTextSession(session);
-			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class).get();
+			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class)
+					//.overridesForField("title","fbEpisodeAnalyzer")
+					//.overridesForField("link","fbEpisodeAnalyzer")
+					//.overridesForField("body","fbEpisodeAnalyzer")
+					.get();
 						
 			RegexpQuery idQuery = new RegexpQuery(new Term("id", (mapToId(id)+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
+
+			
 			
 			Query searchQuery = qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery();
 			Query combinedQuery = qb.bool().must(searchQuery).must(idQuery).createQuery();
@@ -1143,6 +1149,7 @@ public class DB {
 	}
 	
 	public static List<FlatEpisode> getRecentsPage(int rootId, int page, boolean reverse) throws DBException {
+		try {Thread.sleep(5000);}catch(Exception e) {}
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1172,7 +1179,6 @@ public class DB {
 	 * @throws DBException
 	 */
 	public static EpisodeResultList getRecents(int rootId, int page, boolean reverse) throws DBException {
-		System.out.println("recents");
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1192,9 +1198,7 @@ public class DB {
 			).stream().map(ep->new FlatEpisode(ep)).collect(Collectors.toCollection(ArrayList::new));
 						
 			List<FlatEpisode> list = Collections.unmodifiableList(alist);
-			
-			System.out.println("Found " + totalCount + " episodes");
-			
+						
 			return new EpisodeResultList(null, list, false, totalCount/PAGE_SIZE+1);
 		}finally {
 			closeSession(session);
@@ -1264,7 +1268,7 @@ public class DB {
 								returnedSomething.set();
 							});
 
-							if (returnedSomething.get()) writer.write("<div class=\"next\"><a href=\"/fb/outline/" + rootId + "?page=" + (page + 2) + "\">next</a></div>");
+							if (returnedSomething.get()) writer.write("<div class=\"next fboutline\"><a href=\"/fb/outline/" + rootId + "?page=" + (page + 2) + "\">next</a></div>");
 
 						} catch (BreakException e) {
 							writer.flush();

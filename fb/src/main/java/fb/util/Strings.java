@@ -185,7 +185,6 @@ public class Strings {
 		readSnippetsFile("changeemailform.html", fileMap);
 		readSnippetsFile("changepasswordform.html", fileMap);
 		readSnippetsFile("changethemeform.html", fileMap);
-		readSnippetsFile("commentform.html", fileMap);
 		readSnippetsFile("commentflagform.html", fileMap);
 		readSnippetsFile("completestory.html", fileMap);
 		readSnippetsFile("confirmpasswordresetform.html", fileMap);

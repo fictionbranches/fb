@@ -21,6 +21,9 @@ div.fbcomment {
 	border: 1px solid;
 }
 
+div.fboutline {
+	white-space: nowrap;
+}
 
 table {
     border-collapse: collapse;
@@ -32,30 +35,26 @@ table, th, td {
 table.fbtable, th.fbtable, td.fbtable {
     text-align: left;
 }
-table.fbchildtable {
-    table-layout:fixed;
-    width:100%;
-}
-table.fbchildtable, th.fbchildtable, td.fbchildtable {
-    text-align: left;
+
+.fbchildtable, .fbchildtablenumeric {
     border: none;
-    word-wrap: break-word;
-    white-space: normal;
-    overflow-wrap: break-word;
+    white-space: nowrap;
+    word-break: break-all;
+    text-align: left;
 }
-td.fbchildtable {
+.fbchildtablenumeric {
+    text-align: right;
+}
+table.fbchildtable {
+    border-collapse: collapse;
     width: 100%;
 }
-th.fbchildtable, th.fbchildtablenumeric {
-    white-space: nowrap;
+.leftcolumn {
+    word-wrap: break-word;
+    white-space: normal;
 }
 table.sortable th:not(.sorttable_sorted):not(.sorttable_sorted_reverse):not(.sorttable_nosort):after {
     content: " \25B4\25BE"
-}
-table.fbchildtablenumeric, th.fbchildtablenumeric, td.fbchildtablenumeric {
-    text-align: right;
-    border: none;
-    white-space: nowrap;
 }
 .topcorner{
 	float: right;

@@ -153,11 +153,19 @@ public class Story {
 			childHTML.append(Strings.getString(foot));
 		}
 		
+		final String commentFormHTML = "<h4>Add a comment</h4><form id='fbcommentform' action= \"/fb/addcommentpost/"+ep.id+"\" method=\"post\">\n" + 
+				"		<p>\n" + 
+				"			<a name=\"addcomment\" /><textarea id='fbcommenttext' name= \"body\" placeholder=\"Comment\" ></textarea>\n" + 
+				"		</p>\n" + 
+				"       <p><div id='fbcommentformextra' ></div></p>\n" +
+				"		<input id='fbcommentbutton' type= \"submit\" value= \"Submit\"/>\n" +  
+				"	</form>";
+		
 		StringBuilder commentHTML = new StringBuilder();
 		if (!ep.comments.isEmpty()) commentHTML.append("<h3>Comments</h3>\n");
-		if (!InitWebsite.READ_ONLY_MODE && user != null) commentHTML.append("<p><a href=/fb/addcomment/" + ep.id + ">Add comment</a></p>");
+		if (!InitWebsite.READ_ONLY_MODE && user != null && !ep.comments.isEmpty()) commentHTML.append("<p><a href=#addcomment>Add comment</a></p>");
 		for (Comment c : ep.comments) {
-			commentHTML.append("<div class=\"fbcomment\">\n");
+			commentHTML.append("<div id='comment" + c.id + "' class=\"fbcomment\">\n");
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
 			commentHTML.append("<p>" + Story.formatBody(c.text) + "</p><hr/>");
 			commentHTML.append(((c.user.avatar==null)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" />"))+"<a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a><br/>\n");
@@ -169,7 +177,7 @@ public class Story {
 			}
 			commentHTML.append("</div>\n");
 		}
-		if (!InitWebsite.READ_ONLY_MODE && user != null && !ep.comments.isEmpty()) commentHTML.append("<p><a href=/fb/addcomment/" + ep.id + ">Add comment</a></p>");
+		if (!InitWebsite.READ_ONLY_MODE && user != null) commentHTML.append(commentFormHTML); //commentHTML.append("<p><a href=/fb/addcomment/" + ep.id + ">Add comment</a></p>");
 
 		if (InitWebsite.READ_ONLY_MODE) addEp = "";
 		
