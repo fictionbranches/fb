@@ -433,22 +433,11 @@ public class DB {
 				
 				
 				if (Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
-					String rootId = Integer.toString(DB.keyToArr(childId)[0]);
-					DBEpisode root = DB.getEpById(session, rootId);
-					final String rootTitle = root.getLink();// + " - " + author.getAuthor();
-					final String authorName = author.getAuthor();
-					final String epId = child.getMap();
-					new Thread(()->{
-						StringBuilder sb = new StringBuilder();
-						try (Scanner scan = new Scanner(rootTitle)) {
-							while (scan.hasNext()) {
-								String next = scan.next();
-								if (next.length() > 0) sb.append(next.charAt(0));
-							}
-						}
-						String username = sb + " - " + authorName;
-						Discord.notifyHook(username, "https://" + Strings.getDOMAIN() + "/fb/get/" + epId, Strings.getDISCORD_NEW_EPISODE_HOOK());
-					}).start();
+					DBEpisode root = DB.getEpById(session, Integer.toString(DB.keyToArr(childId)[0]));
+					final FlatEpisode flatEp = new FlatEpisode(child);
+					final FlatEpisode flatRoot = new FlatEpisode(root);
+					
+					new Thread(()->Discord.notifyHook(flatEp, flatRoot)).start();
 				}
 			} catch (Exception e) {
 				session.getTransaction().rollback();
