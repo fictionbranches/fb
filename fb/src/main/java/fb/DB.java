@@ -1138,7 +1138,6 @@ public class DB {
 	}
 	
 	public static List<FlatEpisode> getRecentsPage(int rootId, int page, boolean reverse) throws DBException {
-		try {Thread.sleep(5000);}catch(Exception e) {}
 		Session session = openSession();
 		page-=1;
 		try {
