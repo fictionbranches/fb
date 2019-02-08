@@ -50,7 +50,7 @@ public class Discord {
 	
 	public static void notifyHook(FlatEpisode ep, FlatEpisode root) {
 		StringBuilder sb = new StringBuilder();
-		try (Scanner scan = new Scanner(root.title)) {
+		try (Scanner scan = new Scanner(root.link)) {
 			while (scan.hasNext()) {
 				String next = scan.next();
 				if (next.length() > 0) sb.append(next.charAt(0));
