@@ -479,10 +479,10 @@ public class Story {
 		return Strings.getFile("outlinescroll.html", user).replace("$ID", rootId).replace("$TITLE", ep.title).replace("$CHILDREN", Story.epToOutlineHTML(rootId, ep.link, ep.authorId, ep.authorName, ep.depth, ep.depth));
 	}
 	
-	public static String epToOutlineHTML(String id, String link, String authorUsername, String authorName, int depth, int minDepth) {
+	public static String epToOutlineHTML(long generatedId, String link, String authorUsername, String authorName, int depth, int minDepth) {
 		StringBuilder sb = new StringBuilder();
 		for (int i=minDepth; i<depth; ++i) sb.append("&nbsp;");
-		return sb.toString() + depth + ". <a href=\"/fb/get/" + id + "\" target=\"_blank\" >" + escape(link) + "</a> (<a href='/fb/user/" + authorUsername + "' class='author'>" + escape(authorName) + "</a>)<br/>\n";
+		return sb.toString() + depth + ". <a href=\"/fb/story/" + generatedId + "\" target=\"_blank\" >" + escape(link) + "</a> (<a href='/fb/user/" + authorUsername + "' class='author'>" + escape(authorName) + "</a>)<br/>\n";
 	}
 	
 	public static String epLine(FlatEpisode ep) {

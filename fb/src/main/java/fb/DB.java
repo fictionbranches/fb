@@ -8,7 +8,6 @@ import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
@@ -21,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -76,7 +76,6 @@ import fb.objects.ModEpisode;
 import fb.objects.Notification;
 import fb.objects.Theme;
 import fb.objects.User;
-import fb.util.Discord;
 import fb.util.Strings;
 
 public class DB {
@@ -434,11 +433,11 @@ public class DB {
 					note.setDate(new Date());
 					note.setRead(false);
 					note.setUser(parent.getAuthor());
-					note.setBody("<a href=\"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"/fb/get/" + child.getMap() + "\">new child episode</a> of <a href=/fb/get/" + parent.getMap() +">" + Strings.escape(parent.getTitle()) + "</a>");
+					note.setBody("<a href=\"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>");
 					session.save(note);
 				}
 				if (sendMailNotification) new Thread(()->{
-					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/get/" + child.getMap() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/get/" + parent.getMap() +">" + Strings.escape(parent.getTitle()) + "</a>");
+					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>");
 				}).start();
 				
 				session.getTransaction().commit();
@@ -446,7 +445,7 @@ public class DB {
 				
 				
 				
-				if (Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
+				/*if (Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
 					String rootId = Integer.toString(DB.keyToArr(oldChildId)[0]);
 					DBEpisode root = DB.getEpById(session, rootId);
 					final String rootTitle = root.getLink();// + " - " + author.getAuthor();
@@ -463,7 +462,7 @@ public class DB {
 						String username = sb + " - " + authorName;
 						Discord.notifyHook(username, "https://" + Strings.getDOMAIN() + "/fb/get/" + epId, Strings.getDISCORD_NEW_EPISODE_HOOK());
 					}).start();
-				}
+				} TODO */
 			} catch (Exception e) {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
@@ -1162,7 +1161,7 @@ public class DB {
 	 * @return
 	 * @throws DBException if id not found
 	 */
-	public static String getEpByLegacyId(String oldId) throws DBException {	
+	public static FlatEpisode getEpByLegacyId(String oldId) throws DBException {	
 		Session session = openSession();
 		try {
 		CriteriaBuilder cb = session.getCriteriaBuilder();
@@ -1179,7 +1178,7 @@ public class DB {
 			for (DBEpisode ep : result) sb.append(ep.getGeneratedId() + " ");
 			throw new RuntimeException("Multiple episodes have matching id: " + oldId + " " + sb);
 		} else
-			return result.get(0).getMap();
+			return new FlatEpisode(result.get(0));
 		} finally {
 			closeSession(session);
 		}
@@ -1214,20 +1213,25 @@ public class DB {
 	 * @return
 	 * @throws DBException
 	 */
-	public static EpisodeResultList getRecents(long story, int page, boolean reverse) throws DBException {
+	public static EpisodeResultList getRecents(long generatedId, int page, boolean reverse) throws DBException {
 		System.out.println("recents");
 		Session session = openSession();
 		page-=1;
 		try {
-			if (story != 0) if (DB.getEpById(session, ""+story) == null) throw new DBException("Not found: " + story);
+			if (generatedId != 0l) {
+				DBEpisode ep = session.get(DBEpisode.class, generatedId);
+				if (ep == null) throw new DBException("Not found: " + generatedId);
+				List<Long> arr = DB.newMapToIdList(ep.getNewMap());
+				generatedId = arr.get(0);
+			}
 			
 			String sql = "SELECT COUNT(*) FROM fbepisodes";
-			if (story != 0) sql += " WHERE id='" + EP_PREFIX+Integer.toString(story) + "' OR id LIKE '" + EP_PREFIX + Integer.toString(story) + EP_INFIX + "%" + "'";		
+			if (generatedId != 0) sql += " WHERE newmap='" + EP_PREFIX+Long.toString(generatedId) + "' OR newmap LIKE '" + EP_PREFIX + Long.toString(generatedId) + EP_INFIX + "%" + "'";		
 			int totalCount = ((BigInteger)(session.createNativeQuery(sql).list().get(0))).intValue();
 			
 			ArrayList<FlatEpisode> alist = session.createNativeQuery(
 					"SELECT * FROM fbepisodes " + 
-					(story==0?"":" WHERE id='" + EP_PREFIX + story + "' OR id LIKE '" + EP_PREFIX + story + "%' ") + 
+					(generatedId==0?"":" WHERE newmap='" + EP_PREFIX + generatedId + "' OR newmap LIKE '" + EP_PREFIX + generatedId + "%' ") + 
 					" ORDER BY date " +(reverse?"ASC":"DESC") + 
 					" OFFSET " + (PAGE_SIZE*page) + 
 					" LIMIT " + PAGE_SIZE, 
@@ -1284,16 +1288,16 @@ public class DB {
 					writer.write("\n<!-- BEGIN PAGE " + page + "-->\n");
 					
 					String query = "" 
-							+ "select replace(replace(fbepisodes.id,'B','-'),'A',''), link, depth, fbusers.id, fbusers.author "
-							+ "from fbepisodes,fbusers where fbepisodes.id like '" + ep.getId() + EP_INFIX + "%' and fbepisodes.author_id=fbusers.id "
-							+ "order by (CAST(string_to_array(replace(replace(fbepisodes.id,'B','-'),'A',''),'-') AS integer[])) asc LIMIT " + OUTLINE_PAGE_SIZE + " OFFSET " + (page*OUTLINE_PAGE_SIZE) + "";
+							+ "select generatedId, link, depth, fbusers.id, fbusers.author "
+							+ "from fbepisodes,fbusers where fbepisodes.newmap like '" + EP_PREFIX + ep.getNewMap() + EP_INFIX + "%' and fbepisodes.author_id=fbusers.id "
+							+ "order by (CAST(string_to_array(replace(replace(fbepisodes.newmap,'B','-'),'A',''),'-') AS bigint[])) asc LIMIT " + OUTLINE_PAGE_SIZE + " OFFSET " + (page*OUTLINE_PAGE_SIZE) + "";
 						try {							
 							final ReturnedSomething returnedSomething = new ReturnedSomething();
 
 							@SuppressWarnings("unchecked")
 							Stream<Object[]> stream = session.createNativeQuery(query).stream();
 							stream.forEach(x -> {
-								String id = (String) x[0];
+								long id = (long) x[0];
 								String link = (String) x[1];
 								int depth = (int) x[2];
 								String authorUsername = (String) x[3];
@@ -1329,76 +1333,64 @@ public class DB {
 		public boolean get() { return value; }
 	}
 	
-	public static FlatEpisode[] getPath(String id) throws DBException {
-		long start = System.nanoTime();
-		Strings.log("Processing path " + id);
-		FlatEpisode[] episodeList;
+	public static List<FlatEpisode> getPath(long generatedId) throws DBException {
+		final long start = System.nanoTime();
+		
 		Session session = openSession();
 		try {
-			if (getEpById(session, id) == null) throw new DBException("Not found: " + id);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException("Not found: " + generatedId);
+			
+			Strings.log("Processing path " + ep.getNewMap());
 			
 			CriteriaBuilder cb = session.getCriteriaBuilder();
 			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
 			Root<DBEpisode> root = query.from(DBEpisode.class);
 			
 			
-			List<String> ids = getPathIds(id);
-			Predicate[] preds = new Predicate[ids.size()];
-			for (int i=0; i<ids.size(); ++i) preds[i] = cb.equal(root.get("id"), mapToId(ids.get(i)));
+			List<Long> ids = DB.newMapToIdList(ep.getNewMap());
+			Predicate[] preds = ids.stream().map(id->cb.equal(root.get("generatedId"), id)).toArray(length->new Predicate[length]);
 			
 			query.select(root).where(cb.or(preds)).orderBy(cb.asc(root.get("depth")));
 			
-			ArrayList<FlatEpisode> list = new ArrayList<>(ids.size());
+			final ArrayList<FlatEpisode> list = new ArrayList<>(ids.size());
 			for (int i=0; i<=ids.size(); i+=STREAM_SIZE) {
-				Stream<DBEpisode> stream = session.createQuery(query).setFirstResult(i).setMaxResults(STREAM_SIZE).stream();
-				stream.forEach(ep->{
-					list.add(new FlatEpisode(ep));
-				});
+				session.createQuery(query).setFirstResult(i).setMaxResults(STREAM_SIZE).stream().forEach(pathEp->list.add(new FlatEpisode(pathEp)));
 			}
-			episodeList = new FlatEpisode[list.size()];
-			episodeList = list.toArray(episodeList);
+			return list;
 		} finally {
 			closeSession(session);
+			Strings.log("Total path took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
 		}
-		Strings.log("Total path took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
-		return episodeList;
 	}
 	
-	public static FlatEpisode[] getFullStory(String id) throws DBException {
-		long start = System.nanoTime();
-		Strings.log("Processing path " + id);
-		FlatEpisode[] episodeList;
+	public static List<FlatEpisode> getFullStory(long generatedId) throws DBException {
 		Session session = openSession();
 		try {
-			if (getEpById(session, id) == null) throw new DBException("Not found: " + id);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException("Not found: " + generatedId);
 			
 			CriteriaBuilder cb = session.getCriteriaBuilder();
 			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
 			Root<DBEpisode> root = query.from(DBEpisode.class);
 			
-			long aStart = System.nanoTime();
 			
-			List<String> ids = getPathIds(id);
+			/*List<String> ids = getPathIds(id);
 			if (ids.size() > 30) ids = ids.subList(ids.size()-30, ids.size());
 			Predicate[] preds = new Predicate[ids.size()];
-			for (int i=0; i<ids.size(); ++i) preds[i] = cb.equal(root.get("id"), mapToId(ids.get(i)));
+			for (int i=0; i<ids.size(); ++i) preds[i] = cb.equal(root.get("id"), mapToId(ids.get(i)));*/
+			
+			List<Long> ids = DB.newMapToIdList(ep.getNewMap());
+			if (ids.size() > 30) ids = ids.subList(ids.size()-30, ids.size());
+			Predicate[] preds = ids.stream().map(id->cb.equal(root.get("generatedId"), id)).toArray(length->new Predicate[length]);
 			
 			query.select(root).where(cb.or(preds)).orderBy(cb.asc(root.get("depth")));
-			Strings.log("Took " + (((double)(System.nanoTime()-aStart))/1000000000.0) + " to build predicate");
-			aStart = System.nanoTime();
 			
-			List<DBEpisode> result = session.createQuery(query).list();
-			Strings.log("Took " + (((double)(System.nanoTime()-aStart))/1000000000.0) + " to get result");
-			aStart = System.nanoTime();
-			
-			episodeList = new FlatEpisode[result.size()];
-			for (int i=0; i<result.size(); ++i) episodeList[i] = new FlatEpisode(result.get(i));
-			Strings.log("Took " + (((double)(System.nanoTime()-aStart))/1000000000.0) + " to convert result to final array");
+			return session.createQuery(query).list().stream().map(FlatEpisode::new).collect(Collectors.toCollection(ArrayList::new));
+
 		} finally {
 			closeSession(session);
 		}
-		Strings.log("Total path took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
-		return episodeList;
 	}
 	
 	/*private static List<String> getPathIds(String parentId) {
@@ -1719,14 +1711,14 @@ public class DB {
 	 * @return id of newly created comment
 	 * @throws DBException
 	 */
-	public static long addComment(String episodeId, String authorId, String commentText) throws DBException {
+	public static long addComment(long generatedId, String authorId, String commentText) throws DBException {
 		Date commentDate = new Date();
 		Session session = openSession();
 		try {
-			DBEpisode ep = getEpById(session, episodeId);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			DBUser author = getUserById(session, authorId);
 
-			if (ep == null) throw new DBException("Episode not found: " + episodeId);
+			if (ep == null) throw new DBException("Episode not found: " + generatedId);
 			if (author == null) throw new DBException("Author does not exist");
 
 			DBComment comment = new DBComment();
@@ -1758,7 +1750,7 @@ public class DB {
 				
 				if (sendSiteNotification) {
 					DBNotification note = new DBNotification();
-					note.setBody("<a href=\"/fb/user/" + author.getId() + "\">" + Strings.escape(author.getAuthor()) + "</a> left a <a href=\"/fb/get/" + comment.getEpisode().getMap() + "#comment" + comment.getId() + "\">comment</a> on " + Strings.escape(comment.getEpisode().getTitle()));
+					note.setBody("<a href=\"/fb/user/" + author.getId() + "\">" + Strings.escape(author.getAuthor()) + "</a> left a <a href=\"/fb/story/" + generatedId + "#comment" + comment.getId() + "\">comment</a> on " + Strings.escape(comment.getEpisode().getTitle()));
 					note.setDate(new Date());
 					note.setRead(false);
 					note.setUser(comment.getEpisode().getAuthor());
@@ -1767,7 +1759,7 @@ public class DB {
 				
 				if (sendMailNotification) new Thread(()->{ // send the email
 					Accounts.sendEmail(comment.getEpisode().getAuthor().getEmail(), "Someone commented on your episode", 
-							"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + author.getId() + "\">" + Strings.escape(author.getAuthor()) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/get/" + comment.getEpisode().getMap() + "#comment" + comment.getId() + "\">comment</a> on " + Strings.escape(comment.getEpisode().getTitle()));
+							"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + author.getId() + "\">" + Strings.escape(author.getAuthor()) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + generatedId + "#comment" + comment.getId() + "\">comment</a> on " + Strings.escape(comment.getEpisode().getTitle()));
 					
 
 				}).start();
@@ -1779,7 +1771,6 @@ public class DB {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
 			}
-			Strings.log(String.format("Comment: <%s> %s %s", authorId, episodeId, commentDate));
 			return commentID;
 		} finally {
 			closeSession(session);
@@ -2090,7 +2081,7 @@ public class DB {
 			ep.setMod(null);
 			try {
 				session.beginTransaction();
-				if (accepted) DB.modifyEp(session, ep.getMap(), mod.getLink(), mod.getTitle(), mod.getBody(), ep.getAuthor().getId());
+				if (accepted) DB.modifyEp(session, ep.getGeneratedId(), mod.getLink(), mod.getTitle(), mod.getBody(), ep.getAuthor().getId());
 				session.delete(mod);
 				session.merge(ep);
 			session.getTransaction().commit();
@@ -3100,9 +3091,9 @@ public class DB {
 			synchronized (epLock) {
 				final int oldParentDepth = ep.getDepth()-1;
 				
-				final int newRootId = DB.getRoots(session).stream()
+				/*final int newRootId = DB.getRoots(session).stream()
 						.map(root->DB.keyToArr(root.getMap())[0])
-						.reduce((a,b)->a>b?a:b).get()+1;
+						.reduce((a,b)->a>b?a:b).get()+1;*/
 				
 				final String oldId = ep.getId();
 				final String newId = "A" + newRootId;
