@@ -450,11 +450,11 @@ public class Story {
 				.replace("$TITLE", reverse?"Oldest":"Recent");
 	}
 	
-	public static ConcurrentHashMap<String,String> rootNames = new ConcurrentHashMap<>();
+	public static ConcurrentHashMap<Long,String> rootNames = new ConcurrentHashMap<>();
 	static {
 		try {
 			FlatEpisode[] roots = DB.getRoots();
-			for (FlatEpisode root : roots) rootNames.put(root.id, root.link);
+			for (FlatEpisode root : roots) rootNames.put(root.generatedId, root.link);
 		} catch (DBException e) {
 			Strings.log("Root episodes not found");
 			DB.closeSessionFactory();

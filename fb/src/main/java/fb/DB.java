@@ -735,7 +735,7 @@ public class DB {
 				session.beginTransaction();
 				session.merge(child);
 				session.getTransaction().commit();
-				Story.rootNames.put(childId+"", link);
+				Story.rootNames.put(childId, link);
 			} catch (Exception e) {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
@@ -1062,11 +1062,11 @@ public class DB {
 		}
 	}
 	
-	public static FlatEpisode getFlatEp(String id) throws DBException {
+	public static FlatEpisode getFlatEp(long generatedId) throws DBException {
 		Session session = openSession();
 		try {
-			DBEpisode ep = getEpById(session, id);
-			if (ep == null) throw new DBException("Not found: " + id);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException("Not found: " + generatedId);
 			return new FlatEpisode(ep);
 		} finally {
 			closeSession(session);
@@ -1404,7 +1404,7 @@ public class DB {
 		return ret;
 	}*/
 	
-	private static List<Long> newMapToIdList(String newMap) {
+	public static List<Long> newMapToIdList(String newMap) {
 		String[] arr = newMap.substring(1,newMap.length()).split(""+EP_INFIX);
 		ArrayList<Long> list = new ArrayList<>();
 		for (String id : arr) {
@@ -3075,49 +3075,44 @@ public class DB {
 	}
 	
 	/**
-	 * Turns a branch into a new story root
+	 * Turns a branch into a new story root. Ep will have the same URL and generatedId
 	 * @param id id of top episode in branch, to become new root episode
-	 * @return new id of new root episode
 	 * @throws DBException if ep does not exist, ep is already a root, or
 	 */
-	public static String moveEpisodeToRoot(String oldMapId) throws DBException {
+	public static void moveEpisodeToRoot(long generatedId) throws DBException {
 		Session session = openSession();
 		try {
 			
-			DBEpisode ep = DB.getEpById(session, oldMapId);
-			if (ep == null) throw new DBException("not found: " + oldMapId);
-			if (ep.getDepth() == 1) return ep.getMap();
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException("not found: " + generatedId);
+			if (ep.getDepth() == 1) return; // already a root episode
 			
 			synchronized (epLock) {
 				final int oldParentDepth = ep.getDepth()-1;
-				
-				/*final int newRootId = DB.getRoots(session).stream()
-						.map(root->DB.keyToArr(root.getMap())[0])
-						.reduce((a,b)->a>b?a:b).get()+1;*/
-				
-				final String oldId = ep.getId();
-				final String newId = "A" + newRootId;
-				
 				final int branchSize = ep.getChildCount();
+				
+				final String oldNewMap = ep.getNewMap();
 				
 				session.beginTransaction();
 				try {
-					session.createNativeQuery(
+					session.createNativeQuery( // set parentId of new root episode to null
 							"UPDATE fbepisodes\n" + 
 							"SET parent_generatedid = null\n" + 
-							"WHERE id='"+oldId+"';").executeUpdate();
-					session.createNativeQuery("UPDATE fbepisodes\n" + 
-							"SET id = replace(id,'"+oldId+"','"+newId+"'), depth = depth - "+oldParentDepth+"\n" + 
-							"WHERE id LIKE '"+oldId+"%';").executeUpdate();
-					int[] arr = DB.keyToArr(DB.idToMap(oldId));
+							"WHERE generatedid="+generatedId+";").executeUpdate();
+					session.createNativeQuery( // set newMap of all episodes in branch (including root)
+							"UPDATE fbepisodes\n" + 
+							"SET newmap = replace(newmap,'"+oldNewMap+"','"+generatedId+"'), depth = depth - "+oldParentDepth+"\n" + 
+							"WHERE newmap='"+oldNewMap+"' OR newmap LIKE '"+oldNewMap+""+DB.EP_INFIX+"%';").executeUpdate();
+					/*int[] arr = DB.keyToArr(DB.idToMap(oldId));
 					ArrayList<String> path = new ArrayList<>();
 					StringBuilder sb = new StringBuilder();
 					sb.append("A" + arr[0]);
 					for (int i=1; i<arr.length; ++i) {
 						path.add(sb.toString());
 						sb.append("B" + arr[i]);
-					}
-					String where = path.stream().map(s->"id='" + s + "'").collect(Collectors.joining(" OR "));
+					}*/
+					Stream<Long> path = DB.newMapToIdList(oldNewMap).stream();
+					String where = path.filter(gid->gid!=generatedId).map(gid->"generatedId=" + gid).collect(Collectors.joining(" OR "));
 					session.createNativeQuery("UPDATE fbepisodes\n" + 
 							"SET childcount = childcount - "+branchSize+"\n" + 
 							"WHERE " + where + ";").executeUpdate();
@@ -3127,7 +3122,6 @@ public class DB {
 					session.getTransaction().rollback();
 					throw new DBException("rollback");
 				}
-				return Integer.toString(newRootId);
 			}
 		} finally {
 			closeSession(session);

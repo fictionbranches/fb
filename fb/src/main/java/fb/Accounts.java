@@ -243,9 +243,9 @@ public class Accounts {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table class=\"fbtable\">");
 		for (FlatEpisode ep : profileUser.episodes) {
-			String story = Story.rootNames.get(ep.id.split("-")[0]);
+			String story = Story.rootNames.get(DB.newMapToIdList(ep.newMap).get(0));
 			if (story == null) story = "";
-			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().toLowerCase().equals(ep.link.trim().toLowerCase())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/get/" + ep.id + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"fbtable\">" + story + "</td></tr>");
+			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().toLowerCase().equals(ep.link.trim().toLowerCase())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"fbtable\">" + story + "</td></tr>");
 		}
 		sb.append("</table>");
 		String avatar = (profileUser.user.avatar==null)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + Strings.escape(profileUser.user.avatar) + "\" /> ");
@@ -771,7 +771,7 @@ public class Accounts {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1> Mod queue</h1>\n");
 		for (ModEpisode mod : DB.getMods()) {
-			sb.append("<a href=/fb/getmod/" + mod.id + ">" + Strings.escape(mod.link) + "</a> submitted by <a href=/fb/user/" + mod.userId + ">" + Strings.escape(mod.author) + "</a> on " + Dates.outputDateFormat(mod.date) + "<br/>\n");
+			sb.append("<a href=/fb/getmod/" + mod.modId + ">" + Strings.escape(mod.link) + "</a> submitted by <a href=/fb/user/" + mod.userId + ">" + Strings.escape(mod.author) + "</a> on " + Dates.outputDateFormat(mod.date) + "<br/>\n");
 		}
 		return Strings.getFile("generic.html", user).replace("$EXTRA", sb.toString());
 	}
@@ -792,7 +792,7 @@ public class Accounts {
 		return Strings.getFile("generic.html", user).replace("$EXTRA", sb.toString());
 	}
 	
-	public static String getCommentFlag(long id, Cookie fbtoken) {
+	public static String getCommentFlag(long commentId, Cookie fbtoken) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(fbtoken);
@@ -802,7 +802,7 @@ public class Accounts {
 		if (user.level<10) return Strings.getFile("generic.html", user).replace("$EXTRA","You must be a mod to do that");
 		FlaggedComment flag;
 		try {
-			flag = DB.getFlaggedComment(id);
+			flag = DB.getFlaggedComment(commentId);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA",e.getMessage());
 		}
@@ -824,7 +824,7 @@ public class Accounts {
 			
 		sb.append("<h1>Flag text:</h1>");
 		
-		sb.append("<a href=/fb/get/" + flag.comment.episode.id + ">" + Strings.escape(flag.comment.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + Strings.escape(flag.user.author) + "</a> on " + Dates.outputDateFormat(flag.date) + "<br/>\n");
+		sb.append("<a href=/fb/story/" + flag.comment.episode.generatedId + ">" + Strings.escape(flag.comment.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + Strings.escape(flag.user.author) + "</a> on " + Dates.outputDateFormat(flag.date) + "<br/>\n");
 		sb.append("<a href=/fb/clearflaggedcomment/" + flag.id + ">Delete this flag</a><br/>\n");
 		sb.append("<p>" + Strings.escape(flag.text) + "</p>");
 		return Strings.getFile("generic.html", user).replace("$EXTRA",sb.toString());
@@ -861,7 +861,7 @@ public class Accounts {
 		}
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1> Flagged episode</h1>\n");
-		sb.append("<a href=/fb/get/" + flag.episode.id + ">" + Strings.escape(flag.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + Strings.escape(flag.user.author) + "</a> on " + Dates.outputDateFormat(flag.date) + "<br/>\n");
+		sb.append("<a href=/fb/story/" + flag.episode.generatedId + ">" + Strings.escape(flag.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + Strings.escape(flag.user.author) + "</a> on " + Dates.outputDateFormat(flag.date) + "<br/>\n");
 		sb.append("<a href=/fb/clearflag/" + flag.id + ">Delete this flag</a><br/>\n");
 		sb.append("<p>" + Strings.escape(flag.text) + "</p>");
 		return Strings.getFile("generic.html", user).replace("$EXTRA",sb.toString());
@@ -883,18 +883,18 @@ public class Accounts {
 		}
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1> Modification of episode</h1>\n");
-		sb.append("<p>This is the proposed new version. The current version is available " + "<a href=/fb/get/" + mod.episodeId + ">here</a></p>");
+		sb.append("<p>This is the proposed new version. The current version is available " + "<a href=/fb/story/" + mod.episodeGeneratedId + ">here</a></p>");
 		if (doDiff) sb.append("<p><a href=/fb/getmod/" + id + ">Get complete modification</a></p>");
 		else sb.append("<p><a href=/fb/getmod/" + id + "?diff>Get diff</a></p>");
-		sb.append("<p><a href=/fb/get/" + mod.episodeId + ">" + Strings.escape(mod.oldLink) + "</a> submitted by <a href=/fb/user/" + mod.userId + ">" + Strings.escape(mod.author) + "</a> on " + Dates.outputDateFormat(mod.date) + "</p>\n");
-		sb.append("<p><a href=/fb/acceptmod/" + mod.id + ">Accept this modification</a></p>\n");
-		sb.append("<p><a href=/fb/rejectmod/" + mod.id + ">Reject this modification</a></p>\n");
+		sb.append("<p><a href=/fb/story/" + mod.episodeGeneratedId + ">" + Strings.escape(mod.oldLink) + "</a> submitted by <a href=/fb/user/" + mod.userId + ">" + Strings.escape(mod.author) + "</a> on " + Dates.outputDateFormat(mod.date) + "</p>\n");
+		sb.append("<p><a href=/fb/acceptmod/" + mod.modId + ">Accept this modification</a></p>\n");
+		sb.append("<p><a href=/fb/rejectmod/" + mod.modId + ">Reject this modification</a></p>\n");
 		sb.append("<p><hr/><h4>New link:</h4> " + Strings.escape(mod.link) + "</p>\n");
 		sb.append("<p><hr/><h4>New title:</h4> " + Strings.escape(mod.title) + "</p>\n");
 		if (doDiff) {
 			String oldBody;
 			try {
-				 oldBody = DB.getFlatEp(mod.episodeId).body;
+				 oldBody = DB.getFlatEp(mod.episodeGeneratedId).body;
 			} catch (DBException e) {
 				return Strings.getFile("generic.html", user).replace("$EXTRA","Found modification, but not original episode. Tell Phoenix about this immediately.");
 			}
