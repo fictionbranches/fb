@@ -349,7 +349,7 @@ public class DB {
 	 * @return generatedid of newly added episode
 	 * @throws DBException if parent ep or author does not exist, or if new keystring is too long
 	 */
-	public static Long addEp(long parentId, String link, String title, String body, String authorId, Date date) throws DBException {
+	public static long addEp(long parentId, String link, String title, String body, String authorId, Date date) throws DBException {
 		synchronized (epLock) {
 		Session session = openSession();
 		try {
@@ -850,16 +850,16 @@ public class DB {
 	 * Else if a child episodes is not owned by owner of the specified episode (or if no children exist), return child's id.
 	 * Else return -1
 	 * @param id id of episode
-	 * @return
+	 * @return 0 if episode can be modified, 1 if child episodes not owned by owner exist, 2 if mod already exists
 	 * @throws DBException if episode does not exist
 	 */
-	public static long checkIfEpisodeCanBeModified(long generatedId) throws DBException {
+	public static int checkIfEpisodeCanBeModified(long generatedId) throws DBException {
 		Session session = openSession();
 		try {
 			DBEpisode episode = session.get(DBEpisode.class, generatedId);
 			if (episode == null) throw new DBException("Not found: " + generatedId);
 			
-			if (episode.getMod() != null) return -2l;
+			if (episode.getMod() != null) return 2;
 			
 			String q = "SELECT * FROM fbepisodes WHERE author_id!='" + episode.getAuthor().getId() + "' AND newmap LIKE '" + episode.getNewMap() + "%';";
 			
@@ -875,8 +875,8 @@ public class DB {
 			
 			
 			List<DBEpisode> result = session.createNativeQuery(q, DBEpisode.class).setMaxResults(1).list();
-			if (result.size() > 0) return result.get(0).getGeneratedId();
-			return -1l;
+			if (result.size() > 0) return 1;
+			return 0;
 		} finally {
 			closeSession(session);
 		}
@@ -945,7 +945,10 @@ public class DB {
 			List<Episode> children = (List<Episode>) session.createNativeQuery(query).stream()
 			.map(x->{
 				Object[] arr = (Object[])x;
-				String childId = idToMap((String)arr[2]);
+				//long parentId = ((Long)arr[0]).longValue();
+				long childGeneratedId = ((Long)arr[1]).longValue();
+				String newMap = (String)arr[2];
+				//String childId = idToMap((String)arr[2]);
 				String link = (String)arr[3];
 				String title = (String)arr[4];
 				Date date = (Date)arr[5];
@@ -955,7 +958,7 @@ public class DB {
 				long childUpvotes = ((BigInteger)arr[9]).longValue();
 				String authorId = (String)arr[10];
 				String authorName = (String)arr[11];
-				return new Episode(childId,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName);
+				return new Episode(childGeneratedId,newMap,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName);
 			}).collect(Collectors.toCollection(ArrayList::new));
 			
 			/*ArrayList<Episode> children = new ArrayList<>();
@@ -995,9 +998,9 @@ public class DB {
 		}
 	}
 	
-	private static final String CHILD_QUERY = "select parent_generatedid,generatedid,episodeid,link,title,episodedate,childcount, max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes, author_id, fbusers.author as author_name\n" + 
+	private static final String CHILD_QUERY = "select parent_generatedid,generatedid,newmap,link,title,episodedate,childcount, max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes, author_id, fbusers.author as author_name\n" + 
 			"from (\n" + 
-			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.id as episodeid,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, count(*) as viewscount, 0 as upvotescount\n" + 
+			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.newmap as newmap,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, count(*) as viewscount, 0 as upvotescount\n" + 
 			"        from fbepisodes, fbepisodeviews\n" + 
 			"        where fbepisodes.generatedid=fbepisodeviews.episode_generatedid\n" + 
 			"        group by fbepisodes.generatedid)\n" + 
@@ -1073,16 +1076,17 @@ public class DB {
 		}
 	}
 	
-	public static EpisodeResultList search(String id, String search, int page) throws DBException {
-		Strings.log(String.format("Searching \"%s\" on page %s (page number %d", search, id, page));
+	public static EpisodeResultList search(long generatedId, String search, int page) throws DBException {
+		Strings.log(String.format("Searching \"%s\" on page %d (page number %d", search, generatedId, page));
 		Session session = openSession();
 		page-=1;
 		try {
-			if (DB.getEpById(session, id) == null) throw new DBException("Not found: " + id);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException("Not found: " + generatedId);
 			FullTextSession sesh = Search.getFullTextSession(session);
 			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class).get();
 						
-			RegexpQuery idQuery = new RegexpQuery(new Term("id", (mapToId(id)+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
+			RegexpQuery idQuery = new RegexpQuery(new Term("id", (ep.getNewMap()+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
 			
 			Query searchQuery = qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery();
 			Query combinedQuery = qb.bool().must(searchQuery).must(idQuery).createQuery();
@@ -1103,7 +1107,7 @@ public class DB {
 				System.out.println("Got return value");
 				return ret;
 			} catch (Exception e) {
-				throw new RuntimeException("Search exception on id " + id + " with search query \"" + search + "\" -- "  + e + " -- " + e.getMessage());
+				throw new RuntimeException("Search exception on id " + generatedId + " with search query \"" + search + "\" -- "  + e + " -- " + e.getMessage());
 			}
 		} finally {
 			closeSession(session);
@@ -1927,14 +1931,14 @@ public class DB {
 	 * @param flagText
 	 * @throws DBException
 	 */
-	public static void flagEp(String episodeId, String authorId, String flagText) throws DBException {
+	public static void flagEp(long generatedId, String authorId, String flagText) throws DBException {
 		Date flagDate;
 		Session session = openSession();
 		try {
-			DBEpisode ep = getEpById(session, episodeId);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			DBUser author = getUserById(session, authorId);
 
-			if (ep == null) throw new DBException("Episode not found: " + episodeId);
+			if (ep == null) throw new DBException("Episode not found: " + generatedId);
 			if (author == null) throw new DBException("Author does not exist");
 
 			DBFlaggedEpisode flag = new DBFlaggedEpisode();
@@ -1959,7 +1963,7 @@ public class DB {
 		} finally {
 			closeSession(session);
 		}
-		Strings.log(String.format("Flag: <%s> %s %s", authorId, episodeId, flagDate));
+		Strings.log(String.format("Flag: <%s> %d %s", authorId, generatedId, flagDate));
 	}
 	
 	public static List<FlaggedEpisode> getFlags() {
@@ -2612,14 +2616,14 @@ public class DB {
 		}
 	}
 	
-	private static final String POPULAR_QUERY = "select generatedid,id,link,title,date,max(childcount), max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes\n" + 
+	private static final String POPULAR_QUERY = "select generatedid,newmap,link,title,date,max(childcount), max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes\n" + 
 			"from (\n" + 
-			"    (select fbepisodes.generatedid,fbepisodes.id,fbepisodes.link,fbepisodes.title,fbepisodes.date,childcount, fbepisodes.viewcount as hitscount, count(*) as viewscount, 0 as upvotescount\n" + 
+			"    (select fbepisodes.generatedid,fbepisodes.newmap,fbepisodes.link,fbepisodes.title,fbepisodes.date,childcount, fbepisodes.viewcount as hitscount, count(*) as viewscount, 0 as upvotescount\n" + 
 			"        from fbepisodes, fbepisodeviews\n" + 
 			"        where fbepisodes.generatedid=fbepisodeviews.episode_generatedid\n" + 
 			"        group by fbepisodes.generatedid)\n" + 
 			"    union\n" + 
-			"    (select fbepisodes.generatedid,fbepisodes.id,fbepisodes.link,fbepisodes.title,fbepisodes.date,childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, count(*) as upvotescount\n" + 
+			"    (select fbepisodes.generatedid,fbepisodes.newmap,fbepisodes.link,fbepisodes.title,fbepisodes.date,childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, count(*) as upvotescount\n" + 
 			"        from fbepisodes,fbupvotes\n" + 
 			"        where fbepisodes.generatedid=fbupvotes.episode_generatedid\n" + 
 			"        group by fbepisodes.generatedid)\n" + 
@@ -2656,7 +2660,8 @@ public class DB {
 			return (ArrayList<Episode>)session.createNativeQuery(POPULAR_QUERY + pop.ORDER_BY + " \nlimit 100;").stream()
 			.map(o->{
 				Object[] x = (Object[])o;
-				String id = idToMap((String)x[1]);
+				long generatedId = ((Long)x[0]).longValue();
+				String newMap = (String)x[1];
 				String link = (String)x[2];
 				String title = (String)x[3];
 				Date date = (Date)x[4];
@@ -2664,7 +2669,7 @@ public class DB {
 				long hits = ((BigInteger)x[6]).longValue();
 				long views = ((BigInteger)x[7]).longValue();
 				long upvotes = ((BigInteger)x[8]).longValue();
-				return (new Episode(id,link,title,date,childCount,hits,views,upvotes, null, null /*TODO*/));
+				return (new Episode(generatedId,newMap,link,title,date,childCount,hits,views,upvotes, null, null /*TODO*/));
 			}).collect(Collectors.toCollection(ArrayList::new));
 		} finally {
 			closeSession(session);

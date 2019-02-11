@@ -418,9 +418,9 @@ public class AdminStuff {
 			@FormParam("title") String title, @FormParam("body") String body, 
 			@CookieParam("fbtoken") Cookie fbtoken, @FormParam("g-recaptcha-response") String google) {
 		try {
-			String childID = Story.newRootPost(link, title, body, fbtoken);
-			return Response.seeOther(URI.create("/fb/get/" + childID)).build();
-		} catch (EpisodeException e) {
+			long childGeneratedId = Story.newRootPost(link, title, body, fbtoken);
+			return Response.seeOther(URI.create("/fb/story/" + childGeneratedId)).build();
+		} catch (EpisodeException | FBLoginException e) {
 			return Response.ok(e.getMessage()).build();
 		}
 	}
@@ -502,13 +502,18 @@ public class AdminStuff {
 		} catch (FBLoginException e) {
 			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "You are not authorized to do that")).build();
 		}
-		if (user.level < 100) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "You are not authorized to do that")).build();
-		String newId;
+		long generatedId;
 		try {
-			newId = DB.moveEpisodeToRoot(epid);
+			generatedId = Long.parseLong(epid);
+		} catch (Exception e) {
+			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Not found: " + epid)).build();
+		}
+		if (user.level < 100) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "You are not authorized to do that")).build();
+		try {
+			DB.moveEpisodeToRoot(generatedId);
 		} catch (DBException e) {
 			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", e.getMessage())).build();
 		}
-		return Response.seeOther(GetStuff.createURI("/fb/get/" + newId)).build();
+		return Response.seeOther(GetStuff.createURI("/fb/story/" + generatedId)).build();
 	}
 }

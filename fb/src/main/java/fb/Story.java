@@ -57,10 +57,10 @@ public class Story {
 	 * @param id id of episode
 	 * @return HTML episode
 	 */
-	public static String getHTML(String id, int sort, boolean advancedChildren, Cookie token) {
+	public static String getHTML(long generatedId, int sort, boolean advancedChildren, Cookie token) {
 		EpisodeWithChildren ep;
 		try {
-			ep = DB.getFullEp(id, Accounts.getUsernameFromCookie(token));
+			ep = DB.getFullEp(generatedId, Accounts.getUsernameFromCookie(token));
 		} catch (DBException e) {
 			FlatUser user;
 			try {
@@ -68,7 +68,7 @@ public class Story {
 			} catch (FBLoginException e1) {
 				user = null;
 			}
-			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + id);
+			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId);
 		}
 		
 		FlatUser user = ep.viewer;
@@ -77,16 +77,17 @@ public class Story {
 		if (user == null) {
 			addEp = Strings.getString("story_add_ep_not_logged_in");
 		} else {
-			if (ep.authorId.equals(user.id)) modify = Strings.getString("story_modify_owner").replace("$ID", id);
-			else if (user.level >= ((byte)10)) modify = Strings.getString("story_modify_moderator").replace("$ID", id);
-			else modify = Strings.getString("story_modify_logged_in").replace("$ID", id);
-			if (("https://example.com/fb/get/" + id).length() > 1900) addEp = "";
-			else addEp = 
-					Strings.getString("story_add_ep_logged_in").replace("$ID", id) + "&nbsp;&nbsp;&nbsp;" + 
-					(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ep.id)):(Strings.getString("story_downvote").replace("$ID", ep.id))) + "</div>";
-			modify += Strings.getString("story_logged_in_extras").replace("$ID", id) + 
-					(InitWebsite.SEARCHING_ALLOWED?(Strings.getString("story_search_from_here").replace("$ID", id)):"") + 
-					"<p>"+(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ep.id)):(Strings.getString("story_downvote").replace("$ID", ep.id)))+"</p>";
+			if (ep.authorId.equals(user.id)) modify = Strings.getString("story_modify_owner").replace("$ID", ""+generatedId);
+			else if (user.level >= ((byte)10)) modify = Strings.getString("story_modify_moderator").replace("$ID", ""+generatedId);
+			else modify = Strings.getString("story_modify_logged_in").replace("$ID", ""+generatedId);
+			/*if (("https://example.com/fb/story/" + id).length() > 1900) addEp = "";
+			else */
+			addEp = 
+					Strings.getString("story_add_ep_logged_in").replace("$ID", ""+generatedId) + "&nbsp;&nbsp;&nbsp;" + 
+					(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ""+generatedId)):(Strings.getString("story_downvote").replace("$ID", ""+generatedId))) + "</div>";
+			modify += Strings.getString("story_logged_in_extras").replace("$ID", ""+generatedId) + 
+					(InitWebsite.SEARCHING_ALLOWED?(Strings.getString("story_search_from_here").replace("$ID", ""+generatedId)):"") + 
+					"<p>"+(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ""+generatedId)):(Strings.getString("story_downvote").replace("$ID", ""+generatedId)))+"</p>";
 		}
 		
 		if (modify.length() != 0) modify = "<p>" + modify + "</p>";
@@ -120,7 +121,7 @@ public class Story {
 		StringBuilder pathbox = new StringBuilder();
 		for (FlatEpisode pathEp : ep.pathbox) {
 			String link = pathEp.link.substring(0,Integer.min(30,pathEp.link.length()));
-			pathbox.append("<p>" + pathEp.depth + ". <a href=/fb/get/" + pathEp.id + ">" + Strings.escape(link) + "</a></p>\n");
+			pathbox.append("<p>" + pathEp.depth + ". <a href=/fb/story/" + pathEp.generatedId + ">" + Strings.escape(link) + "</a></p>\n");
 		}
 		
 		StringBuilder childHTML = new StringBuilder();
@@ -155,7 +156,7 @@ public class Story {
 		
 		StringBuilder commentHTML = new StringBuilder();
 		if (!ep.comments.isEmpty()) commentHTML.append("<h3>Comments</h3>\n");
-		if (!InitWebsite.READ_ONLY_MODE && user != null) commentHTML.append("<p><a href=/fb/addcomment/" + ep.id + ">Add comment</a></p>");
+		if (!InitWebsite.READ_ONLY_MODE && user != null) commentHTML.append("<p><a href=/fb/addcomment/" + generatedId + ">Add comment</a></p>");
 		for (Comment c : ep.comments) {
 			commentHTML.append("<div class=\"fbcomment\">\n");
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
@@ -169,7 +170,7 @@ public class Story {
 			}
 			commentHTML.append("</div>\n");
 		}
-		if (!InitWebsite.READ_ONLY_MODE && user != null && !ep.comments.isEmpty()) commentHTML.append("<p><a href=/fb/addcomment/" + ep.id + ">Add comment</a></p>");
+		if (!InitWebsite.READ_ONLY_MODE && user != null && !ep.comments.isEmpty()) commentHTML.append("<p><a href=/fb/addcomment/" + generatedId + ">Add comment</a></p>");
 
 		if (InitWebsite.READ_ONLY_MODE) addEp = "";
 		
@@ -187,8 +188,8 @@ public class Story {
 				.replace("$AUTHORID", ep.authorId)
 				.replace("$AUTHORNAME", escape(ep.authorName))
 				.replace("$AVATARURL", (ep.authorAvatar==null)?"":(Strings.getString("story_avatar").replace("$AVATARURL", Strings.escape(ep.authorAvatar))))
-				.replace("$PARENTID", (ep.parentId == null) ? ".." : escape(ep.parentId))
-				.replace("$ID", id)
+				.replace("$PARENTID", (ep.parentId == null) ? ".." : (""+ep.parentId))
+				.replace("$ID", ""+generatedId)
 				.replace("$DATE", escape(Dates.outputDateFormat(ep.date)) + editHTML)
 				.replace("$MODIFY", modify)
 				.replace("$ADDEP", addEp)
@@ -211,7 +212,7 @@ public class Story {
 		
 		if (!dcc.canDelete) return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("story_delete_comment_not_allowed"));
 		
-		return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("story_delete_comment_confirm").replace("$PARENTID", dcc.comment.episode.id).replace("$ID", Long.toString(id)));
+		return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("story_delete_comment_confirm").replace("$PARENTID", dcc.comment.episode.generatedId+"").replace("$ID", Long.toString(id)));
 	}
 	
 	public static String deleteComment(Cookie token, long id) {
@@ -230,7 +231,7 @@ public class Story {
 		return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("story_comment_deleted"));
 	}
 	
-	public static String getDeleteConfirmation(Cookie token, String id) {
+	public static String getDeleteConfirmation(Cookie token, long generatedId) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -242,17 +243,17 @@ public class Story {
 		
 		FlatEpisode ep;
 		try {
-			ep =  DB.epHasChildren(id);
+			ep =  DB.epHasChildren(generatedId);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
 		}
 		
 		if (!ep.authorId.equals(user.id) && user.level<10) return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("story_delete_not_allowed"));
 		
-		return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("story_delete_confirm").replace("$ID", id));
+		return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("story_delete_confirm").replace("$ID", ""+generatedId));
 	}
 	
-	public static String deleteEpisode(Cookie token, String id) {
+	public static String deleteEpisode(Cookie token, long generatedId) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -261,7 +262,7 @@ public class Story {
 		}
 		if (InitWebsite.READ_ONLY_MODE) return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("site_read_only")); 
 		try {
-			DB.deleteEp(id, user.id);
+			DB.deleteEp(generatedId, user.id);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA",  e.getMessage());
 		}
@@ -301,7 +302,7 @@ public class Story {
 		StringBuilder sb = new StringBuilder();
 		try {
 			for (FlatEpisode ep : DB.getRoots()) {
-				sb.append(Strings.getString("search_help_line").replace("$ID", ep.id).replace("$LINK", Strings.escape(ep.link)) + "\n");
+				sb.append(Strings.getString("search_help_line").replace("$ID", ""+ep.generatedId).replace("$LINK", Strings.escape(ep.link)) + "\n");
 			}
 		} catch (DBException e) {
 			Strings.log(e);
@@ -463,7 +464,7 @@ public class Story {
 		
 	}
 	
-	public static String getOutlineScrollable(Cookie token, String rootId) {
+	public static String getOutlineScrollable(Cookie token, long generatedId) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -472,11 +473,11 @@ public class Story {
 		}
 		FlatEpisode ep;
 		try {
-			ep = DB.getFlatEp(rootId);
+			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e) {
-			return Strings.getFile("generic.html", user).replace("$EXTRA", "ID not found: " + rootId);
+			return Strings.getFile("generic.html", user).replace("$EXTRA", "ID not found: " + generatedId);
 		}
-		return Strings.getFile("outlinescroll.html", user).replace("$ID", rootId).replace("$TITLE", ep.title).replace("$CHILDREN", Story.epToOutlineHTML(rootId, ep.link, ep.authorId, ep.authorName, ep.depth, ep.depth));
+		return Strings.getFile("outlinescroll.html", user).replace("$ID", ""+generatedId).replace("$TITLE", ep.title).replace("$CHILDREN", Story.epToOutlineHTML(generatedId, ep.link, ep.authorId, ep.authorName, ep.depth, ep.depth));
 	}
 	
 	public static String epToOutlineHTML(long generatedId, String link, String authorUsername, String authorName, int depth, int minDepth) {
@@ -486,10 +487,10 @@ public class Story {
 	}
 	
 	public static String epLine(FlatEpisode ep) {
-		return "<a href='/fb/get/" + ep.id + "'>" + escape(ep.link) + "</a> (<a href='/fb/user/" + ep.authorId + "' class='author'>" + escape(ep.authorName) + "</a>)<br/>\n";
+		return "<a href='/fb/story/" + ep.generatedId + "'>" + escape(ep.link) + "</a> (<a href='/fb/user/" + ep.authorId + "' class='author'>" + escape(ep.authorName) + "</a>)<br/>\n";
 	}
 	
-	public static String getPath(Cookie token, String id) {
+	public static String getPath(Cookie token, long generatedId) {
 		long start = System.nanoTime();
 		Strings.log("Generating a path page");
 		FlatUser user;
@@ -498,9 +499,9 @@ public class Story {
 		} catch (FBLoginException e) {
 			user = null;
 		}
-		FlatEpisode[] path;
+		List<FlatEpisode> path;
 		try {
-			path = DB.getPath(id);
+			path = DB.getPath(generatedId);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
 		}
@@ -509,32 +510,32 @@ public class Story {
 		for (FlatEpisode child : path) if (child != null){
 			sb.append(child.depth + ". " + epLine(child));
 		}
-		String ret = Strings.getFile("path.html", user).replace("$ID", id).replace("$CHILDREN", sb.toString());
+		String ret = Strings.getFile("path.html", user).replace("$ID", ""+generatedId).replace("$CHILDREN", sb.toString());
 		Strings.log("Took " + (((double)(System.nanoTime()-aStart))/1000000000.0) + " to generate html");
 		Strings.log("Total path page took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
 		return ret;
 	}
 	
-	public static String getCompleteHTML(Cookie token, String id) {
-		FlatEpisode[] path; 
+	public static String getCompleteHTML(Cookie token, long generatedId) {
+		List<FlatEpisode> path; 
 		try {
 			System.out.println("Getting episodes from DB");
-			path = DB.getFullStory(id);
+			path = DB.getFullStory(generatedId);
 			System.out.println("Got episodes from DB");
 		} catch (DBException e) {
 			return Strings.getFileWithToken("generic.html", token).replace("$EXTRA", e.getMessage());
 		}
 		StringBuilder sb = new StringBuilder();
 		for (FlatEpisode child : path) if (child != null){ 
-			sb.append("<h1><a href=/fb/get/" + child.id + ">" + Strings.escape(child.title) + "</a></h1>");
+			sb.append("<h1><a href=/fb/story/" + child.generatedId + ">" + Strings.escape(child.title) + "</a></h1>");
 			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + Strings.escape(child.authorName) + "</a> " + Dates.simpleDateFormat(child.date) + "</p>");
 			sb.append(formatBody(child.body) + "<hr/>\n");
 		}
 		
-		return Strings.getFileWithToken("completestory.html", token).replace("$TITLE", escape(path[0].title)).replace("$BODY", sb.toString());
+		return Strings.getFileWithToken("completestory.html", token).replace("$TITLE", escape(path.get(0).title)).replace("$BODY", sb.toString());
 	}
 	
-	public static String getSearchForm(Cookie token, String id) {
+	public static String getSearchForm(Cookie token, long generatedId) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -545,14 +546,14 @@ public class Story {
 		FlatEpisode ep;
 		try {
 			//roots = DB.getRoots();
-			ep = DB.getFlatEp(id);
+			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e) {
-			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + id);
+			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId);
 		}
-		return Strings.getFile("searchform.html", user).replace("$SEARCHTERM", "").replace("$TITLE", "Searching '" + Strings.escape(ep.title) + "'").replace("$ID", id).replace("$EXTRA", "");
+		return Strings.getFile("searchform.html", user).replace("$SEARCHTERM", "").replace("$TITLE", "Searching '" + Strings.escape(ep.title) + "'").replace("$ID", ""+generatedId).replace("$EXTRA", "");
 	}
 	
-	public static String searchPost(Cookie token, String id, String search, String page) {
+	public static String searchPost(Cookie token, long generatedId, String search, String page) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -569,15 +570,15 @@ public class Story {
 		}
 		EpisodeResultList results;
 		try {
-			results = DB.search(id, search, pageNum);
+			results = DB.search(generatedId, search, pageNum);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
 		} 
 		List<FlatEpisode> result = results.episodes;
 		
 		StringBuilder sb = new StringBuilder();
-		if (pageNum > 1) sb.append(searchButton(id,"Prev", search, pageNum-1));
-		if (results.morePages) sb.append(searchButton(id,"Next", search, pageNum+1));
+		if (pageNum > 1) sb.append(searchButton(generatedId,"Prev", search, pageNum-1));
+		if (results.morePages) sb.append(searchButton(generatedId,"Next", search, pageNum+1));
 		if (sb.length() > 0) {
 			String asdf = sb.toString();
 			sb = new StringBuilder("<p>" + asdf + "</p>");
@@ -586,7 +587,7 @@ public class Story {
 		if (result.size() > 0) {
 			sb.append("<table class=\"fbtable\">");
 			for (FlatEpisode ep : result) {
-				sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/get/" + ep.id + ">" + Strings.escape(ep.link) + "</a></td><td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + 
+				sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + Strings.escape(ep.link) + "</a></td><td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + 
 						Strings.escape(ep.authorName) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td></tr>\n");
 			}
 			sb.append("</table>");
@@ -594,11 +595,11 @@ public class Story {
 			sb.append("No results (<a href=\"/fb/search\">search help</a>)");
 		}
 		sb.append(prevNext);
-		return Strings.getFile("searchform.html", user).replace("$SEARCHTERM", Strings.escape(search)).replace("$TITLE", "Search results").replace("$ID", id).replace("$EXTRA", sb.toString());
+		return Strings.getFile("searchform.html", user).replace("$SEARCHTERM", Strings.escape(search)).replace("$TITLE", "Search results").replace("$ID", ""+generatedId).replace("$EXTRA", sb.toString());
 	}
 	
-	private static String searchButton(String id, String name, String search, int page) {
-		return "<form class=\"simplebutton\" action=\"/fb/search/"+id+"\" method=\"get\">\n" + 
+	private static String searchButton(long generatedId, String name, String search, int page) {
+		return "<form class=\"simplebutton\" action=\"/fb/search/"+generatedId+"\" method=\"get\">\n" + 
 				"  <input type=\"hidden\" name=\"q\" value=\""+Strings.escape(search)+"\" />\n" + 
 				"  <input type=\"hidden\" name=\"page\" value=\""+page+"\" />\n" + 
 				"  <input class=\"simplebutton\" type=\"submit\" value=\""+name+"\" />\n" + 
@@ -618,7 +619,7 @@ public class Story {
 				
 		StringBuilder sb = new StringBuilder();
 		for (FlatEpisode ep : getRoots()) {
-			sb.append("<h3><a href=/fb/get/" + ep.id + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/feed/" + ep.id + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent?story=" + ep.id + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
+			sb.append("<h3><a href=/fb/story/" + ep.generatedId + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/feed/" + ep.generatedId + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent?story=" + ep.generatedId + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
 		}
 		return Strings.getFile("welcome.html", user).replace("$EPISODES", sb.toString());
 		
@@ -708,9 +709,9 @@ public class Story {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table class=\"popular\"><thead><tr><th>Link/Title</th><th><a href=/fb/mosthits>Hits</a></th><th><a href=/fb/mostviews>Views</a></th><th><a href=/fb/mostupvotes>Upvotes</a></th><th>Story</th></tr></thead><tbody>\n");
 		for (Episode ep : arr) {
-			String story = Story.rootNames.get(ep.id.split("-")[0]);
+			String story = Story.rootNames.get(DB.newMapToIdList(ep.newMap).get(0));
 			if (story == null) story = "";
-			sb.append("<tr><td>" + (ep.link.toLowerCase().trim().equals(ep.title.toLowerCase().trim())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/get/" + ep.id + ">" + Strings.escape(ep.link) + "</a></td><td>" + ep.hits + "</td><td>" + ep.views + "</td><td>" + ep.upvotes + "</td><td>" + Strings.escape(story) + "</td></tr>\n");
+			sb.append("<tr><td>" + (ep.link.toLowerCase().trim().equals(ep.title.toLowerCase().trim())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + Strings.escape(ep.link) + "</a></td><td>" + ep.hits + "</td><td>" + ep.views + "</td><td>" + ep.upvotes + "</td><td>" + Strings.escape(story) + "</td></tr>\n");
 		}
 		sb.append("</tbody></table>\n");
 		return sb.toString();
@@ -724,7 +725,7 @@ public class Story {
 	 * @param id id of parent episode
 	 * @return HTML form
 	 */
-	public static String addForm(String id, Cookie token) {
+	public static String addForm(long parentId, Cookie token) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -732,17 +733,17 @@ public class Story {
 			user = null;
 		}
 		if (user == null) return Strings.getFile("generic.html",user).replace("$EXTRA", Strings.getString("must_be_logged_in"));
-		FlatEpisode ep;
+		FlatEpisode parent;
 		try {
-			ep = DB.getFlatEp(id);
+			parent = DB.getFlatEp(parentId);
 		} catch (DBException e) {
 			//return notFound(id);
-			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + id);
+			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + parentId);
 		}
 		return Strings.getFile("addform.html", user)
-				.replace("$TITLE", ep.title)
-				.replace("$ID", id)
-				.replace("$OLDBODY",Story.formatBody(ep.body));
+				.replace("$TITLE", parent.title)
+				.replace("$ID", parentId+"")
+				.replace("$OLDBODY",Story.formatBody(parent.body));
 	}
 	
 	/**
@@ -754,7 +755,7 @@ public class Story {
 	 * @return ID of new episode
 	 * @throws EpisodeException if there's any error, e.getMessage() will contain HTML page for error
 	 */
-	public static String addPost(String id, String link, String title, String body, Cookie token) throws EpisodeException {
+	public static long addPost(long generatedId, String link, String title, String body, Cookie token) throws EpisodeException {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -768,7 +769,7 @@ public class Story {
 		String errors = checkEpisode(link, title, body);
 		if (errors != null) throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", errors));
 		try {
-			return DB.addEp(id, link, title, body, user.id, new Date());
+			return DB.addEp(generatedId, link, title, body, user.id, new Date());
 		} catch (DBException e) {
 			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", e.getMessage()));
 		}
@@ -792,14 +793,14 @@ public class Story {
 		return Strings.getFile("newrootform.html", user);
 	}
 	
-	public static String newRootPost(String link, String title, String body, Cookie token) throws EpisodeException {
+	public static long newRootPost(String link, String title, String body, Cookie token) throws EpisodeException, FBLoginException {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
 		} catch (FBLoginException e) {
 			throw new EpisodeException(Strings.getFile("generic.html",null).replace("$EXTRA", Strings.getString("must_be_logged_in")));
 		}
-		if (user.level < 100) return Strings.getFile("generic.html",user).replace("$EXTRA", "Only admins can add new root episodes");
+		if (user.level < 100) throw new FBLoginException(Strings.getFile("generic.html",user).replace("$EXTRA", "Only admins can add new root episodes"));
 		link = link.trim();
 		title = title.trim();
 		body = body.trim();
@@ -828,7 +829,7 @@ public class Story {
 	 * @param id id of parent episode
 	 * @return HTML form
 	 */
-	public static String modifyForm(String id, Cookie token) {
+	public static String modifyForm(long generatedId, Cookie token) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -838,19 +839,19 @@ public class Story {
 		
 		FlatEpisode ep;
 		try {
-			ep = DB.getFlatEp(id);
+			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e) {
-			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + id);
+			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId);
 		}
 		if (!user.id.equals(ep.authorId) && user.level<10) return Strings.getFile("generic.html",user).replace("$EXTRA", "You can only edit episodes that you wrote");
 		return Strings.getFile("modifyform.html", user)
 				.replace("$TITLE", escape(ep.title))
 				.replace("$BODY", escape(ep.body))
 				.replace("$LINK", escape(ep.link))
-				.replace("$ID", id);
+				.replace("$ID", ""+generatedId);
 	}	
 	
-	public static String commentForm(String id, Cookie token) {
+	public static String commentForm(long generatedId, Cookie token) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -860,13 +861,13 @@ public class Story {
 		
 		FlatEpisode ep;
 		try {
-			ep = DB.getFlatEp(id);
+			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e) {
-			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + id);
+			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId);
 		}
 		return Strings.getFile("commentform.html", user)
 				.replace("$TITLE", escape(ep.title))
-				.replace("$ID", id);
+				.replace("$ID", ""+generatedId);
 	}
 	
 	public static String flagCommentForm(long id, Cookie token) {
@@ -889,7 +890,7 @@ public class Story {
 	 * @return id of new comment
 	 * @throws EpisodeException
 	 */
-	public static long commentPost(String id, String comment, Cookie token) throws EpisodeException {
+	public static long commentPost(long generatedId, String comment, Cookie token) throws EpisodeException {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -909,7 +910,7 @@ public class Story {
 		if (list.size() > 0) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "Comment text may not contain the following: " + list.stream().collect(Collectors.joining(" "))));
 		
 		try {
-			return DB.addComment(id, user.id, comment);
+			return DB.addComment(generatedId, user.id, comment);
 		} catch (DBException e) {
 			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", e.getMessage()));
 		}
@@ -942,7 +943,7 @@ public class Story {
 		
 	}
 	
-	public static String flagForm(String id, Cookie token) {
+	public static String flagForm(long generatedId, Cookie token) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -952,17 +953,17 @@ public class Story {
 		
 		FlatEpisode ep;
 		try {
-			ep = DB.getFlatEp(id);
+			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e) {
-			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + id);
+			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId);
 		}
 		if (user.id.equals(ep.authorId)) return Strings.getFile("generic.html",user).replace("$EXTRA", "You cannot flag your own episode.");
 		return Strings.getFile("flagform.html", user)
 				.replace("$TITLE", escape(ep.title))
-				.replace("$ID", id);
+				.replace("$ID", ""+generatedId);
 	}
 	
-	public static void flagPost(String id, String flag, Cookie token) throws EpisodeException {
+	public static void flagPost(long generatedId, String flag, Cookie token) throws EpisodeException {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -972,10 +973,10 @@ public class Story {
 		
 		FlatEpisode ep;
 		try {
-			ep = DB.getFlatEp(id);
+			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e1) {
 			//throw new EpisodeException(notFound(id));
-			throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + id));
+			throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId));
 		}
 		if (user.id.equals(ep.authorId)) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "You cannot flag your own episode."));
 		
@@ -991,7 +992,7 @@ public class Story {
 		if (list.size() > 0) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "Flag text may not contain the following: " + list));
 		
 		try {
-			DB.flagEp(id, user.id, flag);
+			DB.flagEp(generatedId, user.id, flag);
 		} catch (DBException e) {
 			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", e.getMessage()));
 		}
@@ -1007,7 +1008,7 @@ public class Story {
 	 * @return id of modified episode
 	 * @throws EpisodeException if error occurs, e.getMessage() will contain HTML page with error
 	 */
-	public static String modifyPost(String id, String link, String title, String body, Cookie token) throws EpisodeException {
+	public static void modifyPost(long generatedId, String link, String title, String body, Cookie token) throws EpisodeException {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -1017,10 +1018,10 @@ public class Story {
 		
 		FlatEpisode ep;
 		try {
-			ep = DB.getFlatEp(id);
+			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e1) {
 			//throw new EpisodeException(notFound(id));
-			throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + id));
+			throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId));
 		}
 
 		if (!user.id.equals(ep.authorId) && user.level<10) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "You can only edit episodes that you wrote"));
@@ -1033,21 +1034,21 @@ public class Story {
 		if (errors != null) throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", errors));
 				
 		try {
-			if (user.level > 1) DB.modifyEp(id, link, title, body, user.id);
+			if (user.level > 1) DB.modifyEp(generatedId, link, title, body, user.id);
 			else {
-				String result = DB.checkIfEpisodeCanBeModified(id);
-				if (result.length() == 0) DB.modifyEp(id, link, title, body, user.id);
-				else if (result.equals(DB.MOD_KEYWORD)) throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "You have already submitted a modification for this episode. <br/>Please wait for the moderation team to either accept or reject your previous modification before submitting another one."));
-				else {
-					DB.newEpisodeMod(id, link, title, body);
+				int result = DB.checkIfEpisodeCanBeModified(generatedId);
+				if (result == 0) DB.modifyEp(generatedId, link, title, body, user.id);
+				else if (result == 2) throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "You have already submitted a modification for this episode. <br/>Please wait for the moderation team to either accept or reject your previous modification before submitting another one."));
+				else { // result == 1
+					DB.newEpisodeMod(generatedId, link, title, body);
 					throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Because you do not own <a href=\"/fb/get/" + result + "\">a child episode</a>, your modification has been submitted for approval by the moderation team. Please be patient."));
 				}
 			}
 		} catch (DBException e) {
-			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", "Not found: " + id));
+			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", "Not found: " + generatedId));
 		}
 				
-		return id;	
+		//return id;	
 	}
 	
 	

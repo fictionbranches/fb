@@ -6,7 +6,8 @@ import java.util.Date;
  * Immutable episode object. Contains hits/views/upvotes, and minimal fields. Used for special cases. 
  */
 public class Episode {
-	public final String id;
+	public final long generatedId;
+	public final String newMap;
 	public final String title;
 	public final String link;
 	public final Date date;
@@ -17,8 +18,9 @@ public class Episode {
 	public final String authorId;
 	public final String authorName;
 	
-	public Episode(String id, String link, String title, Date date, int childCount, long hits, long views, long upvotes, String authorId, String authorName) {
-		this.id = id;
+	public Episode(long generatedId, String newMap, String link, String title, Date date, int childCount, long hits, long views, long upvotes, String authorId, String authorName) {
+		this.generatedId = generatedId;
+		this.newMap = newMap;
 		this.link = link;
 		this.title = title;
 		this.date = date;
@@ -30,7 +32,7 @@ public class Episode {
 		this.authorName = authorName;
 	}
 
-	public String getId() {
+	/*public String getId() {
 		return id;
 	}
 
@@ -60,5 +62,5 @@ public class Episode {
 
 	public long getUpvotes() {
 		return upvotes;
-	}
+	}*/
 }
