@@ -75,6 +75,7 @@ import fb.objects.ModEpisode;
 import fb.objects.Notification;
 import fb.objects.Theme;
 import fb.objects.User;
+import fb.util.Discord;
 import fb.util.Strings;
 
 public class DB {
@@ -441,7 +442,13 @@ public class DB {
 				
 				session.getTransaction().commit();
 				
-				/* TODO Discord hook */
+				if (Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
+					DBEpisode root = session.get(DBEpisode.class, DB.newMapToIdList(child.getNewMap()).get(0));				
+					final FlatEpisode flatEp = new FlatEpisode(child);
+					final FlatEpisode flatRoot = new FlatEpisode(root);
+					
+					new Thread(()->Discord.notifyHook(flatEp, flatRoot)).start();
+				}
 			} catch (Exception e) {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
@@ -1063,7 +1070,11 @@ public class DB {
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			FullTextSession sesh = Search.getFullTextSession(session);
-			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class).get();
+			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class)
+					//.overridesForField("title","fbEpisodeAnalyzer")
+					//.overridesForField("link","fbEpisodeAnalyzer")
+					//.overridesForField("body","fbEpisodeAnalyzer")
+					.get();
 						
 			RegexpQuery idQuery = new RegexpQuery(new Term("id", (ep.getNewMap()+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
 			
@@ -1201,7 +1212,6 @@ public class DB {
 	 * @throws DBException
 	 */
 	public static EpisodeResultList getRecents(long generatedId, int page, boolean reverse) throws DBException {
-		System.out.println("recents");
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1226,9 +1236,7 @@ public class DB {
 			).stream().map(ep->new FlatEpisode(ep)).collect(Collectors.toCollection(ArrayList::new));
 						
 			List<FlatEpisode> list = Collections.unmodifiableList(alist);
-			
-			System.out.println("Found " + totalCount + " episodes");
-			
+						
 			return new EpisodeResultList(null, list, false, totalCount/PAGE_SIZE+1);
 		}finally {
 			closeSession(session);

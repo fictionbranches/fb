@@ -454,25 +454,18 @@ public class AccountStuff {
 	@GET
 	@Path("usersearch")
 	@Produces(MediaType.TEXT_HTML)
-	public Response getusersearch(@CookieParam("fbtoken") Cookie fbtoken) {
+	public Response getusersearch(@CookieParam("fbtoken") Cookie fbtoken, @QueryParam("q") String q, @QueryParam("page") String pageString) {
 		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
-		return Response.ok(Accounts.getSearchForm(fbtoken)).build();
-	}
-	
-	@POST
-	@Path("usersearchpost")
-	@Produces(MediaType.TEXT_HTML)
-	public Response usersearchpost(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("search") String search) {
-		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
-		return Response.ok(Accounts.searchPost(fbtoken, search, "1")).build();
-	}
-	
-	@POST
-	@Path("usersearchpost/{page}")
-	@Produces(MediaType.TEXT_HTML)
-	public Response usersearchpost(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("search") String search, @PathParam("page") String page) {
-		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
-		return Response.ok(Accounts.searchPost(fbtoken, search, page)).build();
+		if (q==null || q.trim().length()==0) return Response.ok(Accounts.getSearchForm(fbtoken)).build();
+		else {
+			int page;
+			try {
+				page = Integer.parseInt(pageString);
+			} catch (Exception e) {
+				page = 1;
+			}
+			return Response.ok(Accounts.searchPost(fbtoken, q, page)).build();
+		}	
 	}
 	
 	@GET

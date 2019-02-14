@@ -1050,7 +1050,7 @@ public class Accounts {
 		return Strings.getFile("usersearchform.html", user).replace("$SEARCHTERM", "").replace("$EXTRA", "");
 	}
 	
-	public static String searchPost(Cookie token, String search, String page) {
+	public static String searchPost(Cookie token, String search, int page) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -1058,20 +1058,14 @@ public class Accounts {
 			user = null;
 		}
 		if (user == null) return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("must_be_logged_in"));
-		int pageNum;
-		try {
-			pageNum = Integer.parseInt(page);
-			if (pageNum < 1) pageNum = 1;
-		} catch (NumberFormatException e) {
-			pageNum = 1;
-		}
+		if (page < 1) page = 1;
 		
-		AuthorSearchResult results = DB.searchUser(search, pageNum);
+		AuthorSearchResult results = DB.searchUser(search, page);
 
 		List<FlatUser> result = results.users;
 		StringBuilder sb = new StringBuilder();
-		if (pageNum > 1) sb.append(searchButton("Prev", search, pageNum-1));
-		if (results.morePages) sb.append(searchButton("Next", search, pageNum+1));
+		if (page > 1) sb.append(searchButton("Prev", search, page-1));
+		if (results.morePages) sb.append(searchButton("Next", search, page+1));
 		if (sb.length() > 0) {
 			String asdf = sb.toString();
 			sb = new StringBuilder("<p>" + asdf + "</p>");
@@ -1088,7 +1082,11 @@ public class Accounts {
 	}
 	
 	private static String searchButton(String name, String search, int page) {
-		return "<form class=\"simplebutton\" action= \"/fb/usersearchpost/" + page + "\" method=\"post\"><input type= \"hidden\" name= \"search\" value=\""+search+"\"/><input class=\"simplebutton\" type= \"submit\" value= \"" + name + "\"/></form>";
+		return "<form class=\"simplebutton\" action=\"/fb/usersearch\" method=\"get\">\n" + 
+				"  <input type=\"hidden\" name=\"q\" value=\""+Strings.escape(search)+"\" />\n" + 
+				"  <input type=\"hidden\" name=\"page\" value=\""+page+"\" />\n" + 
+				"  <input class=\"simplebutton\" type=\"submit\" value=\""+name+"\" />\n" + 
+				"</form>";
 	}
 	
 	public static String getNotifications(Cookie token, boolean all) {

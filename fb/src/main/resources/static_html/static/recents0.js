@@ -60,7 +60,21 @@ $(document).ready(function(event) {
 	}
 	
 	function getPage(story,page,reverse) {
-		$("#recentsdiv").html('<p>...loading...</p>');
+		
+		let counter = 0;
+		let loading = ".";
+		let intervalFunc = function() {
+			if (counter == 10) {
+				counter = 0;
+				loading = ".";
+			} else {
+				++counter;
+				loading += ".";
+			}
+			$("#recentsdiv").html('<p>' + loading + '</p>');
+		}
+		
+		let interval = setInterval(intervalFunc,500);
 		
 		if (req) {
 			req.abort();
@@ -70,6 +84,7 @@ $(document).ready(function(event) {
 		req = new XMLHttpRequest();
 		req.open( 'GET', '/fb/recentpage?story=' + encodeURIComponent(story) + '&page=' + encodeURIComponent(page) + (reverse?'&reverse':''), true );
 		req.onload = function() {
+			clearInterval(interval);
 			$("#recentsdiv").html(req.responseText);
 		}
 		req.send();
