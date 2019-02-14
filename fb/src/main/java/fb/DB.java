@@ -1178,6 +1178,29 @@ public class DB {
 		}
 	}
 	
+	public static FlatEpisode getEpByOldMap(String oldMap) throws DBException {	
+		Session session = openSession();
+		try {
+		CriteriaBuilder cb = session.getCriteriaBuilder();
+		CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
+		Root<DBEpisode> root = query.from(DBEpisode.class);
+		
+		query.select(root).where(cb.equal(root.get("oldMap"), EP_PREFIX + oldMap.replace('-',EP_INFIX)));
+		
+		List<DBEpisode> result = session.createQuery(query).list();
+		
+		if (result.size() == 0) throw new DBException("Not found: " + oldMap);
+		else if (result.size() > 1) {
+			StringBuilder sb = new StringBuilder();
+			for (DBEpisode ep : result) sb.append(ep.getGeneratedId() + " ");
+			throw new RuntimeException("Multiple episodes have matching id: " + oldMap + " " + sb);
+		} else
+			return new FlatEpisode(result.get(0));
+		} finally {
+			closeSession(session);
+		}
+	}
+	
 	public static List<FlatEpisode> getRecentsPage(long generatedId, int page, boolean reverse) throws DBException {
 		Session session = openSession();
 		page-=1;

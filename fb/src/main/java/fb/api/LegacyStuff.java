@@ -16,6 +16,20 @@ import fb.objects.FlatEpisode;
 import fb.util.Strings;
 @Path("fb")
 public class LegacyStuff {
+	
+	@GET
+	@Path("get/{oldmap}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response oldmap(@PathParam("oldmap") String oldmap, @CookieParam("fbtoken") Cookie fbtoken) {
+		FlatEpisode ep;
+		try {
+			ep = DB.getEpByOldMap(oldmap);
+		} catch (DBException e) {
+			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Not found: " + oldmap)).build();
+		}
+		return Response.seeOther(GetStuff.createURI("/fb/story/" + ep.generatedId)).build();
+	}
+	
 	/**
 	 * Gets a legacy episode by its legacy id
 	 * 
