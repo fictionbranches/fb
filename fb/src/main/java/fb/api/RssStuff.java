@@ -36,18 +36,18 @@ public class RssStuff {
 	@Path("feed")
 	@Produces("application/rss+xml")
 	public Response getFeed() {
-		String ret = feeds.get(0);
+		String ret = feeds.get(0l);
 		if (ret == null || ret.length() == 0) return Response.ok(generateEmpty()).build();
-		return Response.ok(feeds.get(0)).build();
+		return Response.ok(feeds.get(0l)).build();
 	}
 	
 	@GET
 	@Path("feed/{id}")
 	@Produces("application/rss+xml")
 	public Response getFeedStory(@PathParam("id") String id) {
-		int story;
+		long story;
 		try {
-			story = Integer.parseInt(id);
+			story = Long.parseLong(id);
 		} catch (NumberFormatException e) {
 			return getFeed();
 		}
@@ -76,7 +76,7 @@ public class RssStuff {
 				"Maybe you were looking for <a href=/fb/recent/" + id +  ">recents</a>?")).build();
 	}*/
 
-	private static HashMap<Integer,String> feeds;
+	private static HashMap<Long,String> feeds;
 	static {
 		updateFeeds();
 		Thread t = new Thread(()-> {
@@ -95,19 +95,19 @@ public class RssStuff {
 	}
 	
 	private static void updateFeeds() {
-		HashMap<Integer,String> list = new HashMap<>();
-		list.put(0, generate(0));
+		HashMap<Long,String> list = new HashMap<>();
+		list.put(0l, generate(0l));
 		try {
 			for (FlatEpisode root : DB.getRoots()) {
-				long id = root.generatedId;
-				list.put(id, generate(id));
+				long generatedId = root.generatedId;
+				list.put(generatedId, generate(generatedId));
 			}
 		} catch (DBException e) {
 			Strings.log("Couldn't get roots for RSS");
 		} finally {
 			feeds = list;
 			StringBuilder sb = new StringBuilder("Updated RSS feeds: ");
-			for (int id : list.keySet()) sb.append(id + " ");
+			for (long id : list.keySet()) sb.append(id + " ");
 			Strings.log(sb.toString());
 		}
 	}
@@ -129,7 +129,7 @@ public class RssStuff {
 		for (FlatEpisode ep : eps) {
 			SyndEntry entry = new SyndEntryImpl();
 			entry.setTitle(escape(ep.link));
-			entry.setLink("https://" + Strings.getDOMAIN() + "/fb/get/" + ep.id);
+			entry.setLink("https://" + Strings.getDOMAIN() + "/fb/story/" + ep.generatedId);
 			entry.setPublishedDate(ep.date);
 			entry.setAuthor(escape(ep.authorName));
 			

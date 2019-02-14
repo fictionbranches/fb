@@ -72,11 +72,11 @@ public class JSONStuff {
 			System.out.println("jsongetepisode: " + json);
 			JSONGetEpisodeRequest jepreq = g.get().fromJson(json, JSONGetEpisodeRequest.class);
 			String token = null;
-			String id;
+			long generatedId;
 			boolean sendhtml = false;
 			if (jepreq != null) {
 				if (jepreq.token != null) token = jepreq.token;
-				if (jepreq.id != null) id = jepreq.id;
+				if (jepreq.id != null) generatedId = jepreq.id;
 				else return Response.ok(g().toJson(new JSONError("Invalid episode id"))).build();
 				if (jepreq.sendhtml != null) {
 					if (jepreq.sendhtml.trim().toLowerCase().equals("true")) {
@@ -91,9 +91,9 @@ public class JSONStuff {
 			}
 			EpisodeWithChildren ep;
 			try {
-				ep = DB.getFullEp(id, (user == null) ? null : user.author);
+				ep = DB.getFullEp(generatedId, (user == null) ? null : user.author);
 			} catch (DBException e1) {
-				return Response.ok(g().toJson(new JSONError("Not found: " + id))).build();
+				return Response.ok(g().toJson(new JSONError("Not found: " + generatedId))).build();
 			}
 
 			return Response.ok(g().toJson(new JSONGetEpisodeResponse(ep, user, sendhtml))).build();
@@ -120,7 +120,7 @@ public class JSONStuff {
 	}
 	class JSONGetEpisodeRequest {
 		public String token;
-		public String id;
+		public Long id;
 		public String sendhtml;
 	}
 	class JSONGetEpisodeResponse {
@@ -132,7 +132,7 @@ public class JSONStuff {
 		}
 	}
 	class JSONEpisode {
-		public String id;
+		public long id;
 		public String title;
 		public String link;
 		public String authorUsername;
@@ -145,11 +145,11 @@ public class JSONStuff {
 		public String editorName;
 		public int childCount;
 		public int depth;
-		public String parentId;
+		public long parentId;
 		public long hits;
 		public List<JSONChildEpisode> children;
 		public JSONEpisode(EpisodeWithChildren ep, boolean sendhtml) {
-			this.id = ep.id;
+			this.id = ep.generatedId;
 			this.title=ep.title;
 			this.link=ep.link;
 			this.authorUsername=ep.authorId;
@@ -192,7 +192,7 @@ public class JSONStuff {
 		}
 	}
 	class JSONChildEpisode {
-		public String id;
+		public long id;
 		public String title;
 		public String link;
 		public String date;
@@ -201,7 +201,7 @@ public class JSONStuff {
 		public long views;
 		public long upvotes;
 		public JSONChildEpisode(Episode ep) {
-			this.id = ep.id;
+			this.id = ep.generatedId;
 			this.title=ep.title;
 			this.link=ep.link;
 			this.date=toUTC(ep.date);
@@ -212,7 +212,7 @@ public class JSONStuff {
 		}
 	}
 	class JSONSimpleEpisode {
-		public String id;
+		public long id;
 		public String title;
 		public String link;
 		public String authorUsername;
@@ -224,10 +224,10 @@ public class JSONStuff {
 		public String editorName;
 		public int childCount;
 		public int depth;
-		public String parentId;
+		public long parentId;
 		public long hits;
 		public JSONSimpleEpisode(FlatEpisode ep) {
-			this.id = ep.id;
+			this.id = ep.generatedId;
 			this.title=ep.title;
 			this.link=ep.link;
 			this.authorUsername=ep.authorId;

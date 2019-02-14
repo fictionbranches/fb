@@ -12,6 +12,7 @@ import javax.ws.rs.core.Response;
 
 import fb.DB;
 import fb.DB.DBException;
+import fb.objects.FlatEpisode;
 import fb.util.Strings;
 @Path("fb")
 public class LegacyStuff {
@@ -23,16 +24,16 @@ public class LegacyStuff {
 	 * @return redirect to HTML episode
 	 */
 	@GET
-	@Path("legacy/{oldId}")
+	@Path("legacy/{legacyId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacy(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken) {
-		String newId;
+	public Response legacy(@PathParam("legacyId") String legacyId, @CookieParam("fbtoken") Cookie fbtoken) {
+		FlatEpisode ep;
 		try {
-			newId = DB.getEpByLegacyId(oldId);
+			ep = DB.getEpByLegacyId(legacyId);
 		} catch (DBException e) {
-			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Not found: " + oldId)).build();
+			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Not found: " + legacyId)).build();
 		}
-		return Response.seeOther(GetStuff.createURI("/fb/get/" + newId)).build();
+		return Response.seeOther(GetStuff.createURI("/fb/story/" + ep.generatedId)).build();
 	}
 	
 	@GET

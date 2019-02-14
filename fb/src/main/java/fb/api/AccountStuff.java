@@ -19,7 +19,6 @@ import fb.Accounts.FBLoginException;
 import fb.DB;
 import fb.DB.DBException;
 import fb.InitWebsite;
-import fb.Story;
 import fb.objects.FlatUser;
 import fb.util.GoogleRECAPTCHA;
 import fb.util.GoogleRECAPTCHA.GoogleCheckException;
@@ -463,7 +462,7 @@ public class AccountStuff {
 	@POST
 	@Path("usersearchpost")
 	@Produces(MediaType.TEXT_HTML)
-	public Response usersearchpost(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id, @FormParam("search") String search) {
+	public Response usersearchpost(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("search") String search) {
 		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
 		return Response.ok(Accounts.searchPost(fbtoken, search, "1")).build();
 	}
@@ -471,9 +470,9 @@ public class AccountStuff {
 	@POST
 	@Path("usersearchpost/{page}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response usersearchpost(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id, @FormParam("search") String search, @PathParam("page") String page) {
+	public Response usersearchpost(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("search") String search, @PathParam("page") String page) {
 		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
-		return Response.ok(Story.searchPost(fbtoken, id, search, page)).build();
+		return Response.ok(Accounts.searchPost(fbtoken, search, page)).build();
 	}
 	
 	@GET
