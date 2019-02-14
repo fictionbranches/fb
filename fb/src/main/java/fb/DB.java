@@ -257,13 +257,13 @@ public class DB {
 		}
 	}
 	
-	public static String mapToId(String map) {
+	/*public static String mapToId(String map) {
 		return EP_PREFIX + map.replace('-', EP_INFIX);
 	}
 	
 	public static String idToMap(String id) {
 		return id.substring(1, id.length()).replace(EP_INFIX,'-');
-	}
+	}*/
 	
 	/**
 	 * 
@@ -286,14 +286,14 @@ public class DB {
 	 * @param id 1-2-3
 	 * @return null if episodes does not exist
 	 */
-	static DBEpisode getEpById(Session session, String id) {
+	/*static DBEpisode getEpById(Session session, String id) {
 		CriteriaBuilder cb = session.getCriteriaBuilder();
 		CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
 		Root<DBEpisode> root = query.from(DBEpisode.class);
 		query.select(root).where(cb.equal(root.get("id"), mapToId(id)));
 		DBEpisode result = session.createQuery(query).uniqueResult();
 		return result;
-	}
+	}*/
 	
 	/**
 	 * Returns null if id does not exist
@@ -925,7 +925,7 @@ public class DB {
 			.map(x->{
 				Object[] arr = (Object[])x;
 				//long parentId = ((Long)arr[0]).longValue();
-				long childGeneratedId = ((Long)arr[1]).longValue();
+				long childGeneratedId = ((BigInteger)arr[1]).longValue();
 				String newMap = (String)arr[2];
 				//String childId = idToMap((String)arr[2]);
 				String link = (String)arr[3];
@@ -984,16 +984,16 @@ public class DB {
 			"        where fbepisodes.generatedid=fbepisodeviews.episode_generatedid\n" + 
 			"        group by fbepisodes.generatedid)\n" + 
 			"    union\n" + 
-			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.id as episodeid,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, count(*) as upvotescount\n" + 
+			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.newmap as newmap,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, count(*) as upvotescount\n" + 
 			"        from fbepisodes,fbupvotes\n" + 
 			"        where fbepisodes.generatedid=fbupvotes.episode_generatedid\n" + 
 			"        group by fbepisodes.generatedid)\n" + 
 			"    union\n" + 
-			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.id as episodeid,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, 0 as upvotescount\n" + 
+			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.newmap as newmap,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, 0 as upvotescount\n" + 
 			"    from fbepisodes)\n" + 
 			"    ) as countstuff, fbusers\n" + 
 			"where fbusers.id=countstuff.author_id and countstuff.parent_generatedid=";
-	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,episodeid,link,title,episodedate,childcount,author_id,author_name";
+	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,newmap,link,title,episodedate,childcount,author_id,author_name";
 	
 	public static void upvote(long generatedId, String username) throws DBException {
 		Session session = openSession();
@@ -1167,15 +1167,19 @@ public class DB {
 		}
 	}
 	
-	public static List<FlatEpisode> getRecentsPage(int rootId, int page, boolean reverse) throws DBException {
+	public static List<FlatEpisode> getRecentsPage(long generatedId, int page, boolean reverse) throws DBException {
 		Session session = openSession();
 		page-=1;
 		try {
-			if (rootId != 0) if (DB.getEpById(session, ""+rootId) == null) throw new DBException("Not found: " + rootId);
+			if (generatedId != 0) {
+				DBEpisode ep = session.get(DBEpisode.class, generatedId);
+				if (ep == null) throw new DBException("Not found: " + generatedId);
+				if (ep.getDepth() != 1) generatedId = DB.newMapToIdList(ep.getNewMap()).get(0);
+			}
 			
 			ArrayList<FlatEpisode> alist = session.createNativeQuery(
 					"SELECT * FROM fbepisodes " + 
-					(rootId==0?"":" WHERE id='" + EP_PREFIX + rootId + "' OR id LIKE '" + EP_PREFIX + rootId + "%' ") + 
+					(generatedId==0?"":" WHERE newmap='" + EP_PREFIX + generatedId + "' OR newmap LIKE '" + EP_PREFIX + generatedId + EP_INFIX + "%' ") + 
 					" ORDER BY date " +(reverse?"ASC":"DESC") + 
 					" OFFSET " + (PAGE_SIZE*page) + 
 					" LIMIT " + PAGE_SIZE, 
@@ -1358,11 +1362,6 @@ public class DB {
 			Root<DBEpisode> root = query.from(DBEpisode.class);
 			
 			
-			/*List<String> ids = getPathIds(id);
-			if (ids.size() > 30) ids = ids.subList(ids.size()-30, ids.size());
-			Predicate[] preds = new Predicate[ids.size()];
-			for (int i=0; i<ids.size(); ++i) preds[i] = cb.equal(root.get("id"), mapToId(ids.get(i)));*/
-			
 			List<Long> ids = DB.newMapToIdList(ep.getNewMap());
 			if (ids.size() > 30) ids = ids.subList(ids.size()-30, ids.size());
 			Predicate[] preds = ids.stream().map(id->cb.equal(root.get("generatedId"), id)).toArray(length->new Predicate[length]);
@@ -1413,7 +1412,7 @@ public class DB {
 			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
 			Root<DBEpisode> root = query.from(DBEpisode.class);			
 						
-			query.select(root).where(cb.isNull(root.get("parent"))).orderBy(cb.asc(root.get("id")));
+			query.select(root).where(cb.isNull(root.get("parent"))).orderBy(cb.asc(root.get("date")));
 			
 			List<DBEpisode> result = session.createQuery(query).list();
 			
