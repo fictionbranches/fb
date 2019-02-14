@@ -473,7 +473,7 @@ public class AccountStuff {
 	@Produces(MediaType.TEXT_HTML)
 	public Response usersearchpost(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id, @FormParam("search") String search, @PathParam("page") String page) {
 		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
-		return Response.ok(Story.searchPost(fbtoken, id, search, page)).build();
+		return Response.ok(Accounts.searchPost(fbtoken, search, page)).build();
 	}
 	
 	@GET
