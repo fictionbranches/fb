@@ -97,19 +97,19 @@ public class Story {
 		switch (sort) {
 		case 0:
 		default:
-			Collections.sort(children, Comparator.comparing(e->e.getId(),DB.keyStringComparator));
+			Collections.sort(children, Comparator.comparing(e->e.newMap,DB.newMapComparator));
 			sortOrder = "Oldest first (default)";
 			break;
 		case 1:
-			Collections.sort(children, Comparator.comparing((Episode e)->e.getId(),DB.keyStringComparator).reversed());
+			Collections.sort(children, Comparator.comparing((Episode e)->e.newMap,DB.newMapComparator).reversed());
 			sortOrder = "Newest first";
 			break;
 		case 2:
-			Collections.sort(children, Comparator.comparing((Episode e)->e.getChildCount()).reversed());
+			Collections.sort(children, Comparator.comparing((Episode e)->e.childCount).reversed());
 			sortOrder = "Children (descending)";
 			break;
 		case 3:
-			Collections.sort(children, Comparator.comparing(e->e.getChildCount()));
+			Collections.sort(children, Comparator.comparing(e->e.childCount));
 			sortOrder = "Children (ascending)";
 			break;
 		case 4:
@@ -142,7 +142,7 @@ public class Story {
 				childHTML.append(Strings.getString(row)
 					.replace("$AUTHORID", child.authorId)
 					.replace("$AUTHORNAME", Strings.escape(child.authorName))
-					.replace("$ID", child.id)
+					.replace("$ID", ""+child.generatedId)
 					.replace("$LINK", Strings.escape(child.link))
 					.replace("$COMPLETEDATE", escape(Dates.completeSimpleDateFormat(child.date)))
 					.replace("$DATE", escape(Dates.simpleDateFormat(child.date)))
@@ -315,10 +315,10 @@ public class Story {
 	private static String getRecentsTable(List<FlatEpisode> recents, int root) {
 		StringBuilder sb = new StringBuilder(Strings.getString("recents_table_head"));
 		for (FlatEpisode child : recents) if (child != null){
-			String storyNum = child.id.split("-")[0];
+			long rootId = DB.newMapToIdList(child.newMap).get(0);
 			String story;
 			if (root==0){
-				story = rootNames.get(storyNum);
+				story = rootNames.get(rootId);
 				if (story == null) story = "";
 				else story = Strings.getString("recents_table_head_story_column").replace("$TITLE", story);
 			} else story = "";
@@ -327,7 +327,7 @@ public class Story {
 			if (child.title.toLowerCase().trim().equals(child.link.toLowerCase().trim())) row = Strings.getString("recents_table_row_same_linktitle");
 			else row = Strings.getString("recents_table_row_different_linktitle");
 			
-			row = row.replace("$ID", child.id)
+			row = row.replace("$ID", ""+child.generatedId)
 					.replace("$TITLE", escape(child.title))
 					.replace("$AUTHORID", child.authorId)
 					.replace("$AUTHORNAME", escape(child.authorName))
@@ -1041,7 +1041,7 @@ public class Story {
 				else if (result == 2) throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "You have already submitted a modification for this episode. <br/>Please wait for the moderation team to either accept or reject your previous modification before submitting another one."));
 				else { // result == 1
 					DB.newEpisodeMod(generatedId, link, title, body);
-					throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Because you do not own <a href=\"/fb/get/" + result + "\">a child episode</a>, your modification has been submitted for approval by the moderation team. Please be patient."));
+					throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Because you do not own a child episode, your modification has been submitted for approval by the moderation team. Please be patient."));
 				}
 			}
 		} catch (DBException e) {

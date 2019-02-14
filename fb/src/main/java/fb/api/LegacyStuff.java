@@ -40,7 +40,7 @@ public class LegacyStuff {
 	@Path("legacy/the-forum/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response legacy1(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken) {
-		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb/get/1")).build();
+		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		return legacy(oldId, fbtoken);
 	}
 	
@@ -48,7 +48,7 @@ public class LegacyStuff {
 	@Path("legacy/you-are-what-you-wish/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response legacy2(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken) {
-		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb/get/2")).build();
+		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		return legacy(oldId, fbtoken);
 	}
 	
@@ -56,7 +56,7 @@ public class LegacyStuff {
 	@Path("legacy/altered-fates/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response legacy3(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken) {
-		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb/get/3")).build();
+		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		return legacy(oldId, fbtoken);
 	}
 	
@@ -64,7 +64,7 @@ public class LegacyStuff {
 	@Path("legacy/the-future-of-gaming/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response legacy4(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken) {
-		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb/get/4")).build();
+		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		return legacy(oldId, fbtoken);
 	}
 	

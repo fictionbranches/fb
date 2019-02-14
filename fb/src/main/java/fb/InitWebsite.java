@@ -152,7 +152,7 @@ public class InitWebsite {
 		System.out.println("Checking database");
 		try {
 			for (FlatEpisode rootEp : DB.getRoots()) {
-				Strings.log("Found root episode: " + rootEp.id + " " + rootEp.link);
+				Strings.log("Found root episode: " + rootEp.generatedId + " " + rootEp.link);
 			}
 		} catch (DBException e) {
 			System.err.println("No root episodes found");

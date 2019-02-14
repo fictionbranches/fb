@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -442,27 +441,7 @@ public class DB {
 				
 				session.getTransaction().commit();
 				
-				
-				
-				
-				/*if (Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
-					String rootId = Integer.toString(DB.keyToArr(oldChildId)[0]);
-					DBEpisode root = DB.getEpById(session, rootId);
-					final String rootTitle = root.getLink();// + " - " + author.getAuthor();
-					final String authorName = author.getAuthor();
-					final String epId = child.getMap();
-					new Thread(()->{
-						StringBuilder sb = new StringBuilder();
-						try (Scanner scan = new Scanner(rootTitle)) {
-							while (scan.hasNext()) {
-								String next = scan.next();
-								if (next.length() > 0) sb.append(next.charAt(0));
-							}
-						}
-						String username = sb + " - " + authorName;
-						Discord.notifyHook(username, "https://" + Strings.getDOMAIN() + "/fb/get/" + epId, Strings.getDISCORD_NEW_EPISODE_HOOK());
-					}).start();
-				} TODO */
+				/* TODO Discord hook */
 			} catch (Exception e) {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
@@ -697,7 +676,7 @@ public class DB {
 		try {
 			DBUser author = getUserById(session, authorId);
 			
-			List<DBEpisode> roots = getRoots(session);
+			//List<DBEpisode> roots = getRoots(session);
 
 			if (author == null) throw new DBException("Author does not exist");
 
@@ -1040,13 +1019,13 @@ public class DB {
 		}
 	}
 	
-	public static void downvote(String id, String username) throws DBException {
+	public static void downvote(long generatedId, String username) throws DBException {
 		Session session = openSession();
 		try {
 			DBUser user = DB.getUserById(session, username);
 			if (user == null) throw new DBException("Not found: " + username);
-			DBEpisode ep = DB.getEpById(session, id);
-			if (ep == null) throw new DBException ("Not found: " + id);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException ("Not found: " + generatedId);
 			
 			DBUpvote upvote = session.createQuery("from DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId() + " and uv.user.id='" + user.getId() + "'", DBUpvote.class).uniqueResult();
 			
@@ -1252,8 +1231,8 @@ public class DB {
 		}
 	}
 	
-	public static StreamingOutput getOutlinePage(Cookie token, String rootId, int pageNum) {
-		System.out.println("Getting outline " + rootId + " page " + pageNum);
+	public static StreamingOutput getOutlinePage(Cookie token, long generatedId, int pageNum) {
+		System.out.println("Getting outline " + generatedId + " page " + pageNum);
 		final int page = pageNum - 1;
 		final int OUTLINE_PAGE_SIZE = 300;
 		StreamingOutput outputStream = new StreamingOutput() {
@@ -1281,9 +1260,9 @@ public class DB {
 						return;
 					}
 					FlatUser user = new FlatUser(dbUser);
-					DBEpisode ep = DB.getEpById(session, rootId);
+					DBEpisode ep = session.get(DBEpisode.class, generatedId);//DB.getEpById(session, rootId);
 					if (ep == null) {
-						writer.write(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + rootId));
+						writer.write(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId));
 						writer.flush();
 						return;
 					}
@@ -1315,7 +1294,7 @@ public class DB {
 								returnedSomething.set();
 							});
 
-							if (returnedSomething.get()) writer.write("<div class=\"next\"><a href=\"/fb/outline/" + rootId + "?page=" + (page + 2) + "\">next</a></div>");
+							if (returnedSomething.get()) writer.write("<div class=\"next\"><a href=\"/fb/outline/" + generatedId + "?page=" + (page + 2) + "\">next</a></div>");
 
 						} catch (BreakException e) {
 							writer.flush();
@@ -3158,17 +3137,17 @@ public class DB {
  	 * @return
  	 * @throws NumberFormatException
  	 */
- 	public static int[] keyToArr(String s) throws NumberFormatException {
+ 	/*public static int[] keyToArr(String s) throws NumberFormatException {
 		String[] arr = s.split("-");
 		int[] ret = new int[arr.length];
 		for (int i=0; i<arr.length; ++i) ret[i] = Integer.parseInt(arr[i]);
 		return ret;
-	}
+	}*/
 
 	/**
 	 * Correctly sorts key strings. 1-10 will come after 1-9 instead of after 1-1
 	 */
-	public static Comparator<String> keyStringComparator = new Comparator<String>() {
+	/*public static Comparator<String> keyStringComparator = new Comparator<String>() {
 		@Override
 		public int compare(String A, String B) {
 			int[] a, b;
@@ -3190,5 +3169,19 @@ public class DB {
 			}
 			return Integer.compare(a.length, b.length);
 		}
-	};
+	};*/
+ 	public static Comparator<String> newMapComparator = new Comparator<String>() {
+ 		@Override
+		public int compare(String A, String B) {
+			List<Long> a = DB.newMapToIdList(A);
+			List<Long> b = DB.newMapToIdList(B);
+			for (int i=0; i<a.size() && i<b.size(); ++i) {
+				Long x = a.get(i);
+				Long y = b.get(i);
+				int comp = x.compareTo(y);
+				if (comp != 0) return comp;
+			}
+			return Integer.compare(a.size(), b.size());
+		}
+ 	};
 }

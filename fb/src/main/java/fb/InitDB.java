@@ -131,10 +131,10 @@ public class InitDB {
 
 				DBEpisode child = new DBEpisode();
 				
-				String childId = "1";
+				//String childId = "1";
 
-				child.setMap(childId);
-				child.setDepth(DB.keyToArr(childId).length);
+				//child.setMap(childId);
+				child.setDepth(1);
 				
 				child.setTitle("Your First Story Title");
 				child.setLink("Your First Story");
@@ -151,6 +151,15 @@ public class InitDB {
 					session.beginTransaction();
 					session.save(child);
 					session.merge(author);
+					session.getTransaction().commit();
+				} catch (Exception e) {
+					session.getTransaction().rollback();
+					throw new DBException("Database error");
+				}
+				try {
+					session.beginTransaction();
+					child.setNewMap(""+child.getGeneratedId());
+					session.merge(child);
 					session.getTransaction().commit();
 				} catch (Exception e) {
 					session.getTransaction().rollback();

@@ -31,36 +31,4 @@ public class Episode {
 		this.authorId = authorId;
 		this.authorName = authorName;
 	}
-
-	/*public String getId() {
-		return id;
-	}
-
-	public String getTitle() {
-		return title;
-	}
-
-	public String getLink() {
-		return link;
-	}
-
-	public Date getDate() {
-		return date;
-	}
-
-	public int getChildCount() {
-		return childCount;
-	}
-
-	public long getHits() {
-		return hits;
-	}
-
-	public long getViews() {
-		return views;
-	}
-
-	public long getUpvotes() {
-		return upvotes;
-	}*/
 }

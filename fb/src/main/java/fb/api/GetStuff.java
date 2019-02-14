@@ -102,7 +102,7 @@ public class GetStuff {
 	 * @return HTTP 302 redirect
 	 */
 	@GET
-	@Path("get")
+	@Path("story")
 	@Produces(MediaType.TEXT_HTML)
 	public Response getGet() {
 		return Response.seeOther(createURI("/fb")).build();
@@ -116,40 +116,34 @@ public class GetStuff {
 	 * @return HTML episode with id
 	 */
 	@GET
-	@Path("get/{id}")
+	@Path("story/{generatedid}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response get(@Context UriInfo uriInfo, @PathParam("id") String id, @QueryParam("sort") String sort, @QueryParam("vote") String vote, @CookieParam("fbchildsort") Cookie fbchildsort, @CookieParam("fbadvancedchildren") Cookie fbadvancedchildren, @CookieParam("fbtoken") Cookie fbtoken) {
+	public Response get(@Context UriInfo uriInfo, @PathParam("generatedid") long generatedId, @QueryParam("sort") String sort, @QueryParam("vote") String vote, 
+			@CookieParam("fbchildsort") Cookie fbchildsort, @CookieParam("fbadvancedchildren") Cookie fbadvancedchildren, @CookieParam("fbtoken") Cookie fbtoken) {
 		if (vote != null && fbtoken != null) {
-			Response ret = Response.seeOther(GetStuff.createURI("/fb/get/" + id)).build();
-			String username;
-			switch (vote.toLowerCase()) {
-			case "up":
-				username = Accounts.getUsernameFromCookie(fbtoken);
-				if (username == null) return ret;
-				try {
-					DB.upvote(id, username);
-				} catch (DBException e) {
-					return ret;
+			final Response redirectHere = Response.seeOther(GetStuff.createURI("/fb/story/" + generatedId)).build();
+			String username = Accounts.getUsernameFromCookie(fbtoken);
+			if (username == null) return redirectHere;
+
+			try {
+				switch (vote.toLowerCase()) {
+				case "up":
+					DB.upvote(generatedId, username);
+					break;
+				case "down":
+					DB.downvote(generatedId, username);
 				}
-				break;
-			case "down":
-				username = Accounts.getUsernameFromCookie(fbtoken);
-				if (username == null) return ret;
-				try {
-					DB.downvote(id, username);
-				} catch (DBException e) {
-					return ret;
-				}
-				break;
+			} catch (DBException e) {
+				return redirectHere;
 			}
-			return ret;
+			return redirectHere;
 		}
 		
 		boolean advancedChildren = false;
 		if (fbadvancedchildren != null && fbadvancedchildren.getValue().equals("true")) advancedChildren = true;
 		
 		if (sort != null) {
-			ResponseBuilder ret = Response.seeOther(createURI("/fb/get/" + id + "#children"));
+			ResponseBuilder ret = Response.seeOther(createURI("/fb/story/" + generatedId + "#children"));
 			switch (sort.toLowerCase()) {
 			case "oldest":
 			case "newest":
@@ -179,100 +173,8 @@ public class GetStuff {
 			sortNum = 4;
 			break;
 		}
-		return Response.ok(Story.getHTML(id, sortNum, InitWebsite.DEV_MODE||advancedChildren /* TODO advancedChildren*/, fbtoken)).build();
+		return Response.ok(Story.getHTML(generatedId, sortNum, InitWebsite.DEV_MODE||advancedChildren /* TODO advancedChildren*/, fbtoken)).build();
 	}
-	
-	/**
-	 * Gets an episode by its id, newest first sort
-	 * 
-	 * DEPRECATED! Will be removed in a future update
-	 * 
-	 * @param id
-	 *            id of episode (1-7-4-...-3)
-	 * @return HTML episode
-	 */
-//	@GET
-//	@Path("getoldest/{id}")
-//	@Produces(MediaType.TEXT_HTML)
-//	public Response getoldest(@PathParam("id") String id, @CookieParam("fbtoken") Cookie fbtoken) {
-//		return Response.seeOther(createURI("/fb/get/" + id)).cookie(newCookie("fbchildsort", "oldest")).build();
-//	}
-
-	/**
-	 * Gets an episode by its id, newest first sort
-	 * 
-	 * DEPRECATED! Will be removed in a future update
-	 * 
-	 * @param id
-	 *            id of episode (1-7-4-...-3)
-	 * @return HTML episode
-	 */
-//	@GET
-//	@Path("getnewest/{id}")
-//	@Produces(MediaType.TEXT_HTML)
-//	public Response getnewest(@PathParam("id") String id, @CookieParam("fbtoken") Cookie fbtoken) {
-//		return Response.seeOther(createURI("/fb/get/" + id)).cookie(newCookie("fbchildsort", "newest")).build();
-//	}
-
-	/**
-	 * Gets an episode by its id, most children first sort
-	 * 
-	 * DEPRECATED! Will be removed in a future update
-	 * 
-	 * @param id
-	 *            id of episode (1-7-4-...-3)
-	 * @return HTML episode
-	 */
-//	@GET
-//	@Path("getmostfirst/{id}")
-//	@Produces(MediaType.TEXT_HTML)
-//	public Response getmostfirst(@PathParam("id") String id, @CookieParam("fbtoken") Cookie fbtoken) {
-//		//return Response.ok(Story.getHTML(id, 2, fbtoken)).build();
-//		/*HashMap<String,String> params = new HashMap<>();
-//		params.put("sort","mostfirst");
-//		return Response.seeOther(createURI("/fb/get/" + id, params)).build();*/
-//		return Response.seeOther(createURI("/fb/get/" + id)).cookie(newCookie("fbchildsort", "mostfirst")).build();
-//	}
-
-	/**
-	 * Gets an episode by its id, least children first sort
-	 * 
-	 * DEPRECATED! Will be removed in a future update
-	 * 
-	 * @param id
-	 *            id of episode (1-7-4-...-3)
-	 * @return HTML episode
-	 */
-//	@GET
-//	@Path("getleastfirst/{id}")
-//	@Produces(MediaType.TEXT_HTML)
-//	public Response getleastfirst(@PathParam("id") String id, @CookieParam("fbtoken") Cookie fbtoken) {
-//		/*//return Response.ok(Story.getHTML(id, 3, fbtoken)).build();
-//		HashMap<String,String> params = new HashMap<>();
-//		params.put("sort","leastfirst");
-//		return Response.seeOther(createURI("/fb/get/" + id, params)).build();*/
-//		return Response.seeOther(createURI("/fb/get/" + id)).cookie(newCookie("fbchildsort", "leastfirst")).build();
-//	}
-
-	/**
-	 * Gets an episode by its id, least children first sort
-	 * 
-	 * DEPRECATED! Will be removed in a future update
-	 * 
-	 * @param id
-	 *            id of episode (1-7-4-...-3)
-	 * @return HTML episode
-	 */
-//	@GET
-//	@Path("getrandom/{id}")
-//	@Produces(MediaType.TEXT_HTML)
-//	public Response getrandom(@PathParam("id") String id, @CookieParam("fbtoken") Cookie fbtoken) {
-//		/*//return Response.ok(Story.getHTML(id, 4, fbtoken)).build();
-//		HashMap<String,String> params = new HashMap<>();
-//		params.put("sort","random");
-//		return Response.seeOther(createURI("/fb/get/" + id, params)).build();*/
-//		return Response.seeOther(createURI("/fb/get/" + id)).cookie(newCookie("fbchildsort", "random")).build();
-//	}
 	
 	/**
 	 * Gets an episode as raw text
@@ -282,17 +184,18 @@ public class GetStuff {
 	 * @return HTML episode
 	 */
 	@GET
-	@Path("getraw/{id}")
+	@Path("getraw/{generatedId}")
 	@Produces(MediaType.TEXT_PLAIN)
-	public String getraw(@PathParam("id") String id) {
+	public String getraw(@PathParam("generatedId") long generatedId) {
 		FlatEpisode ep;
 		try {
-			ep = DB.getFlatEp(id);
+			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e) {
-			return "Not found: " + id;
+			return "Not found: " + generatedId;
 		}
 		StringBuilder sb = new StringBuilder();
-		sb.append(ep.id + "\n");
+		sb.append(ep.generatedId + "\n");
+		sb.append(ep.newMap.substring(1,ep.newMap.length()).replace('B','-') + "\n");
 		sb.append(ep.link + "\n");
 		sb.append(ep.title + "\n");
 		sb.append(ep.authorName + "\n");
@@ -302,16 +205,16 @@ public class GetStuff {
 	}
 
 	@GET
-	@Path("recent/{id}")
+	@Path("recent/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response recentbak(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id) {
-		return Response.seeOther(GetStuff.createURI("/fb/recent?story=" + id)).build();
+	public Response recentbak(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId) {
+		return Response.seeOther(GetStuff.createURI("/fb/recent?story=" + generatedId)).build();
 	}
 	
 	@GET
-	@Path("recent/{id}/{page}")
+	@Path("recent/{generatedId}/{page}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response recentbak2(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id, @PathParam("page") String page, @QueryParam("reverse") String reverseString) {
+	public Response recentbak2(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId, @PathParam("page") String page, @QueryParam("reverse") String reverseString) {
 		int pageNum;
 		try {
 			pageNum = Integer.parseInt(page);
@@ -320,7 +223,7 @@ public class GetStuff {
 			pageNum = 1;
 		}
 		boolean reverse = reverseString!=null;
-		return Response.seeOther(GetStuff.createURI("/fb/recent?story=" + id + "&page=" + pageNum + (reverse?"&reverse":""))).build();
+		return Response.seeOther(GetStuff.createURI("/fb/recent?story=" + generatedId + "&page=" + pageNum + (reverse?"&reverse":""))).build();
 	}
 	
 	@GET
@@ -356,46 +259,43 @@ public class GetStuff {
 	}
 	
 	@GET
-	@Path("outline/{id}")
+	@Path("outline/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response outline(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id, @QueryParam("page") String page) {
+	public Response outline(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId, @QueryParam("page") String page) {
 		if (!Accounts.isLoggedIn(fbtoken)) return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
 		
 		if (page != null) try {
 			int pageNum = Integer.parseInt(page);
-			return Response.ok(DB.getOutlinePage(fbtoken, id, pageNum)).build();
+			return Response.ok(DB.getOutlinePage(fbtoken, generatedId, pageNum)).build();
 		} catch (Exception e) {
-			return Response.seeOther(GetStuff.createURI("/fb/outline/" + id)).build();
+			return Response.seeOther(GetStuff.createURI("/fb/outline/" + generatedId)).build();
 		}
 		
-		return Response.ok(Story.getOutlineScrollable(fbtoken, id)).build();
+		return Response.ok(Story.getOutlineScrollable(fbtoken, generatedId)).build();
 	}
 	
 	@GET
-	@Path("path/{id}")
+	@Path("path/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response path(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id) {
+	public Response path(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(fbtoken);
 		} catch (FBLoginException e) {
 			user = null;
 		}
-		if (user != null) return Response.ok(Story.getPath(fbtoken, id)).build();
+		if (user != null) return Response.ok(Story.getPath(fbtoken, generatedId)).build();
 		else return Response.ok(Strings.getFile("generic.html",user).replace("$EXTRA", "You must be logged in to do that")).build();
 	}
 	
 	@GET
-	@Path("complete/{id}")
+	@Path("complete/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response getcomplete(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id) {
+	public Response getcomplete(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId) {
 		if (!Accounts.isLoggedIn(fbtoken)) return Response.ok(Strings.getFileWithToken("generic.html",fbtoken).replace("$EXTRA", "You must be logged in to do that")).build();
 		
-		System.out.println("Complete request : " + id);
-		String ret = Story.getCompleteHTML(fbtoken, id);
-		System.out.println("Complete return  : " + id);
+		String ret = Story.getCompleteHTML(fbtoken, generatedId);
 		Response response = Response.ok(ret).build();
-		System.out.println("Complete response: " + id);
 		return response;
 	}
 	
@@ -408,29 +308,17 @@ public class GetStuff {
 	}
 	
 	@GET
-	@Path("search/{id}")
+	@Path("search/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response searchform(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id, @QueryParam("q") String q, @QueryParam("page") Integer page) {
+	public Response searchform(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId, @QueryParam("q") String q, @QueryParam("page") Integer page) {
 		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
 		if (q!=null && q.length() > 0) {
 			if (page==null) page = 1;
 			if (page < 1) page = 1;
-			System.out.println("Token " + fbtoken);
-			System.out.println("id " + id);
-			System.out.println("q " + q);
-			System.out.println("page " + page);
-			return Response.ok(Story.searchPost(fbtoken, id, q, Integer.toString(page))).build();
+			return Response.ok(Story.searchPost(fbtoken, generatedId, q, Integer.toString(page))).build();
 		} 
-		return Response.ok(Story.getSearchForm(fbtoken, id)).build();
+		return Response.ok(Story.getSearchForm(fbtoken, generatedId)).build();
 	}
-	
-	/*@POST
-	@Path("search/{id}/{page}")
-	@Produces(MediaType.TEXT_HTML)
-	public Response searchpost(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id, @QueryParam("q") String q, @PathParam("page") String page) {
-		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
-		return Response.ok(Story.searchPost(fbtoken, id, q, page)).build();
-	}*/
 	
 	@GET
 	@Path("formatting")
@@ -502,17 +390,17 @@ public class GetStuff {
 	}
 	
 	@GET
-	@Path("delete/{id}")
+	@Path("delete/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response delete(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id) {
-		return Response.ok(Story.getDeleteConfirmation(fbtoken, id)).build();
+	public Response delete(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId) {
+		return Response.ok(Story.getDeleteConfirmation(fbtoken, generatedId)).build();
 	}
 	
 	@POST
-	@Path("delete/{id}")
+	@Path("delete/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response deleteconfirm(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") String id) {
-		return Response.ok(Story.deleteEpisode(fbtoken, id)).build();
+	public Response deleteconfirm(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId) {
+		return Response.ok(Story.deleteEpisode(fbtoken, generatedId)).build();
 	}
 	
 	@GET

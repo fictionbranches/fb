@@ -20,8 +20,8 @@ story_modify_logged_in~<a href=/fb/flag/$ID>Flag this episode</a>
 story_logged_in_extras~<br/><a href=/fb/path/$ID>Path to here</a><br/><a href=/fb/outline/$ID>Outline from here</a><br/><a href=/fb/complete/$ID>View story so far</a>
 
 story_search_from_here~<br/><a href=/fb/search/$ID>&#x1F50DSearch from here</a>
-story_upvote~<a href=/fb/get/$ID?vote=up>Upvote this episode</a>
-story_downvote~Upvoted! <a href=/fb/get/$ID?vote=down>Undo upvote</a>
+story_upvote~<a href=/fb/story/$ID?vote=up>Upvote this episode</a>
+story_downvote~Upvoted! <a href=/fb/story/$ID?vote=down>Undo upvote</a>
 
 story_editor~<br/>Episode last modified by <a href='/fb/user/$EDITORID' rel='editor'>$EDITORNAME</a> on $EDITDATE
 
@@ -31,17 +31,17 @@ story_childtable_row_advanced~<tr><td class="fbchildtable"><a href='$ID' rel='ch
 
 story_childtable_foot_advanced~</tbody></table>
 
-story_childtable_row~<p><a href=/fb/get/$ID>$LINK</a> ($CHILDCOUNT)</p>
+story_childtable_row~<p><a href=/fb/story/$ID>$LINK</a> ($CHILDCOUNT)</p>
 
 story_avatar~<img class="avatarsmall" alt="avatar" src="$AVATARURL" /> 
 
 #### delete stuff
 
-story_delete_confirm~<p>Are you sure you wish to delete this episode?</p><p><form class="simplebutton" action= "/fb/delete/$ID" method="post"><input class="simplebutton" type= "submit" value= "Yes"/></form></p><p><a href=/fb/get/$ID>No</a></p>
+story_delete_confirm~<p>Are you sure you wish to delete this episode?</p><p><form class="simplebutton" action= "/fb/delete/$ID" method="post"><input class="simplebutton" type= "submit" value= "Yes"/></form></p><p><a href=/fb/story/$ID>No</a></p>
 story_delete_not_allowed~You are not authorized to delete this episode.
 story_deleted~Episode successfully deleted.
 
-story_delete_comment_confirm~<p>Are you sure you wish to delete this comment?</p><p><form class="simplebutton" action= "/fb/deletecomment/$ID" method="post"><input class="simplebutton" type= "submit" value= "Yes"/></form></p><p><a href=/fb/get/$PARENTID>No</a></p>
+story_delete_comment_confirm~<p>Are you sure you wish to delete this comment?</p><p><form class="simplebutton" action= "/fb/deletecomment/$ID" method="post"><input class="simplebutton" type= "submit" value= "Yes"/></form></p><p><a href=/fb/story/$PARENTID>No</a></p>
 story_delete_comment_not_allowed~You are not authorized to delete this comment.
 story_comment_deleted~Comment successfully deleted.
 
@@ -52,5 +52,5 @@ search_help_line~<a href=/fb/search/$ID>Search $LINK</a><br/>
 
 recents_table_head~<table class="fbtable">
 recents_table_head_story_column~<td class="fbtable">$TITLE</td>
-recents_table_row_same_linktitle~<tr class='hentry'><td class="fbtable"><a class='url entry-title' href='/fb/get/$ID'>$LINK</a></td><td class="fbtable"><span='author'><a href=/fb/user/$AUTHORID>$AUTHORNAME</a></span></td><td class="fbtable"><time class='published'>$DATE</time></td>$STORY</tr>
-recents_table_row_different_linktitle~<tr class='hentry'><td class="fbtable">$TITLE<br/><a class='url entry-title' href='/fb/get/$ID'>$LINK</a></td><td class="fbtable"><span='author'><a href=/fb/user/$AUTHORID>$AUTHORNAME</a></span></td><td class="fbtable"><time class='published'>$DATE</time></td>$STORY</tr>
+recents_table_row_same_linktitle~<tr class='hentry'><td class="fbtable"><a class='url entry-title' href='/fb/story/$ID'>$LINK</a></td><td class="fbtable"><span='author'><a href=/fb/user/$AUTHORID>$AUTHORNAME</a></span></td><td class="fbtable"><time class='published'>$DATE</time></td>$STORY</tr>
+recents_table_row_different_linktitle~<tr class='hentry'><td class="fbtable">$TITLE<br/><a class='url entry-title' href='/fb/story/$ID'>$LINK</a></td><td class="fbtable"><span='author'><a href=/fb/user/$AUTHORID>$AUTHORNAME</a></span></td><td class="fbtable"><time class='published'>$DATE</time></td>$STORY</tr>
