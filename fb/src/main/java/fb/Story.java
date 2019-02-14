@@ -308,12 +308,9 @@ public class Story {
 		}
 		
 		StringBuilder sb = new StringBuilder();
-		try {
-			for (FlatEpisode ep : DB.getRoots()) {
-				sb.append(Strings.getString("search_help_line").replace("$ID", ""+ep.generatedId).replace("$LINK", Strings.escape(ep.link)) + "\n");
-			}
-		} catch (DBException e) {
-			Strings.log(e);
+		
+		for (FlatEpisode ep : Story.getRootEpisodes()) {
+			sb.append(Strings.getString("search_help_line").replace("$ID", ""+ep.generatedId).replace("$LINK", Strings.escape(ep.link)) + "\n");
 		}
 		
 		
@@ -325,10 +322,11 @@ public class Story {
 		for (FlatEpisode child : recents) if (child != null){
 			long rootId = DB.newMapToIdList(child.newMap).get(0);
 			String story;
+			FlatEpisode rootEp;
 			if (root==0){
-				story = rootNames.get(rootId);
-				if (story == null) story = "";
-				else story = Strings.getString("recents_table_head_story_column").replace("$TITLE", story);
+				rootEp = Story.getRootEpisodeById(rootId);
+				if (rootEp == null) story = "";
+				else story = Strings.getString("recents_table_head_story_column").replace("$TITLE", rootEp.link);
 			} else story = "";
 			
 			String row;
@@ -459,17 +457,48 @@ public class Story {
 				.replace("$TITLE", reverse?"Oldest":"Recent");
 	}
 	
-	public static ConcurrentHashMap<Long,String> rootNames = new ConcurrentHashMap<>();
+	private static ConcurrentHashMap<Long,FlatEpisode> rootEpisodesCache2 = new ConcurrentHashMap<>();
 	static {
+		updateRootEpisodesCache();		
+	}
+	
+	static {
+		updateRootEpisodesCache();
+		Thread t = new Thread() {
+			public void run() {
+				while (true) {
+					try {
+						Thread.sleep(1000*60*5);
+					} catch (InterruptedException e) {
+						Strings.log("Root cache thread interrupted (should never happend): " + e.getMessage());
+						break;
+					}
+					updateRootEpisodesCache();
+				}
+			}
+		};
+		t.setName("RootCacheUpdaterThread");
+		t.start();
+	}
+	
+	public static List<FlatEpisode> getRootEpisodes() {
+		return Story.rootEpisodesCache2.values().stream().sorted((a,b)->a.date.compareTo(b.date)).collect(Collectors.toList());
+	}
+	
+	public static FlatEpisode getRootEpisodeById(long generatedId) {
+		return Story.rootEpisodesCache2.get(generatedId);
+	}
+	
+	public static void updateRootEpisodesCache() {
+		ConcurrentHashMap<Long,FlatEpisode> newCache = new ConcurrentHashMap<>();
 		try {
-			FlatEpisode[] roots = DB.getRoots();
-			for (FlatEpisode root : roots) rootNames.put(root.generatedId, root.link);
+			for (FlatEpisode root : DB.getRoots()) newCache.put(root.generatedId, root);
+			rootEpisodesCache2 = newCache;
 		} catch (DBException e) {
 			Strings.log("Root episodes not found");
 			DB.closeSessionFactory();
 			System.exit(1);
 		}
-		
 	}
 	
 	public static String getOutlineScrollable(Cookie token, long generatedId) {
@@ -553,7 +582,6 @@ public class Story {
 		if (user == null) return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("must_be_logged_in"));
 		FlatEpisode ep;
 		try {
-			//roots = DB.getRoots();
 			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId);
@@ -626,13 +654,13 @@ public class Story {
 		}
 				
 		StringBuilder sb = new StringBuilder();
-		for (FlatEpisode ep : getRoots()) {
+		for (FlatEpisode ep : Story.getRootEpisodes()) {
 			sb.append("<h3><a href=/fb/story/" + ep.generatedId + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/feed/" + ep.generatedId + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent?story=" + ep.generatedId + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
 		}
 		return Strings.getFile("welcome.html", user).replace("$EPISODES", sb.toString());
 		
 	}
-	public static List<FlatEpisode> getRoots() {
+	/*public static List<FlatEpisode> getRoots() {
 		return Stream.of(rootsCache).collect(Collectors.toList());
 	}
 	private static FlatEpisode[] rootsCache;
@@ -654,12 +682,7 @@ public class Story {
 						Strings.log("Root cache thread interrupted (should never happend): " + e.getMessage());
 						break;
 					}
-					try {
-						rootsCache = DB.getRoots();
-					} catch (DBException e) {
-						Strings.log(e);
-						Strings.log("Could not reload roots cache, exiting cache thread");
-					}
+					updateRootsCache();
 				}
 			}
 		};
@@ -667,6 +690,14 @@ public class Story {
 		t.start();
 	}
 	
+	private static void updateRootsCache() {
+		try {
+			rootsCache = DB.getRoots();
+		} catch (DBException e) {
+			Strings.log(e);
+			Strings.log("Could not reload roots cache, exiting cache thread");
+		}
+	}*/
 	
 	public static String getMostHits(Cookie token) {
 		FlatUser user;
@@ -717,8 +748,10 @@ public class Story {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table class=\"popular\"><thead><tr><th>Link/Title</th><th><a href=/fb/mosthits>Hits</a></th><th><a href=/fb/mostviews>Views</a></th><th><a href=/fb/mostupvotes>Upvotes</a></th><th>Story</th></tr></thead><tbody>\n");
 		for (Episode ep : arr) {
-			String story = Story.rootNames.get(DB.newMapToIdList(ep.newMap).get(0));
-			if (story == null) story = "";
+			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).get(0));
+			String story;
+			if (rootEp == null) story = "";
+			else story = rootEp.link;
 			sb.append("<tr><td>" + (ep.link.toLowerCase().trim().equals(ep.title.toLowerCase().trim())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + Strings.escape(ep.link) + "</a></td><td>" + ep.hits + "</td><td>" + ep.views + "</td><td>" + ep.upvotes + "</td><td>" + Strings.escape(story) + "</td></tr>\n");
 		}
 		sb.append("</tbody></table>\n");

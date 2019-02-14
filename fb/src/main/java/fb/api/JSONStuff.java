@@ -58,7 +58,7 @@ public class JSONStuff {
 		JSONToken jtoken = g.get().fromJson(json, JSONToken.class);
 		String token = null;
 		if (jtoken != null) if (jtoken.token != null) token = jtoken.token;
-		List<FlatEpisode> roots = Story.getRoots();
+		List<FlatEpisode> roots = Story.getRootEpisodes();
 		FlatUser user = null;
 		try { user = Accounts.getFlatUserUsingTokenString(token); } catch (Exception e) {}
 		return Response.ok(g().toJson(new JSONEpisodeList(roots, user))).build();

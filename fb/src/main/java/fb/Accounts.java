@@ -243,9 +243,11 @@ public class Accounts {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table class=\"fbtable\">");
 		for (FlatEpisode ep : profileUser.episodes) {
-			String story = Story.rootNames.get(DB.newMapToIdList(ep.newMap).get(0));
-			if (story == null) story = "";
-			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().toLowerCase().equals(ep.link.trim().toLowerCase())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"fbtable\">" + story + "</td></tr>");
+			String story;
+			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).get(0));
+			if (rootEp == null) story = "";
+			else story = rootEp.link;
+			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().toLowerCase().equals(ep.link.trim().toLowerCase())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"fbtable\">" + Strings.escape(story) + "</td></tr>");
 		}
 		sb.append("</table>");
 		String avatar = (profileUser.user.avatar==null)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + Strings.escape(profileUser.user.avatar) + "\" /> ");

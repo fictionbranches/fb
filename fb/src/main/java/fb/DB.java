@@ -721,7 +721,7 @@ public class DB {
 				session.beginTransaction();
 				session.merge(child);
 				session.getTransaction().commit();
-				Story.rootNames.put(childId, link);
+				//Story.rootNames.put(childId, link);
 			} catch (Exception e) {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
@@ -731,6 +731,7 @@ public class DB {
 			return childId;
 		} finally {
 			closeSession(session);
+			Story.updateRootEpisodesCache();
 		}
 		}
 	}
@@ -1071,12 +1072,9 @@ public class DB {
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			FullTextSession sesh = Search.getFullTextSession(session);
 			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class)
-					//.overridesForField("title","fbEpisodeAnalyzer")
-					//.overridesForField("link","fbEpisodeAnalyzer")
-					//.overridesForField("body","fbEpisodeAnalyzer")
 					.get();
 						
-			RegexpQuery idQuery = new RegexpQuery(new Term("id", (ep.getNewMap()+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
+			RegexpQuery idQuery = new RegexpQuery(new Term("newMap", (ep.getNewMap()+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
 			
 			Query searchQuery = qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery();
 			Query combinedQuery = qb.bool().must(searchQuery).must(idQuery).createQuery();
@@ -3139,6 +3137,7 @@ public class DB {
 			}
 		} finally {
 			closeSession(session);
+			Story.updateRootEpisodesCache();
 		}
 	}
 	
