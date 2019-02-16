@@ -23,9 +23,7 @@ public class DBEpisodeView {
 	
 	@ManyToOne
 	private DBUser user;
-	
-	public DBEpisodeView() {}
-	
+		
 	public long getId() {
 		return id;
 	}

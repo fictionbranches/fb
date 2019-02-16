@@ -28,8 +28,6 @@ public class DBNotification {
 	
 	private boolean read;
 	
-	public DBNotification() {}
-
 	public long getId() {
 		return id;
 	}

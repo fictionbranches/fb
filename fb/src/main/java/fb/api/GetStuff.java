@@ -29,6 +29,7 @@ import fb.InitWebsite;
 import fb.Story;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
+import fb.util.BadLogger;
 import fb.util.Dates;
 import fb.util.Strings;
 
@@ -38,8 +39,7 @@ public class GetStuff {
 	@GET
 	@Path("asdf")
 	public static Response asdf() throws DBException {
-		Strings.log("asdf");
-		//return Response.seeOther(createURI("/fb?asdf=qwerty&qwery=asdf")).build();
+		BadLogger.log("asdf");
 		throw new DBException("this is an exception asdf");
 	}
 	
@@ -77,7 +77,6 @@ public class GetStuff {
 				d, 
 				true, 
 				true);
-		//return new NewCookie(new NewCookie(name, value).toCookie(), "fbtoken", Integer.MAX_VALUE, Date.from(Instant.MAX), true, true);
 		} catch (Exception e) {
 			System.err.println(e);
 			e.printStackTrace();
@@ -126,13 +125,8 @@ public class GetStuff {
 			if (username == null) return redirectHere;
 
 			try {
-				switch (vote.toLowerCase()) {
-				case "up":
-					DB.upvote(generatedId, username);
-					break;
-				case "down":
-					DB.downvote(generatedId, username);
-				}
+				if (vote.equalsIgnoreCase("up")) DB.upvote(generatedId, username);
+				else if (vote.equalsIgnoreCase("down")) DB.downvote(generatedId, username);
 			} catch (DBException e) {
 				return redirectHere;
 			}
@@ -141,7 +135,6 @@ public class GetStuff {
 		
 		boolean advancedChildren = false;
 		if (fbadvancedchildren != null && fbadvancedchildren.getValue().equals("true")) advancedChildren = true;
-		//if (InitWebsite.DEV_MODE) advancedChildren = true; /* TODO */
 		
 		if (sort != null) {
 			ResponseBuilder ret = Response.seeOther(createURI("/fb/story/" + generatedId + "#children"));
@@ -296,8 +289,7 @@ public class GetStuff {
 		if (!Accounts.isLoggedIn(fbtoken)) return Response.ok(Strings.getFileWithToken("generic.html",fbtoken).replace("$EXTRA", "You must be logged in to do that")).build();
 		
 		String ret = Story.getCompleteHTML(fbtoken, generatedId);
-		Response response = Response.ok(ret).build();
-		return response;
+		return Response.ok(ret).build();
 	}
 	
 	@GET
@@ -339,7 +331,6 @@ public class GetStuff {
 	@Path("announcements")
 	@Produces(MediaType.TEXT_HTML)
 	public Response announcements(@CookieParam("fbtoken") Cookie fbtoken) {
-		//return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", Story.formatBody(Strings.getFile("announcements.md", null)))).build();
 		return Response.ok(Story.getAnnouncements(fbtoken)).build();
 	}
 	
@@ -351,7 +342,9 @@ public class GetStuff {
 			long aid = Long.parseLong(id);
 			FlatUser user = Accounts.getFlatUser(fbtoken);
 			DB.markAnnouncementViewed(user.id, aid);
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			BadLogger.log(e);
+		}
 		return Response.seeOther(GetStuff.createURI("/fb/announcements")).build();
 	}
 	

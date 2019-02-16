@@ -33,7 +33,7 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 		
 		try (StringWriter sw = new StringWriter()) {
 			 try (PrintWriter pw = new PrintWriter(sw)) {
-				exception.printStackTrace(pw);
+				if (exception != null) exception.printStackTrace(pw);
 			}
 			StringBuilder sb = new StringBuilder();
 			sb.append("<p><h1>You ran into an uncaught exception.</h1><br/>\n");

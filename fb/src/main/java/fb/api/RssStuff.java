@@ -27,6 +27,7 @@ import fb.DB;
 import fb.DB.DBException;
 import fb.Story;
 import fb.objects.FlatEpisode;
+import fb.util.BadLogger;
 import fb.util.Strings;
 
 @Path("fb")
@@ -56,37 +57,17 @@ public class RssStuff {
 		return Response.ok(feeds.get(story)).build();
 	}
 	
-	/*@GET
-	@Path("feed")
-	@Produces(MediaType.TEXT_HTML)
-	public Response getFeedHTML( @CookieParam("fbtoken") Cookie fbtoken) {
-		return Response.ok(Strings.getFileWithToken("generic.html",fbtoken).replace("$EXTRA", 
-				"This an RSS page, but it looks like you're trying to access it from a web browser.<br/><br/>\n" + 
-				"If you wish to subscribe to Fiction Branches with your RSS reader, give it this page's URL.<br/><br/>\n" + 
-				"Maybe you were looking for <a href=/fb/recent>recents</a>?")).build();
-	}
-	
-	@GET
-	@Path("feed/{id}")
-	@Produces(MediaType.TEXT_HTML)
-	public Response getFeedHTML(@PathParam("id") String id, @CookieParam("fbtoken") Cookie fbtoken) {
-		return Response.ok(Strings.getFileWithToken("generic.html",fbtoken).replace("$EXTRA", 
-				"This an RSS page, but it looks like you're trying to access it from a web browser.<br/><br/>\n" + 
-				"If you wish to subscribe to Fiction Branches with your RSS reader, give it this page's URL.<br/><br/>\n" + 
-				"Maybe you were looking for <a href=/fb/recent/" + id +  ">recents</a>?")).build();
-	}*/
-
 	private static HashMap<Long,String> feeds;
 	static {
 		updateFeeds();
 		Thread t = new Thread(()-> {
-			final long sleepTime = 1000*60*60;
+			final long sleepTime = 1000l*60l*60l;
 			while (true) {
 				try {
 					Thread.sleep(sleepTime);
 					updateFeeds();
 				} catch (InterruptedException e) {
-					Strings.log("Feed updater thread interrupted");
+					BadLogger.log("Feed updater thread interrupted");
 				}
 			}
 		});
@@ -102,13 +83,11 @@ public class RssStuff {
 				long generatedId = root.generatedId;
 				list.put(generatedId, generate(generatedId));
 			}
-		} catch (DBException e) {
-			Strings.log("Couldn't get roots for RSS");
 		} finally {
 			feeds = list;
 			StringBuilder sb = new StringBuilder("Updated RSS feeds: ");
 			for (long id : list.keySet()) sb.append(id + " ");
-			Strings.log(sb.toString());
+			BadLogger.log(sb.toString());
 		}
 	}
 	
@@ -123,7 +102,7 @@ public class RssStuff {
 		try {
 			eps = DB.getRecents(story, 1, false).episodes;
 		} catch (DBException e) {
-			Strings.log("Couldn't get recents for RSS");
+			BadLogger.log("Couldn't get recents for RSS");
 			return feedToString(feed);
 		}
 		for (FlatEpisode ep : eps) {
@@ -166,9 +145,9 @@ public class RssStuff {
 		try {
 			new SyndFeedOutput().output(feed, writer);
 		} catch (IOException e) {
-			Strings.log("RSS: there was some problem writing to the Writer");
+			BadLogger.log("RSS: there was some problem writing to the Writer");
 		} catch (FeedException e) {
-			Strings.log("RSS: the XML representation for the feed could not be created");
+			BadLogger.log("RSS: the XML representation for the feed could not be created");
 		}
 		return writer.toString();
 	}

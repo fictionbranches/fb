@@ -17,8 +17,6 @@ public class DBPasswordReset {
 	
 	private Date date;
 	
-	public DBPasswordReset() {}
-
 	public String getToken() {
 		return token;
 	}

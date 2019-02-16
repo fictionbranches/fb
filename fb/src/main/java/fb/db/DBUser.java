@@ -32,9 +32,7 @@ filters = {
   @TokenFilterDef(factory = StandardFilterFactory.class) 
 })
 public class DBUser {
-	
-	public DBUser() {}
-	
+		
 	@Id
 	private String id;
 	
@@ -58,7 +56,7 @@ public class DBUser {
 	private byte level; // 1=user, 10=mod, 100=admin, 
 	
 	@ManyToOne
-	private DBTheme theme;// = "Default";
+	private DBTheme theme;
 	
 	@OneToOne(mappedBy = "user")
 	private DBEmailChange emailChange;

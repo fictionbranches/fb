@@ -15,9 +15,7 @@ public class DBPotentialUser {
 	private String passwordHash;
 	private String author;
 	private Date date;
-	
-	public DBPotentialUser() {}
-	
+		
 	public String getToken() {
 		return token;
 	}

@@ -20,6 +20,7 @@ import fb.DB;
 import fb.DB.DBException;
 import fb.InitWebsite;
 import fb.objects.FlatUser;
+import fb.util.BadLogger;
 import fb.util.GoogleRECAPTCHA;
 import fb.util.GoogleRECAPTCHA.GoogleCheckException;
 import fb.util.Strings;
@@ -57,19 +58,12 @@ public class AccountStuff {
 	@Produces(MediaType.TEXT_HTML)
 	public Response login(@CookieParam("fbtoken") Cookie fbtoken) {
 		return Response.seeOther(GetStuff.createURI("/fb")).build();
-		/*//if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
-		
-		Strings.log("Someone's on the login page");
-		if (Accounts.isLoggedIn(fbtoken)) return Response.ok("Already logged in").build();
-		return Response.ok(Strings.getFile("loginform.html", null).replace("$EXTRA", "")).build();*/
 	}
 	
 	@GET
 	@Path("logout")
 	@Produces(MediaType.TEXT_HTML)
-	public Response logout(@CookieParam("fbtoken") Cookie fbtoken, @QueryParam("return") String returnPath) {
-		//if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
-		
+	public Response logout(@CookieParam("fbtoken") Cookie fbtoken, @QueryParam("return") String returnPath) {		
 		Accounts.logout(fbtoken);
 		if (returnPath == null || returnPath.equals("")) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		else return Response.seeOther(GetStuff.createURI(returnPath)).build();
@@ -87,9 +81,8 @@ public class AccountStuff {
 	@Produces(MediaType.TEXT_HTML)
 	public Response loginpost(@Context UriInfo uriInfo, @FormParam("email") String email, @FormParam("password") String password,
 			@FormParam("g-recaptcha-response") String google) {
-		//if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 		
-		Strings.log("Login attempt: " + email);
+		BadLogger.log("Login attempt: " + email);
 		try {
 			String token = Accounts.login(email, password);
 			return Response.seeOther(GetStuff.createURI("/fb")).cookie(GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost())).build();
@@ -102,9 +95,8 @@ public class AccountStuff {
 	@Path("loginpost2")
 	@Produces(MediaType.TEXT_HTML)
 	public Response loginpost2(@Context UriInfo uriInfo, @FormParam("email") String email, @FormParam("password") String password) {
-		//if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 		
-		Strings.log("Login2 attempt: " + email);
+		BadLogger.log("Login2 attempt: " + email);
 		try {
 			String token = Accounts.login(email, password);
 			return Response.ok("loggedin").cookie(GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost())).build();
@@ -124,7 +116,7 @@ public class AccountStuff {
 	public Response confirmaccount(@PathParam("token") String token) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 		
-		Strings.log("Verifying: " + token);
+		BadLogger.log("Verifying: " + token);
 		return Response.ok(Accounts.verify(token)).build();
 	}
 	
@@ -139,7 +131,7 @@ public class AccountStuff {
 	public Response createaccount(@CookieParam("fbtoken") Cookie fbtoken) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 		
-		if (Accounts.isLoggedIn(fbtoken)) return Response.seeOther(GetStuff.createURI("/fb")).build();//ok("Already looged in").build();
+		if (Accounts.isLoggedIn(fbtoken)) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		return Response.ok(Strings.getFileWithToken("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", "")).build();
 	}
 	
@@ -182,13 +174,13 @@ public class AccountStuff {
 			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
 		}
 		
-		
+		final String checked = "checked";
 		
 		return Response.ok(Strings.getFile("useraccount.html", user)
-				.replace("$COMMENT_SITE_CHECKED", user.commentSite?"checked":"")
-				.replace("$COMMENT_MAIL_CHECKED", user.commentMail?"checked":"")
-				.replace("$CHILD_SITE_CHECKED", user.childSite?"checked":"")
-				.replace("$CHILD_MAIL_CHECKED", user.childMail?"checked":"")
+				.replace("$COMMENT_SITE_CHECKED", user.commentSite?checked:"")
+				.replace("$COMMENT_MAIL_CHECKED", user.commentMail?checked:"")
+				.replace("$CHILD_SITE_CHECKED", user.childSite?checked:"")
+				.replace("$CHILD_MAIL_CHECKED", user.childMail?checked:"")
 				.replace("$ID", user.id)).build();
 	}
 	
@@ -401,7 +393,7 @@ public class AccountStuff {
 	public Response confirmemailchange(@PathParam("token") String token, @CookieParam("fbtoken") Cookie fbtoken) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 		
-		Strings.log("Verifying: " + token);
+		BadLogger.log("Verifying: " + token);
 		return Response.ok(Accounts.verifyNewEmail(token, fbtoken)).build();
 	}
 	
@@ -472,9 +464,8 @@ public class AccountStuff {
 	@Path("notifications")
 	@Produces(MediaType.TEXT_HTML)
 	public Response notifications(@CookieParam("fbtoken") Cookie fbtoken, @QueryParam("all") String all) {
-		//return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", Story.formatBody(Strings.getFile("announcements.md", null)))).build();
 		boolean bAll = false;
-		if (all != null) if (all.toLowerCase().equals("true")) bAll = true;
+		if (all != null && all.equalsIgnoreCase("true")) bAll = true;
 		return Response.ok(Accounts.getNotifications(fbtoken, bAll)).build();
 	}
 
@@ -492,10 +483,10 @@ public class AccountStuff {
 			boolean childSite = false;
 			boolean childMail = false;
 			
-			if (comment_site != null) if (comment_site.length() > 0) commentSite = true;
-			if (comment_mail != null) if (comment_mail.length() > 0) commentMail = true;
-			if (child_site != null) if (child_site.length() > 0) childSite = true;
-			if (child_mail != null) if (child_mail.length() > 0) childMail = true;
+			if (comment_site != null && comment_site.length() > 0) commentSite = true;
+			if (comment_mail != null && comment_mail.length() > 0) commentMail = true;
+			if (child_site != null && child_site.length() > 0) childSite = true;
+			if (child_mail != null && child_mail.length() > 0) childMail = true;
 			
 			DB.updateUserNotificationSettings(user.id, commentSite, commentMail, childSite, childMail);
 		} catch (FBLoginException | DBException e) {

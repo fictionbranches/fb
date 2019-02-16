@@ -44,6 +44,7 @@ import fb.objects.FlatUser;
 import fb.objects.ModEpisode;
 import fb.objects.Notification;
 import fb.objects.User;
+import fb.util.BadLogger;
 import fb.util.Dates;
 import fb.util.Strings;
 
@@ -53,32 +54,32 @@ public class Accounts {
 	
 	private static ConcurrentHashMap<String,UserSession> active = new ConcurrentHashMap<>(); //<loginToken>, user>
 	
-	private static final String sessionPath = InitWebsite.BASE_DIR + "/fbtemp/sessions/";
+	private static final String SESSION_PATH = InitWebsite.BASE_DIR + "/fbtemp/sessions/";
 	
 	/**
 	 * Writes out all current login sessions to json files inside the home directory
 	 */
 	public static void writeSessionsToFile() {
-		Strings.log("Writing queues to file");
-		new File(sessionPath).mkdirs();
+		BadLogger.log("Writing queues to file");
+		new File(SESSION_PATH).mkdirs();
 		for (Entry<String,UserSession> entry : active.entrySet()) {
-			try (BufferedWriter out = new BufferedWriter(new FileWriter(sessionPath + entry.getKey()))) {
+			try (BufferedWriter out = new BufferedWriter(new FileWriter(SESSION_PATH + entry.getKey()))) {
 				out.write(new Gson().toJson(entry.getValue()));
 				out.flush();
 			} catch (IOException e) {
 				e.printStackTrace();
-				Strings.log("Error writing user sessions queue: " + e.getMessage());
+				BadLogger.log("Error writing user sessions queue: " + e.getMessage());
 			}
 		}
-		Strings.log("Done writing queues to file");
+		BadLogger.log("Done writing queues to file");
 	}
 	
 	/**
 	 * Reads in all current login sessions from json files inside the home directory
 	 */
 	private static void readSessionsFromFile() {
-		Strings.log("Reading queues from file");
-		File dir = new File(sessionPath);
+		BadLogger.log("Reading queues from file");
+		File dir = new File(SESSION_PATH);
 		if (dir.exists()) {
 			if (dir.isDirectory()) {
 				for (File f : dir.listFiles()) {
@@ -86,24 +87,22 @@ public class Accounts {
 					String token = f.getName();
 					active.put(token, sesh);
 				}
-			} else Strings.log("Session directory " + sessionPath + " exists but is a file");
-		} else Strings.log("Session directory " + sessionPath + " does not exist");
-		Strings.safeDeleteFileDirectory(sessionPath);
-		Strings.log("Done reading queues from file");
+			} else BadLogger.log("Session directory " + SESSION_PATH + " exists but is a file");
+		} else BadLogger.log("Session directory " + SESSION_PATH + " does not exist");
+		Strings.safeDeleteFileDirectory(SESSION_PATH);
+		BadLogger.log("Done reading queues from file");
 	}
 	
 	/**
 	 * Removes any login sessions more than 7 days old
 	 */
 	private static void pruneSessions() {
-		ArrayList<String> deleteTheseTokens = new ArrayList<>();
-		for (String loginToken : active.keySet()) {
+		active.entrySet().removeIf(e->{
+			long then = e.getValue().lastActive().getTime();
 			long now = System.currentTimeMillis();
-			long then = active.get(loginToken).lastActive().getTime();
 			double hours = ((double) (now - then)) / (1000.0 * 60.0 * 60.0);
-			if (hours > 24*7) deleteTheseTokens.add(loginToken); // expires after 7 days
-		}
-		for (String loginToken : deleteTheseTokens) active.remove(loginToken);
+			return hours > 24*7; // expires after 7 days
+		});
 	}
 	
 	public static void bump() {
@@ -125,9 +124,9 @@ public class Accounts {
 		Thread t = new Thread(()-> {
 				while (true) {
 				try {
-					Thread.sleep(1000 * 60 * 60);// run every hour
+					Thread.sleep(1000l * 60l * 60l);// run every hour
 				} catch (InterruptedException e) {
-					Strings.log("session prunning thread interrupted " + e.getMessage());
+					BadLogger.log("session prunning thread interrupted " + e.getMessage());
 				}
 				Accounts.pruneSessions();
 				DB.pruneQueues();
@@ -183,7 +182,6 @@ public class Accounts {
 				+ "</p><p><a href=/fb/passwordreset>I forgot my password</a></p></div>";
 		
 		String logoutButton = "<form id=\"logoutButton\" class=\"simplebutton\" action= \"/fb/logout\" method=\"get\"><input class=\"simplebutton\" type= \"submit\" value= \"Log out\"/></form>";
-		//String logoutButton = "<a id=\"logoutButton\" href=\"/fb/logout\">Log out</a>";
 				
 		StringBuilder response = new StringBuilder("<p>Logged in as <a href=/fb/useraccount>" + escape(user.author) + "</a></p><p>" + logoutButton + "</p><p>");
 		if (user.level>=(byte)100) response.append("<a href=/fb/admin>Admin stuff</a><br/>");
@@ -192,8 +190,8 @@ public class Accounts {
 			if (sizes[0] > 0) response.append("<a href=/fb/flagqueue>" + sizes[0] + " flagged episodes</a><br/>");
 			if (sizes[1] > 0) response.append("<a href=/fb/modqueue>" + sizes[1] + " episode modification requests)</a><br/>");
 			if (sizes[2] > 0) response.append("<a href=/fb/commentflagqueue>" + sizes[2] + " flagged comments</a><br/>");
-				response.append("<a href=/fb/modhelp>Moderator guidelines</a>");
-			//response.append("<a href=/fb/flagqueue>Flag queue (" + sizes[0] + ")</a><br/><a href=/fb/modqueue>Mod queue (" + sizes[1] + ")</a><br/><a href=/fb/modhelp>Moderator guidelines</a>");
+			
+			response.append("<a href=/fb/modhelp>Moderator guidelines</a>");
 		}
 		int unreadAnnouncements;
 		try {
@@ -247,7 +245,7 @@ public class Accounts {
 			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).get(0));
 			if (rootEp == null) story = "";
 			else story = rootEp.link;
-			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().toLowerCase().equals(ep.link.trim().toLowerCase())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"fbtable\">" + Strings.escape(story) + "</td></tr>");
+			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"fbtable\">" + Strings.escape(story) + "</td></tr>");
 		}
 		sb.append("</table>");
 		String avatar = (profileUser.user.avatar==null)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + Strings.escape(profileUser.user.avatar) + "\" /> ");
@@ -383,7 +381,7 @@ public class Accounts {
 	 * @throws FBLoginException if not logged in, or if id does not exist
 	 */
 	public static FlatUser getFlatUser(Cookie token) throws FBLoginException {
-		if (token == null) throw new FBLoginException(""); // return null;
+		if (token == null) throw new FBLoginException("");
 		return getFlatUserUsingTokenString(token.getValue());
 	}
 	
@@ -395,7 +393,7 @@ public class Accounts {
 	 */
 	public static FlatUser getFlatUserUsingTokenString(String token)  throws FBLoginException {
 		UserSession sesh = active.get(token);
-		if (sesh == null) throw new FBLoginException(""); // return null;
+		if (sesh == null) throw new FBLoginException("");
 		try {
 			return DB.getFlatUser(sesh.userID);
 		} catch (DBException e) {
@@ -477,7 +475,7 @@ public class Accounts {
 	public static String verify(String createToken) {
 		try {
 			String user = DB.addUser(createToken);
-			Strings.log("Created user " + user);
+			BadLogger.log("Created user " + user);
 			return Strings.getFile("accountconfirmed.html", null);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html",null).replace("$EXTRA", e.getMessage());
@@ -493,25 +491,25 @@ public class Accounts {
 	 * @return HTML with success or form with error 
 	 */
 	public static String create(String email, String password, String password2, String author, String username, String domain) {
-		{
-			String htmlForm = Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY());
-			if (email == null || email.length() == 0) return htmlForm.replace("$EXTRA", "Email address is required");
-			
-			email = email.toLowerCase();
-			
-			if (DB.emailInUse(email)) return htmlForm.replace("$EXTRA", "Email address " + email + " is already in use");
-			if (!EmailValidator.getInstance().isValid(email)) return htmlForm.replace("$EXTRA", "Invalid email address " + email);
-			if (!password.equals(password2)) return htmlForm.replace("$EXTRA", "Passwords do not match");
-			if (password.length() < 8) return htmlForm.replace("$EXTRA", "Password must be at least 8 characters long");
-			if (author == null) return htmlForm.replace("$EXTRA", "Author name is required");
-			author = author.trim();
-			if (author.length() == 0) return htmlForm.replace("$EXTRA", "Author name is required");
-			if (author.length() > Accounts.AUTHOR_LENGTH_LIMIT) return htmlForm.replace("$EXTRA", "Author name cannot be longer than 32 characters");
-			if (username == null || username.length() == 0) return htmlForm.replace("$EXTRA", "Username is required");
-			username = username.toLowerCase();
-			if (DB.userIdInUse(username)) return htmlForm.replace("$EXTRA", "Username " + username + " is already in use");
-			for (char c : username.toCharArray()) if (!allowedUsernameChars.contains(c)) return htmlForm.replace("$EXTRA", "Username may not contain " + c);
-		}
+		
+		String htmlForm = Strings.getFile("createaccountform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY());
+		if (email == null || email.length() == 0) return htmlForm.replace("$EXTRA", "Email address is required");
+
+		email = email.toLowerCase();
+
+		if (DB.emailInUse(email)) return htmlForm.replace("$EXTRA", "Email address " + email + " is already in use");
+		if (!EmailValidator.getInstance().isValid(email)) return htmlForm.replace("$EXTRA", "Invalid email address " + email);
+		if (!password.equals(password2)) return htmlForm.replace("$EXTRA", "Passwords do not match");
+		if (password.length() < 8) return htmlForm.replace("$EXTRA", "Password must be at least 8 characters long");
+		if (author == null) return htmlForm.replace("$EXTRA", "Author name is required");
+		author = author.trim();
+		if (author.length() == 0) return htmlForm.replace("$EXTRA", "Author name is required");
+		if (author.length() > Accounts.AUTHOR_LENGTH_LIMIT) return htmlForm.replace("$EXTRA", "Author name cannot be longer than 32 characters");
+		if (username == null || username.length() == 0) return htmlForm.replace("$EXTRA", "Username is required");
+		username = username.toLowerCase();
+		if (DB.userIdInUse(username)) return htmlForm.replace("$EXTRA", "Username " + username + " is already in use");
+		for (char c : username.toCharArray()) if (!allowedUsernameChars.contains(c)) return htmlForm.replace("$EXTRA", "Username may not contain " + c);
+
 		String createToken = DB.addPotentialUser(username, email, BCrypt.hashpw(password, BCrypt.gensalt(10)), author);
 		if (InitWebsite.DEV_MODE) {
 			verify(createToken);
@@ -591,7 +589,7 @@ public class Accounts {
 		if (bio.length() > 10000) errors.append("Body cannot be longer than 10000 (" + bio.length() + ")<br/>\n");
 		TreeSet<String> list = new TreeSet<>();
 		for (String s : Story.replacers) if (bio.contains(s)) list.add(s);
-		if (list.size() > 0) {
+		if (!list.isEmpty()) {
 			errors.append("Bio may not contain any of the following strings: ");
 			for (String s : list) errors.append("\"" + s + "\"");
 			errors.append("<br/>\n");
@@ -715,7 +713,6 @@ public class Accounts {
 				return "Confirmation link is expired, invalid, or has already been used";
 			}
 			try {
-				//user = DB.getFlatUser(fbtoken.getValue());
 				user = Accounts.getFlatUser(fbtoken);
 			} catch (FBLoginException e) {
 				user = null;
@@ -817,11 +814,6 @@ public class Accounts {
 			commentHTML.append("<p>" + Story.formatBody(c.text) + "</p><hr/>");
 			commentHTML.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" /><a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a><br/>\n");
 			commentHTML.append(Strings.escape(Dates.outputDateFormat(c.date)));
-			/*if (user != null) {
-				if (c.user.id.equals(user.id)) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete</a>");
-				else if (user.level>=10) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete as mod</a>");
-				else commentHTML.append(" - <a href=/fb/flagcomment/" + c.id + ">Flag</a>");
-			}*/
 			commentHTML.append("</div>\n");
 			
 		sb.append("<h1>Flag text:</h1>");
@@ -929,16 +921,6 @@ public class Accounts {
 				}
 				out.append("</tbody></table>");
 				sb.append("<p><hr/><h4>Diffed body:</h4> " + out.toString() + "</p>\n");
-				
-				
-				/*sb.append("<h4>Diffed body:</h4>");
-				Patch<String> patch = DiffUtils.diff(listify(oldBody), listify(mod.body));
-				for (Delta<String> delta : patch.getDeltas()) {
-					sb.append(Strings.escape(delta.toString()) + "<br/>\n");
-				}*/
-				
-				//throw new Exception("asdf");
-				
 			} catch (Exception e) {
 				e.printStackTrace();
 				sb.append("<p><hr/><h4>New body:</h4> " + Story.formatBody(mod.body) + "</p>\n");
@@ -1098,9 +1080,7 @@ public class Accounts {
 		} catch (FBLoginException e) {
 			return Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that");
 		}
-		
-		//List<Announcement> list = DB.getAnnouncements((user==null)?null:user.id);
-		
+				
 		List<Notification> list;
 		try {
 			list = DB.getNotificationsForUser(user.id, all, 1);
@@ -1117,7 +1097,7 @@ public class Accounts {
 			sb.append("<hr/>\n");
 		}
 		
-		if (list.size() == 0) {
+		if (list.isEmpty()) {
 			if (all) sb.append("<p>(no notifications)</p>");
 			else sb.append("<p>(no new notifications)</p>");
 		}
@@ -1155,6 +1135,7 @@ public class Accounts {
 		props.put("mail.smtp.auth", "true");
 		props.put("mail.smtp.starttls.enable", "true");
 		Authenticator auth = new Authenticator() {
+			@Override
 			protected PasswordAuthentication getPasswordAuthentication() {
 				return new PasswordAuthentication(Strings.getSMTP_EMAIL(), Strings.getSMTP_PASSWORD());
 			}
@@ -1188,4 +1169,6 @@ public class Accounts {
 		allowedUsernameChars.add('_');
 		allowedUsernameChars.add('.');
 	}
+	
+	private Accounts() {}
 }

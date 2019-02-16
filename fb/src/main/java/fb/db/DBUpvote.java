@@ -23,9 +23,7 @@ public class DBUpvote {
 	
 	@ManyToOne
 	private DBUser user;
-	
-	public DBUpvote() {}
-	
+		
 	public long getId() {
 		return id;
 	}

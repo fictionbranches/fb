@@ -34,6 +34,7 @@ import fb.objects.Episode;
 import fb.objects.EpisodeWithChildren;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
+import fb.util.BadLogger;
 import fb.util.Dates;
 import fb.util.Strings;
 
@@ -73,15 +74,15 @@ public class Story {
 		
 		FlatUser user = ep.viewer;
 		
-		String addEp, modify="";	
+		String addEp;
+		String modify="";	
 		if (user == null) {
 			addEp = Strings.getString("story_add_ep_not_logged_in");
 		} else {
 			if (ep.authorId.equals(user.id)) modify = Strings.getString("story_modify_owner").replace("$ID", ""+generatedId);
 			else if (user.level >= ((byte)10)) modify = Strings.getString("story_modify_moderator").replace("$ID", ""+generatedId);
 			else modify = Strings.getString("story_modify_logged_in").replace("$ID", ""+generatedId);
-			/*if (("https://example.com/fb/story/" + id).length() > 1900) addEp = "";
-			else */
+			
 			addEp = 
 					Strings.getString("story_add_ep_logged_in").replace("$ID", ""+generatedId) + "&nbsp;&nbsp;&nbsp;" + 
 					(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ""+generatedId)):(Strings.getString("story_downvote").replace("$ID", ""+generatedId))) + "</div>";
@@ -95,11 +96,6 @@ public class Story {
 		ArrayList<Episode> children = new ArrayList<>(ep.children);
 		String sortOrder;
 		switch (sort) {
-		case 0:
-		default:
-			Collections.sort(children, Comparator.comparing(e->e.newMap,DB.newMapComparator));
-			sortOrder = "Oldest first (default)";
-			break;
 		case 1:
 			Collections.sort(children, Comparator.comparing((Episode e)->e.newMap,DB.newMapComparator).reversed());
 			sortOrder = "Newest first";
@@ -116,6 +112,11 @@ public class Story {
 			Collections.shuffle(children, Strings.r);
 			sortOrder = "Random";
 			break;
+		case 0:
+		default:
+			Collections.sort(children, Comparator.comparing(e->e.newMap,DB.newMapComparator));
+			sortOrder = "Oldest first (default)";
+			break;
 		}
 		
 		StringBuilder pathbox = new StringBuilder();
@@ -126,7 +127,9 @@ public class Story {
 		
 		StringBuilder childHTML = new StringBuilder();
 		if (!children.isEmpty()) {
-			String head, row, foot;
+			String head;
+			String row;
+			String foot;
 			if (advancedChildren) {
 				head = "story_childtable_head_advanced";
 				row = "story_childtable_row_advanced";
@@ -178,7 +181,7 @@ public class Story {
 			}
 			commentHTML.append("</div>\n");
 		}
-		if (!InitWebsite.READ_ONLY_MODE && user != null) commentHTML.append(commentFormHTML); //commentHTML.append("<p><a href=/fb/addcomment/" + ep.id + ">Add comment</a></p>");
+		if (!InitWebsite.READ_ONLY_MODE && user != null) commentHTML.append(commentFormHTML);
 
 		if (InitWebsite.READ_ONLY_MODE) addEp = "";
 		
@@ -354,17 +357,7 @@ public class Story {
 	 * @return empty string if parameters are wrong
 	 */
 	public static String getRecentsTable(String rootId, int page, boolean reverse) {
-		int root = -1;
-		{ // Check rootId is actually a root Id
-			if (rootId == null || rootId.length() == 0) root = 0;
-			for (char c : rootId.toCharArray()) if (c<'0' || c>'9') root = 0;
-			if (root == -1) try {
-				root = Integer.parseInt(rootId);
-			} catch (NumberFormatException e) {
-				root = 0;
-			}
-		}
-		
+		int root = getRecentsRoot(rootId);
 		List<FlatEpisode> episodes;
 		try {
 			episodes = DB.getRecentsPage(root, page, reverse); 
@@ -375,22 +368,32 @@ public class Story {
 		return getRecentsTable(episodes, root);
 	}
 	
-	/**
-	 * Gets an list of recent episodes
-	 * 
-	 * @return HTML recents
-	 */
-	public static String getRecents(Cookie token, String rootId, int page, boolean reverse) {
+	private static int getRecentsRoot(String rootId) {
 		int root = -1;
 		{ // Check rootId is actually a root Id
 			if (rootId == null || rootId.length() == 0) root = 0;
-			for (char c : rootId.toCharArray()) if (c<'0' || c>'9') root = 0;
+			else {
+				for (char c : rootId.toCharArray()) if (c<'0' || c>'9') {
+					root = 0;
+					break;
+				}
+			}
 			if (root == -1) try {
 				root = Integer.parseInt(rootId);
 			} catch (NumberFormatException e) {
 				root = 0;
 			}
 		}
+		return root;
+	}
+	
+	/**
+	 * Gets an list of recent episodes
+	 * 
+	 * @return HTML recents
+	 */
+	public static String getRecents(Cookie token, String rootId, int page, boolean reverse) {
+		int root = getRecentsRoot(rootId);
 		
 		List<FlatEpisode> recents;
 		FlatUser user;
@@ -464,19 +467,17 @@ public class Story {
 	
 	static {
 		updateRootEpisodesCache();
-		Thread t = new Thread() {
-			public void run() {
-				while (true) {
-					try {
-						Thread.sleep(1000*60*5);
-					} catch (InterruptedException e) {
-						Strings.log("Root cache thread interrupted (should never happend): " + e.getMessage());
-						break;
-					}
-					updateRootEpisodesCache();
+		Thread t = new Thread(()->{
+			while (true) {
+				try {
+					Thread.sleep(1000l*60l*5l);
+				} catch (InterruptedException e) {
+					BadLogger.log("Root cache thread interrupted (should never happend): " + e.getMessage());
+					break;
 				}
+				updateRootEpisodesCache();
 			}
-		};
+		});
 		t.setName("RootCacheUpdaterThread");
 		t.start();
 	}
@@ -491,14 +492,8 @@ public class Story {
 	
 	public static void updateRootEpisodesCache() {
 		ConcurrentHashMap<Long,FlatEpisode> newCache = new ConcurrentHashMap<>();
-		try {
-			for (FlatEpisode root : DB.getRoots()) newCache.put(root.generatedId, root);
-			rootEpisodesCache2 = newCache;
-		} catch (DBException e) {
-			Strings.log("Root episodes not found");
-			DB.closeSessionFactory();
-			System.exit(1);
-		}
+		for (FlatEpisode root : DB.getRoots()) newCache.put(root.generatedId, root);
+		rootEpisodesCache2 = newCache;
 	}
 	
 	public static String getOutlineScrollable(Cookie token, long generatedId) {
@@ -529,7 +524,7 @@ public class Story {
 	
 	public static String getPath(Cookie token, long generatedId) {
 		long start = System.nanoTime();
-		Strings.log("Generating a path page");
+		BadLogger.log("Generating a path page");
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -548,8 +543,8 @@ public class Story {
 			sb.append(child.depth + ". " + epLine(child));
 		}
 		String ret = Strings.getFile("path.html", user).replace("$ID", ""+generatedId).replace("$CHILDREN", sb.toString());
-		Strings.log("Took " + (((double)(System.nanoTime()-aStart))/1000000000.0) + " to generate html");
-		Strings.log("Total path page took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
+		BadLogger.log("Took " + (((double)(System.nanoTime()-aStart))/1000000000.0) + " to generate html");
+		BadLogger.log("Total path page took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
 		return ret;
 	}
 	
@@ -620,7 +615,7 @@ public class Story {
 			sb = new StringBuilder("<p>" + asdf + "</p>");
 		}
 		String prevNext = sb.toString();
-		if (result.size() > 0) {
+		if (!result.isEmpty()) {
 			sb.append("<table class=\"fbtable\">");
 			for (FlatEpisode ep : result) {
 				sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + Strings.escape(ep.link) + "</a></td><td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + 
@@ -640,9 +635,6 @@ public class Story {
 				"  <input type=\"hidden\" name=\"page\" value=\""+page+"\" />\n" + 
 				"  <input class=\"simplebutton\" type=\"submit\" value=\""+name+"\" />\n" + 
 				"</form>";
-		
-		
-		//return "<form class=\"simplebutton\" action= \"/fb/searchpost/"+ id + "/" + page + "\" method=\"post\"><input type= \"hidden\" name= \"search\" value=\""+Strings.escape(search)+"\"/><input class=\"simplebutton\" type= \"submit\" value= \"" + name + "\"/></form>";
 	}
 	
 	public static String getWelcome(Cookie token) {
@@ -660,44 +652,6 @@ public class Story {
 		return Strings.getFile("welcome.html", user).replace("$EPISODES", sb.toString());
 		
 	}
-	/*public static List<FlatEpisode> getRoots() {
-		return Stream.of(rootsCache).collect(Collectors.toList());
-	}
-	private static FlatEpisode[] rootsCache;
-	static {
-		try {
-			rootsCache = DB.getRoots();
-		} catch (DBException e) {
-			Strings.log(e);
-			Strings.log("Could not initialize roots cache, exiting");
-			DB.closeSessionFactory();
-			System.exit(1);
-		}
-		Thread t = new Thread() {
-			public void run() {
-				while (true) {
-					try {
-						Thread.sleep(1000*60*5);
-					} catch (InterruptedException e) {
-						Strings.log("Root cache thread interrupted (should never happend): " + e.getMessage());
-						break;
-					}
-					updateRootsCache();
-				}
-			}
-		};
-		t.setName("RootCacheUpdaterThread");
-		t.start();
-	}
-	
-	private static void updateRootsCache() {
-		try {
-			rootsCache = DB.getRoots();
-		} catch (DBException e) {
-			Strings.log(e);
-			Strings.log("Could not reload roots cache, exiting cache thread");
-		}
-	}*/
 	
 	public static String getMostHits(Cookie token) {
 		FlatUser user;
@@ -721,7 +675,6 @@ public class Story {
 			user = null;
 		}
 		
-		//Episode[] mostViews = DB.mostViews();
 		List<Episode> mostViews = DB.popularEpisodes(DB.PopularEpisode.VIEWS);
 		StringBuilder html = new StringBuilder("<h1>Most views</h1><p>This is the number of logged in users who have viewed the episode.</p>\n");
 		html.append(getPopularityTable(mostViews));
@@ -737,7 +690,6 @@ public class Story {
 			user = null;
 		}
 		
-		//Episode[] mostUpvotes = DB.mostUpvotes();
 		List<Episode> mostUpvotes = DB.popularEpisodes(DB.PopularEpisode.UPVOTES);
 		StringBuilder html = new StringBuilder("<h1>Most upvotes</h1><p>Episodes that have received the most upvotes from users.</p>\n");
 		html.append(getPopularityTable(mostUpvotes));
@@ -778,7 +730,6 @@ public class Story {
 		try {
 			parent = DB.getFlatEp(parentId);
 		} catch (DBException e) {
-			//return notFound(id);
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + parentId);
 		}
 		return Strings.getFile("addform.html", user)
@@ -822,7 +773,6 @@ public class Story {
 	 * @return HTML form
 	 */
 	public static String newRootForm(Cookie token) {
-		//if (!Accounts.isLoggedIn(token)) 
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -948,7 +898,7 @@ public class Story {
 		for (String r : replacers) {
 			if (comment.contains(r)) list.add(r);
 		}
-		if (list.size() > 0) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "Comment text may not contain the following: " + list.stream().collect(Collectors.joining(" "))));
+		if (!list.isEmpty()) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "Comment text may not contain the following: " + list.stream().collect(Collectors.joining(" "))));
 		
 		try {
 			return DB.addComment(generatedId, user.id, comment);
@@ -974,7 +924,7 @@ public class Story {
 		for (String r : replacers) {
 			if (body.contains(r)) list.add(r);
 		}
-		if (list.size() > 0) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "Flag text may not contain the following: " + list.stream().collect(Collectors.joining(" "))));
+		if (!list.isEmpty()) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "Flag text may not contain the following: " + list.stream().collect(Collectors.joining(" "))));
 		
 		try {
 			return DB.flagComment(id, user.id, body);
@@ -1016,7 +966,6 @@ public class Story {
 		try {
 			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e1) {
-			//throw new EpisodeException(notFound(id));
 			throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId));
 		}
 		if (user.id.equals(ep.authorId)) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "You cannot flag your own episode."));
@@ -1030,7 +979,7 @@ public class Story {
 		for (String r : replacers) {
 			if (flag.contains(r)) list.add(r);
 		}
-		if (list.size() > 0) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "Flag text may not contain the following: " + list));
+		if (!list.isEmpty()) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "Flag text may not contain the following: " + list));
 		
 		try {
 			DB.flagEp(generatedId, user.id, flag);
@@ -1061,7 +1010,6 @@ public class Story {
 		try {
 			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e1) {
-			//throw new EpisodeException(notFound(id));
 			throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId));
 		}
 
@@ -1087,9 +1035,7 @@ public class Story {
 			}
 		} catch (DBException e) {
 			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", "Not found: " + generatedId));
-		}
-				
-		//return id;	
+		}	
 	}
 	
 	
@@ -1117,7 +1063,7 @@ public class Story {
 		for (String s : replacers) if (link.contains(s)) list.add(s);
 		for (String s : replacers) if (title.contains(s)) list.add(s);
 		for (String s : replacers) if (body.contains(s)) list.add(s);
-		if (list.size() > 0) {
+		if (!list.isEmpty()) {
 			errors.append("Link text, title, and body may not contain any of the following strings: ");
 			for (String s : list) errors.append("\"" + s + "\"");
 			errors.append("<br/>\n");
@@ -1173,4 +1119,5 @@ public class Story {
 		renderer = HtmlRenderer.builder(options).build();
 	}
 
+	private Story() {}
 }

@@ -13,14 +13,12 @@ import javax.persistence.Table;
 import org.hibernate.Session;
 
 import fb.DB;
-import fb.util.Strings;
+import fb.util.BadLogger;
 
 @Entity
 @Table(name="fbthemes")
 public class DBTheme {
-	
-	public DBTheme() {}
-	
+		
 	@Id
 	private String name;
 	
@@ -46,7 +44,7 @@ public class DBTheme {
 	public static void main(String[] args) throws Exception {
 		HashMap<String,String> css = new HashMap<>(); // <Name, css code>
 		try (Scanner scan = new Scanner(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream("styles.txt")))) { 
-			Strings.log("Updating styles");
+			BadLogger.log("Updating styles");
 			while (scan.hasNext()) {
 				String themeName = scan.nextLine();
 				String fileName = scan.nextLine() + ".css";

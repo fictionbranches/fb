@@ -26,7 +26,6 @@ import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
-import fb.DB.DBException;
 import fb.api.AccountStuff;
 import fb.api.AddStuff;
 import fb.api.AdminStuff;
@@ -39,6 +38,7 @@ import fb.api.MyErrorPageGenerator;
 import fb.api.NotFoundExceptionMapper;
 import fb.api.RssStuff;
 import fb.objects.FlatEpisode;
+import fb.util.BadLogger;
 import fb.util.Strings;
 
 public class InitWebsite {
@@ -99,17 +99,15 @@ public class InitWebsite {
 		HttpServer server;
 		{
 			Thread searchIndexer = checkBaseDirAndIndexes();
-			Strings.log("Started. Connecting to postgres"); // This line also starts the file watcher threads
+			BadLogger.log("Started. Connecting to postgres"); // This line also starts the file watcher threads
 			checkDatabase();
 		
 			Accounts.bump(); // Force temp accounts to be loaded and account cleaner thread to start
 		
-			Runtime.getRuntime().addShutdownHook(new Thread() {
-				public void run() {
-					Accounts.writeSessionsToFile();
-					DB.closeSessionFactory();
-				}
-			});
+			Runtime.getRuntime().addShutdownHook(new Thread(()->{
+				Accounts.writeSessionsToFile();
+				DB.closeSessionFactory();
+			}));
 			
 			
 			if (searchIndexer != null) {
@@ -118,7 +116,7 @@ public class InitWebsite {
 				System.out.println("Search indexer started");
 			}
 			
-			Strings.log("Starting server");
+			BadLogger.log("Starting server");
 			
 			int port; try {
 				port = Integer.parseInt(Strings.getBACKEND_PORT());
@@ -141,25 +139,19 @@ public class InitWebsite {
 		try {
 			server.start();
 		} catch (IOException e) {
-			Strings.log(e);
+			BadLogger.log(e);
 			System.exit(26);
 			throw new RuntimeException(e);
 		}
-		Strings.log("Server started");
+		BadLogger.log("Server started");
 	}
 	
 	private static void checkDatabase() {
 		System.out.println("Checking database");
-		try {
-			for (FlatEpisode rootEp : DB.getRoots()) {
-				Strings.log("Found root episode: " + rootEp.generatedId + " " + rootEp.link);
-			}
-		} catch (DBException e) {
-			System.err.println("No root episodes found");
-			System.exit(27);
-			throw new RuntimeException(e);
+		for (FlatEpisode rootEp : DB.getRoots()) {
+			BadLogger.log("Found root episode: " + rootEp.generatedId + " " + rootEp.link);
 		}
-		Strings.log("Postgres connected successfully");
+		BadLogger.log("Postgres connected successfully");
 	}
 	
 	private static Thread checkBaseDirAndIndexes() {
@@ -176,19 +168,16 @@ public class InitWebsite {
 		}
 		File indexDir = new File(InitWebsite.BASE_DIR + "/search-indexes");
 		if (indexDir.exists() && indexDir.isFile()) {
-			Strings.log("Search index directory " + indexDir.getAbsolutePath() + " is a file");
+			BadLogger.log("Search index directory " + indexDir.getAbsolutePath() + " is a file");
 			DB.closeSessionFactory();
 			System.exit(1);
 		} else if (!indexDir.exists() || indexDir.list().length==0) {
 			InitWebsite.SEARCHING_ALLOWED = false;
-			Thread t = new Thread() {
-				public void run() {
-					DB.doSearchIndex();
-					InitWebsite.SEARCHING_ALLOWED = true;
-				}
-			};
+			Thread t = new Thread(()->{
+				DB.doSearchIndex();
+				InitWebsite.SEARCHING_ALLOWED = true;
+			});
 			t.setName("SearchIndexerThread");
-			//t.start();
 			System.out.println("Started search indexer thread");
 			return t;
 		}
@@ -226,7 +215,7 @@ public class InitWebsite {
 			System.out.println("Finished reading " + keystore.length + " bytes into the keystore");
 		} catch (IOException e) {
 			//never happens
-			Strings.log(e);
+			BadLogger.log(e);
 			System.exit(25);
 			throw new RuntimeException(e);
 		}
@@ -247,7 +236,7 @@ public class InitWebsite {
 					.setQueueLimit(512))
 				.build();
 		for (NetworkListener nl : server.getListeners()) {
-			Strings.log("Set transport for listener: " + nl);
+			BadLogger.log("Set transport for listener: " + nl);
 			nl.setTransport(transport);
 		}
 	}
@@ -265,7 +254,7 @@ public class InitWebsite {
 	private static void saltTest() {
 		final int N = 10;
 		final int L = 32;
-		final Random r = new Random();
+		final Random r = Strings.r;
 		
 		ArrayList<String> list = new ArrayList<>(N);
 		ArrayList<Character> chars = new ArrayList<>(10+26+26);
@@ -293,11 +282,12 @@ public class InitWebsite {
 		}
 	}
 	private static double[] hashAll(int d, ArrayList<String> list, ArrayList<Character> chars, Random r) {
+		if (list.isEmpty()) return new double[] {0.0};
 		double sumHash = 0.0;
 		double sumCheckYes = 0.0;
 		double sumCheckNo = 0.0;
-		int c = 0;
-		long start, stop;
+		long start;
+		long stop;
 		for (String s : list) {
 			start = System.nanoTime();
 			String hash = BCrypt.hashpw(s, BCrypt.gensalt(d));
@@ -312,11 +302,10 @@ public class InitWebsite {
 			BCrypt.checkpw(s, hash);
 			stop = System.nanoTime();
 			sumCheckNo += stop-start;
-			++c;
 		}
 		sumHash /= 1000000000.0;
 		sumCheckYes /= 1000000000.0;
 		sumCheckNo /= 1000000000.0;
-		return new double[]{ sumHash / ((double)c), sumCheckYes / ((double)c), sumCheckNo / ((double)c) };
+		return new double[]{ sumHash / ((double)list.size()), sumCheckYes / ((double)list.size()), sumCheckNo / ((double)list.size()) };
 	}
 }

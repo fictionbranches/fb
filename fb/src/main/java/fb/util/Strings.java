@@ -1,9 +1,7 @@
 package fb.util;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -15,7 +13,6 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -45,11 +42,9 @@ public class Strings {
 	 */
 	public static final Random r; 
 	
-	private static final Map<String,String> files;
-	private static final Map<String,String> strings;
-	
-	private static final Object logLock;
-	
+	private static final Map<String,String> filesMap;
+	private static final Map<String,String> stringsTxtMap;
+		
 	private static String DOMAIN;
 	private static String SMTP_SERVER;
 	private static String SMTP_EMAIL;
@@ -63,14 +58,12 @@ public class Strings {
 	private static String BACKEND_PORT;
 
 	static {
-		logLock = new Object();
 		r = new Random();
 		
 		refreshSiteSettings();
 
-		files = readInFilesMap();
-		//styles = readInStylesMap();
-		strings = readInStringsMap();
+		filesMap = readInFilesMap();
+		stringsTxtMap = readInStringsMap();
 	}
 	
 	public static void refreshSiteSettings() {
@@ -234,19 +227,18 @@ public class Strings {
 		try (Scanner scan = new Scanner(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream("strings.txt")))) {
 			while (scan.hasNextLine()) {
 				String line = scan.nextLine();
-				if (line.trim().startsWith("#")) continue;
-				else if (line.trim().length() == 0) continue;
+				if (line.trim().length() == 0 || line.trim().startsWith("#")) continue;
 				if (!line.contains("~")) {
-					Strings.log("Misformatted strings.txt (uncommented nonempty line with no '~'): " + line);
+					BadLogger.log("Misformatted strings.txt (uncommented nonempty line with no '~'): " + line);
 					System.exit(1);
 				}
 				String[] arr = line.split("~");
 				if (arr.length != 2) {
-					Strings.log("Misformatted strings.txt (too many '~'s " + line + ")");
+					BadLogger.log("Misformatted strings.txt (too many '~'s " + line + ")");
 					System.exit(2);
 				}
 				if (stringsMap.put(arr[0], arr[1]) != null) {
-					Strings.log("strings.txt duplicate key: " + arr[0]);
+					BadLogger.log("strings.txt duplicate key: " + arr[0]);
 					System.exit(3);
 				}
 			}
@@ -259,7 +251,7 @@ public class Strings {
 	}
 	
 	public static String getString(String name) {
-		String value = strings.get(name);
+		String value = stringsTxtMap.get(name);
 		if (value == null) value = "";
 		return value;
 	}
@@ -284,7 +276,7 @@ public class Strings {
 		
 		String account = Accounts.getAccount(user);
 		if (InitWebsite.DEV_MODE) account = "<h3>This site is in dev mode.</h3><p>Any changes you make <em><string>will</strong></em> be deleted.</p>" + account;
-		return files.get(name)
+		return filesMap.get(name)
 				.replace("$DONATEBUTTON", Strings.getDONATE_BUTTON())
 				.replace("$ACCOUNT", account)
 				.replace("$STYLE", user==null?"":themeToCss(user.theme));
@@ -304,40 +296,9 @@ public class Strings {
 		try (Scanner scan = new Scanner(file)) {
 			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
 		} catch (FileNotFoundException e) {
-			Strings.log(e);
+			BadLogger.log(e);
 		}
 		return sb.toString();
-	}
-	
-	/**
-	 * Prepends message with the current date, and writes it to stdout
-	 * @param message
-	 */
-	public static void log(String message) {
-		synchronized (logLock) {
-			Calendar c = Calendar.getInstance();
-			int y = c.get(Calendar.YEAR);
-			int mo = c.get(Calendar.MONTH);
-			int d = c.get(Calendar.DAY_OF_MONTH);
-			int h = c.get(Calendar.HOUR_OF_DAY);
-			int mi = c.get(Calendar.MINUTE);
-			int s = c.get(Calendar.SECOND);
-			try (BufferedWriter out = new BufferedWriter(new FileWriter(InitWebsite.BASE_DIR + "/fblog.txt", true))) {
-				out.write(String.format("%04d-%02d-%02d %02d:%02d:%02d %s", y, mo, d, h, mi, s, message));
-				out.newLine();
-			} catch (IOException e) {
-				System.err.printf("%04d-%02d-%02d %02d:%02d:%02d %s%n", y, mo, d, h, mi, s, "Could not open log file");
-			} finally {
-				System.out.printf("%04d-%02d-%02d %02d:%02d:%02d %s%n", y, mo, d, h, mi, s, message);
-			}
-		}
-	}
-		
-	public static void log(Exception e) {
-		List<String> lines = traceToLines(e);
-		if (lines.size() > 0) synchronized (logLock) {
-			for (String line : lines) log(line);
-		}
 	}
 	
 	public static List<String> traceToLines(Throwable e) {
@@ -353,14 +314,14 @@ public class Strings {
 			return lines;
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			log(e.getMessage());
-			log("Trouble logging previous exception's stack trace: " + ioe.getMessage());
-			return new ArrayList<String>();
+			BadLogger.log(e.getMessage());
+			BadLogger.log("Trouble logging previous exception's stack trace: " + ioe.getMessage());
+			return new ArrayList<>();
 		}
 	}
 	
 	public static String getSelectThemes() {
-		ArrayList<String> list = DB.getThemeNames(); //new ArrayList<>(styles.keySet());
+		List<String> list = DB.getThemeNames();
 		Collections.sort(list);
 		StringBuilder sb = new StringBuilder();
 		for (String theme : list) sb.append(String.format("<option value=\"%s\">%s</option>%n", theme, theme));
@@ -388,11 +349,15 @@ public class Strings {
 						}
 					});
 				} catch (IOException e) {
-					Strings.log("Error deleting directory " + dirPath);
+					BadLogger.log("Error deleting directory " + dirPath);
 					e.printStackTrace();
 				}
-			} else f.delete();
+			} else {
+				f.delete();
+			}
 		}
 	}
+	
+	private Strings() {}
 
 }

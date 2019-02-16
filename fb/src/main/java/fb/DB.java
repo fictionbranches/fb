@@ -28,7 +28,6 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.StreamingOutput;
 
@@ -75,6 +74,7 @@ import fb.objects.ModEpisode;
 import fb.objects.Notification;
 import fb.objects.Theme;
 import fb.objects.User;
+import fb.util.BadLogger;
 import fb.util.Discord;
 import fb.util.Strings;
 
@@ -98,13 +98,13 @@ public class DB {
 		synchronized (epLock) {
 		synchronized (userLock) { synchronized (ecLock) { synchronized (puLock) { synchronized (dumpLock) {
 			mySessionFactory = newSessionFactory();
-			Strings.log("Database success");
+			BadLogger.log("Database success");
 		}
 		} } } } 
 	}
 	
 	private static SessionFactory newSessionFactory() {
-		Configuration configuration = new Configuration();//.configure();
+		Configuration configuration = new Configuration();
 		String dbSettingsFilename = InitWebsite.BASE_DIR + "/dbsettings.txt";
 		File dbSettingsFile = new File(dbSettingsFilename);
 		String connectionURL = "";
@@ -162,7 +162,7 @@ public class DB {
 		configuration.addAnnotatedClass(DBAnnouncementView.class);
 		configuration.addAnnotatedClass(DBNotification.class);
 		configuration.addAnnotatedClass(DBTheme.class);
-
+		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
 			return configuration.buildSessionFactory(builder.build());
@@ -175,27 +175,27 @@ public class DB {
 	
 	public static void closeSessionFactory() {
 		try {
-			Strings.log("Trying to close Session factory");
+			BadLogger.log("Trying to close Session factory");
 			sessionLock.writeLock().lock();
-			Strings.log("Closing Session factory");
+			BadLogger.log("Closing Session factory");
 			mySessionFactory.close();
 		} finally {
 			sessionLock.writeLock().unlock();
-			Strings.log("Session closed");
+			BadLogger.log("Session closed");
 		}
 	}
 	
 	public static void restartSessionFactory() {
 		try {
-			Strings.log("Trying to restart Session factory");
+			BadLogger.log("Trying to restart Session factory");
 			sessionLock.writeLock().lock();
-			Strings.log("Closing Session factory");
+			BadLogger.log("Closing Session factory");
 			mySessionFactory.close();
-			Strings.log("Opening Session factory");
+			BadLogger.log("Opening Session factory");
 			mySessionFactory = newSessionFactory();
 		} finally {
 			sessionLock.writeLock().unlock();
-			Strings.log("Session restarted");
+			BadLogger.log("Session restarted");
 		}	
 	}
 	
@@ -280,9 +280,7 @@ public class DB {
 	 * @return
 	 */
 	static DBUser getUserById(Session session, String id) {
-		id = id.toLowerCase();
-		DBUser result = session.get(DBUser.class, id);
-		return result;
+		return session.get(DBUser.class, id.toLowerCase());
 	}
 	
 	/**
@@ -298,8 +296,7 @@ public class DB {
 		CriteriaQuery<DBUser> query = cb.createQuery(DBUser.class);
 		Root<DBUser> root = query.from(DBUser.class);
 		query.select(root).where(cb.equal(root.get("email"), email));
-		DBUser result = session.createQuery(query).uniqueResult();
-		return result;
+		return session.createQuery(query).uniqueResult();
 	}
 	
 	public static FlatUser getFlatUserByEmail(String email) throws DBException {
@@ -332,7 +329,6 @@ public class DB {
 		Session session = openSession();
 		try {
 			DBEpisode parent = session.get(DBEpisode.class, parentId);
-			//DBEpisode parent = getEpById(session, parentId);
 			DBUser author = getUserById(session, authorId);
 
 			if (parent == null) throw new DBException("Not found: " + parentId);
@@ -397,9 +393,9 @@ public class DB {
 					note.setBody("<a href=\"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>");
 					session.save(note);
 				}
-				if (sendMailNotification) new Thread(()->{
-					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>");
-				}).start();
+				if (sendMailNotification) new Thread(()->
+					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>")
+				).start();
 				
 				session.getTransaction().commit();
 				
@@ -414,7 +410,7 @@ public class DB {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
 			}
-			Strings.log(String.format("New: <%s> %s %s", author, title, childId));
+			BadLogger.log(String.format("New: <%s> %s %s", author, title, childId));
 			return childId;
 		} finally {
 			closeSession(session);
@@ -426,7 +422,6 @@ public class DB {
 		synchronized (epLock) {
 		Session session = openSession();
 		try {
-			//DBEpisode parent = getEpById(session, oldParentId);
 			DBEpisode parent = session.get(DBEpisode.class, parentId);
 			DBUser author = null;
 			{
@@ -498,7 +493,7 @@ public class DB {
 				e.printStackTrace();
 				throw new DBException("Database error");
 			}
-			Strings.log(String.format("New: <%s> %s %s", author, title, child.getGeneratedId()));
+			BadLogger.log(String.format("New: <%s> %s %s", author, title, child.getGeneratedId()));
 			return childId;
 		} finally {
 			closeSession(session);
@@ -653,7 +648,7 @@ public class DB {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
 			}
-			Strings.log(String.format("New: <%s> %s %s", author, title, childId+""));
+			BadLogger.log(String.format("New: <%s> %s %s", author, title, childId+""));
 			return childId;
 		} finally {
 			closeSession(session);
@@ -674,7 +669,7 @@ public class DB {
 			Predicate combPred = cb.and(levelPred, notRootPred);
 			query.select(root).where(combPred).orderBy(cb.asc(root.get("author")));
 			
-			return session.createQuery(query).stream().map(x->new FlatUser(x)).collect(Collectors.toList());
+			return session.createQuery(query).stream().map(FlatUser::new).collect(Collectors.toList());
 		} finally {
 			closeSession(session);
 		}
@@ -696,7 +691,7 @@ public class DB {
 			session.getTransaction().commit();
 		} catch (Exception e) {
 			session.getTransaction().rollback();
-			Strings.log(String.format("Database error modifying: %s", generatedId+""));
+			BadLogger.log(String.format("Database error modifying: %s", generatedId+""));
 			throw new DBException("Database error");
 		} finally {
 			closeSession(session);
@@ -704,7 +699,6 @@ public class DB {
 	}
 	
 	private static void modifyEp(Session session, long generatedId, String link, String title, String body, String editorId) throws DBException {
-		// DBEpisode ep = getEpById(session, id);
 		DBEpisode ep = session.get(DBEpisode.class, generatedId);
 		if (ep == null) throw new DBException("Not found: " + generatedId);
 		DBUser editor = getUserById(session, editorId);
@@ -720,7 +714,7 @@ public class DB {
 		session.merge(oldEditor);
 		session.merge(editor);
 
-		Strings.log(String.format("Modified: <%s> %s", title, generatedId));
+		BadLogger.log(String.format("Modified: <%s> %s", title, generatedId));
 	}
 		
 	public static void newEpisodeMod(long generatedId, String link, String title, String body) throws DBException {
@@ -742,8 +736,8 @@ public class DB {
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
-				Strings.log(e);
-				Strings.log(String.format("Database error submitting new modify: %s", generatedId+""));
+				BadLogger.log(e);
+				BadLogger.log(String.format("Database error submitting new modify: %s", generatedId+""));
 				throw new DBException("Database error");
 			}
 		} finally {
@@ -772,7 +766,7 @@ public class DB {
 			String q = "SELECT * FROM fbepisodes WHERE author_id!='" + episode.getAuthor().getId() + "' AND newmap LIKE '" + episode.getNewMap() + "%';";
 			
 			List<DBEpisode> result = session.createNativeQuery(q, DBEpisode.class).setMaxResults(1).list();
-			if (result.size() > 0) return 1;
+			if (!result.isEmpty()) return 1;
 			return 0;
 		} finally {
 			closeSession(session);
@@ -800,7 +794,7 @@ public class DB {
 			ArrayList<Comment> comments = session.createQuery("from DBComment c where c.episode.generatedId=" + ep.getGeneratedId() + " order by c.date", DBComment.class)
 					.setMaxResults(PAGE_SIZE)
 					.stream()
-					.map(c->new Comment(c))
+					.map(Comment::new)
 					.collect(Collectors.toCollection(ArrayList::new));
 			
 			if (!InitWebsite.READ_ONLY_MODE) {
@@ -816,8 +810,8 @@ public class DB {
 					username = username.toLowerCase().trim();
 					user = DB.getUserById(session, username);
 					if (user != null) {
-						canUpvote = session.createQuery("from DBUpvote vote where vote.episode.generatedId=" + ep.getGeneratedId() + " and vote.user.id='" + user.getId() + "'").setMaxResults(1).list().size() == 0;
-						if (session.createQuery("from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId() + " and ev.user.id='" + username + "'").setMaxResults(1).list().size() == 0) {
+						canUpvote = session.createQuery("from DBUpvote vote where vote.episode.generatedId=" + ep.getGeneratedId() + " and vote.user.id='" + user.getId() + "'").setMaxResults(1).list().isEmpty();
+						if (session.createQuery("from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId() + " and ev.user.id='" + username + "'").setMaxResults(1).list().isEmpty()) {
 							try {
 							session.beginTransaction();
 							DBEpisodeView ev = new DBEpisodeView();
@@ -839,13 +833,12 @@ public class DB {
 			
 			String query = CHILD_QUERY + ep.getGeneratedId() + CHILD_QUERY_POST;
 			
-			List<Episode> children = (List<Episode>) session.createNativeQuery(query).stream()
-			.map(x->{
+			Stream<Object> stream = session.createNativeQuery(query).stream();
+			
+			ArrayList<Episode> children = stream.map(x->{
 				Object[] arr = (Object[])x;
-				//long parentId = ((Long)arr[0]).longValue();
 				long childGeneratedId = ((BigInteger)arr[1]).longValue();
 				String newMap = (String)arr[2];
-				//String childId = idToMap((String)arr[2]);
 				String link = (String)arr[3];
 				String title = (String)arr[4];
 				Date date = (Date)arr[5];
@@ -869,7 +862,7 @@ public class DB {
 			
 			List<FlatEpisode> pathbox = session
 					.createQuery("from DBEpisode ep where " + pathIds.stream().collect(Collectors.joining(" or "))+" order by ep.id desc",DBEpisode.class)
-					.stream().map(e->new FlatEpisode(e))
+					.stream().map(FlatEpisode::new)
 					.collect(Collectors.toList());
 			
 			return new EpisodeWithChildren(ep, visitorCount, upvotes, user, canUpvote, children, comments, pathbox);
@@ -957,7 +950,7 @@ public class DB {
 	}
 	
 	public static EpisodeResultList search(long generatedId, String search, int page) throws DBException {
-		Strings.log(String.format("Searching \"%s\" on page %d (page number %d", search, generatedId, page));
+		BadLogger.log(String.format("Searching \"%s\" on page %d (page number %d", search, generatedId, page));
 		Session session = openSession();
 		page-=1;
 		try {
@@ -974,19 +967,18 @@ public class DB {
 			System.out.println("Searching from page " + page);
 			
 			try {
+				
 				@SuppressWarnings("unchecked")
-				List<FlatEpisode> list = (List<FlatEpisode>) sesh.createFullTextQuery(combinedQuery, DBEpisode.class)
-																	.setFirstResult(PAGE_SIZE*page)
-																	.setMaxResults(PAGE_SIZE+1)
-																	.stream()
-																	.map(e->new FlatEpisode((DBEpisode)e))
-																	.collect(Collectors.toCollection(ArrayList::new));
-				System.out.println("Got results list");
+				Stream<Object> stream = sesh.createFullTextQuery(combinedQuery, DBEpisode.class)
+						.setFirstResult(PAGE_SIZE*page)
+						.setMaxResults(PAGE_SIZE+1)
+						.stream();
+				
+				ArrayList<FlatEpisode> list = stream
+					.map(e->new FlatEpisode((DBEpisode)e))
+					.collect(Collectors.toCollection(ArrayList::new));
 				boolean hasNext = list.size() > PAGE_SIZE;
-				System.out.println("Got hasNext: " + hasNext);
-				EpisodeResultList ret = new EpisodeResultList(null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
-				System.out.println("Got return value");
-				return ret;
+				return new EpisodeResultList(null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
 			} catch (Exception e) {
 				throw new RuntimeException("Search exception on id " + generatedId + " with search query \"" + search + "\" -- "  + e + " -- " + e.getMessage());
 			}
@@ -1006,7 +998,13 @@ public class DB {
 			System.out.println("Searching from page " + page);			
 			
 			@SuppressWarnings("unchecked")
-			List<FlatUser> list = (List<FlatUser>) sesh.createFullTextQuery(searchQuery, DBUser.class).setFirstResult(PAGE_SIZE*page).setMaxResults(PAGE_SIZE+1).stream().map(e->new FlatUser((DBUser)e)).collect(Collectors.toCollection(ArrayList::new));
+			Stream<Object> stream = sesh.createFullTextQuery(searchQuery, DBUser.class)
+					.setFirstResult(PAGE_SIZE*page)
+					.setMaxResults(PAGE_SIZE+1)
+					.stream();
+			
+			List<FlatUser> list = stream.map(e->new FlatUser((DBUser)e))
+					.collect(Collectors.toCollection(ArrayList::new));
 			
 			boolean hasNext = list.size() > PAGE_SIZE;
 			return new AuthorSearchResult(hasNext?list.subList(0, PAGE_SIZE):list, hasNext);
@@ -1049,21 +1047,22 @@ public class DB {
 	public static FlatEpisode getEpByLegacyId(String oldId) throws DBException {	
 		Session session = openSession();
 		try {
-		CriteriaBuilder cb = session.getCriteriaBuilder();
-		CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-		Root<DBEpisode> root = query.from(DBEpisode.class);
-		
-		query.select(root).where(cb.equal(root.get("legacyId"), oldId));
-		
-		List<DBEpisode> result = session.createQuery(query).list();
-		
-		if (result.size() == 0) throw new DBException("Not found: " + oldId);
-		else if (result.size() > 1) {
-			StringBuilder sb = new StringBuilder();
-			for (DBEpisode ep : result) sb.append(ep.getGeneratedId() + " ");
-			throw new RuntimeException("Multiple episodes have matching id: " + oldId + " " + sb);
-		} else
-			return new FlatEpisode(result.get(0));
+			CriteriaBuilder cb = session.getCriteriaBuilder();
+			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
+			Root<DBEpisode> root = query.from(DBEpisode.class);
+
+			query.select(root).where(cb.equal(root.get("legacyId"), oldId));
+
+			List<DBEpisode> result = session.createQuery(query).list();
+
+			if (result.isEmpty()) throw new DBException("Not found: " + oldId);
+			else if (result.size() > 1) {
+				StringBuilder sb = new StringBuilder();
+				for (DBEpisode ep : result) sb.append(ep.getGeneratedId() + " ");
+				throw new RuntimeException("Multiple episodes have matching id: " + oldId + " " + sb);
+			} else {
+				return new FlatEpisode(result.get(0));
+			}
 		} finally {
 			closeSession(session);
 		}
@@ -1078,21 +1077,22 @@ public class DB {
 	public static FlatEpisode getEpByOldMap(String oldMap) throws DBException {	
 		Session session = openSession();
 		try {
-		CriteriaBuilder cb = session.getCriteriaBuilder();
-		CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-		Root<DBEpisode> root = query.from(DBEpisode.class);
-		
-		query.select(root).where(cb.equal(root.get("oldMap"), EP_PREFIX + oldMap.replace('-',EP_INFIX)));
-		
-		List<DBEpisode> result = session.createQuery(query).list();
-		
-		if (result.size() == 0) throw new DBException("Not found: " + oldMap);
-		else if (result.size() > 1) {
-			StringBuilder sb = new StringBuilder();
-			for (DBEpisode ep : result) sb.append(ep.getGeneratedId() + " ");
-			throw new RuntimeException("Multiple episodes have matching id: " + oldMap + " " + sb);
-		} else
-			return new FlatEpisode(result.get(0));
+			CriteriaBuilder cb = session.getCriteriaBuilder();
+			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
+			Root<DBEpisode> root = query.from(DBEpisode.class);
+
+			query.select(root).where(cb.equal(root.get("oldMap"), EP_PREFIX + oldMap.replace('-', EP_INFIX)));
+
+			List<DBEpisode> result = session.createQuery(query).list();
+
+			if (result.isEmpty()) throw new DBException("Not found: " + oldMap);
+			else if (result.size() > 1) {
+				StringBuilder sb = new StringBuilder();
+				for (DBEpisode ep : result) sb.append(ep.getGeneratedId() + " ");
+				throw new RuntimeException("Multiple episodes have matching id: " + oldMap + " " + sb);
+			} else {
+				return new FlatEpisode(result.get(0));
+			}
 		} finally {
 			closeSession(session);
 		}
@@ -1115,7 +1115,7 @@ public class DB {
 					" OFFSET " + (PAGE_SIZE*page) + 
 					" LIMIT " + PAGE_SIZE, 
 				DBEpisode.class
-			).stream().map(ep->new FlatEpisode(ep)).collect(Collectors.toCollection(ArrayList::new));
+			).stream().map(FlatEpisode::new).collect(Collectors.toCollection(ArrayList::new));
 						
 			return Collections.unmodifiableList(alist);
 			 
@@ -1153,7 +1153,7 @@ public class DB {
 					" OFFSET " + (PAGE_SIZE*page) + 
 					" LIMIT " + PAGE_SIZE, 
 				DBEpisode.class
-			).stream().map(ep->new FlatEpisode(ep)).collect(Collectors.toCollection(ArrayList::new));
+			).stream().map(FlatEpisode::new).collect(Collectors.toCollection(ArrayList::new));
 						
 			List<FlatEpisode> list = Collections.unmodifiableList(alist);
 						
@@ -1167,8 +1167,8 @@ public class DB {
 		System.out.println("Getting outline " + generatedId + " page " + pageNum);
 		final int page = pageNum - 1;
 		final int OUTLINE_PAGE_SIZE = 300;
-		StreamingOutput outputStream = new StreamingOutput() {
-			public void write(OutputStream os) throws IOException, WebApplicationException {
+		return new StreamingOutput() {
+			public void write(OutputStream os) throws IOException {
 				try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os))) {
 
 				Session session = openSession();
@@ -1192,7 +1192,7 @@ public class DB {
 						return;
 					}
 					FlatUser user = new FlatUser(dbUser);
-					DBEpisode ep = session.get(DBEpisode.class, generatedId);//DB.getEpById(session, rootId);
+					DBEpisode ep = session.get(DBEpisode.class, generatedId);
 					if (ep == null) {
 						writer.write(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId));
 						writer.flush();
@@ -1239,7 +1239,6 @@ public class DB {
 				}
 			}
 		};
-		return outputStream;
 	}
 	
 	private static class ReturnedSomething {
@@ -1256,7 +1255,7 @@ public class DB {
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			
-			Strings.log("Processing path " + ep.getNewMap());
+			BadLogger.log("Processing path " + ep.getNewMap());
 			
 			CriteriaBuilder cb = session.getCriteriaBuilder();
 			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
@@ -1275,7 +1274,7 @@ public class DB {
 			return list;
 		} finally {
 			closeSession(session);
-			Strings.log("Total path took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
+			BadLogger.log("Total path took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
 		}
 	}
 	
@@ -1312,7 +1311,7 @@ public class DB {
 		return list;
 	}
 	
-	public static FlatEpisode[] getRoots() throws DBException {
+	public static FlatEpisode[] getRoots() {
 		Session session = openSession();
 		try {
 			List<DBEpisode> result = getRoots(session);
@@ -1324,16 +1323,14 @@ public class DB {
 			closeSession(session);
 		}
 	}
-	private static List<DBEpisode> getRoots(Session session) throws DBException {
+	private static List<DBEpisode> getRoots(Session session) {
 			CriteriaBuilder cb = session.getCriteriaBuilder();
 			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
 			Root<DBEpisode> root = query.from(DBEpisode.class);			
 						
 			query.select(root).where(cb.isNull(root.get("parent"))).orderBy(cb.asc(root.get("date")));
 			
-			List<DBEpisode> result = session.createQuery(query).list();
-			
-			return result;
+			return session.createQuery(query).list();
 	}
 	
 	/**
@@ -1372,9 +1369,8 @@ public class DB {
 		try {
 			DBUser user = getUserById(session, id);
 			if (user == null) throw new DBException("User id does not exist");
-			//user.setTheme(newTheme);
 			DBTheme theme = session.get(DBTheme.class, newTheme);
-			if (theme == null) throw new DBException("Theme " + newTheme + " does not exist"); // TODO maybe do this better?
+			if (theme == null) throw new DBException("Theme " + newTheme + " does not exist");
 			user.setTheme(theme);
 			try {
 				session.beginTransaction();
@@ -1494,11 +1490,8 @@ public class DB {
 		Session session = openSession();
 		try {
 			DBUser user = getUserById(session, id);
-			if (user == null) {
-				throw new DBException("User id does not exist");
-			}
-			FlatUser ret = new FlatUser(user);
-			return ret;
+			if (user == null) throw new DBException("User id does not exist");
+			return new FlatUser(user);
 		} finally {
 			closeSession(session);
 		}
@@ -1521,7 +1514,11 @@ public class DB {
 
 			query.select(root).where(pred).orderBy(cb.desc(root.get("date")));
 			
-			List<FlatEpisode> list = (List<FlatEpisode>)session.createQuery(query).setFirstResult(PAGE_SIZE*page).setMaxResults(PAGE_SIZE+1).stream().map(e->new FlatEpisode((DBEpisode)e)).collect(Collectors.toCollection(ArrayList::new));
+			List<FlatEpisode> list = session.createQuery(query)
+					.setFirstResult(PAGE_SIZE*page)
+					.setMaxResults(PAGE_SIZE+1).stream()
+					.map(FlatEpisode::new)
+					.collect(Collectors.toCollection(ArrayList::new));
 			boolean hasNext = list.size() > PAGE_SIZE;
 			return new EpisodeResultList(new FlatUser(user), hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
 		} finally {
@@ -1656,12 +1653,12 @@ public class DB {
 					session.save(note);
 				}
 				
-				if (sendMailNotification) new Thread(()->{ // send the email
+				if (sendMailNotification) new Thread(()-> // send the email
 					Accounts.sendEmail(comment.getEpisode().getAuthor().getEmail(), "Someone commented on your episode", 
-							"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + author.getId() + "\">" + Strings.escape(author.getAuthor()) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + generatedId + "#comment" + comment.getId() + "\">comment</a> on " + Strings.escape(comment.getEpisode().getTitle()));
+							"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + author.getId() + "\">" + Strings.escape(author.getAuthor()) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + generatedId + "#comment" + comment.getId() + "\">comment</a> on " + Strings.escape(comment.getEpisode().getTitle()))
 					
 
-				}).start();
+				).start();
 				
 				session.getTransaction().commit();
 				
@@ -1703,7 +1700,7 @@ public class DB {
 		} finally {
 			closeSession(session);
 		}
-		Strings.log(String.format("Comment edit: <%s> %s %s", commentId, username, commentDate));
+		BadLogger.log(String.format("Comment edit: <%s> %s %s", commentId, username, commentDate));
 	}
 	
 	public static class DeleteCommentConfirmation {
@@ -1811,7 +1808,7 @@ public class DB {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
 			}
-			Strings.log(String.format("Comment flag: <%s> %s %s", authorId, commentId, flagDate));
+			BadLogger.log(String.format("Comment flag: <%s> %s %s", authorId, commentId, flagDate));
 			return new FlatEpisode(comment.getEpisode());
 		} finally {
 			closeSession(session);
@@ -1858,13 +1855,13 @@ public class DB {
 		} finally {
 			closeSession(session);
 		}
-		Strings.log(String.format("Flag: <%s> %d %s", authorId, generatedId, flagDate));
+		BadLogger.log(String.format("Flag: <%s> %d %s", authorId, generatedId, flagDate));
 	}
 	
 	public static List<FlaggedEpisode> getFlags() {
 		Session session = openSession();
 		try {
-			return session.createQuery("from DBFlaggedEpisode flag order by flag.date desc", DBFlaggedEpisode.class).stream().map(x->new FlaggedEpisode(x)).collect(Collectors.toList());
+			return session.createQuery("from DBFlaggedEpisode flag order by flag.date desc", DBFlaggedEpisode.class).stream().map(FlaggedEpisode::new).collect(Collectors.toList());
 		} finally {
 			closeSession(session);
 		}
@@ -1917,7 +1914,7 @@ public class DB {
 	public static List<FlaggedComment> getFlaggedComments() {
 		Session session = openSession();
 		try {
-			return session.createQuery("from DBFlaggedComment mod order by mod.date desc", DBFlaggedComment.class).stream().map(x->new FlaggedComment(x)).collect(Collectors.toList());
+			return session.createQuery("from DBFlaggedComment mod order by mod.date desc", DBFlaggedComment.class).stream().map(FlaggedComment::new).collect(Collectors.toList());
 		} finally {
 			closeSession(session);
 		}
@@ -1926,7 +1923,7 @@ public class DB {
 	public static List<ModEpisode> getMods() {
 		Session session = openSession();
 		try {
-			return session.createQuery("from DBModEpisode mod order by mod.date desc", DBModEpisode.class).stream().map(x->new ModEpisode(x)).collect(Collectors.toList());
+			return session.createQuery("from DBModEpisode mod order by mod.date desc", DBModEpisode.class).stream().map(ModEpisode::new).collect(Collectors.toList());
 		} finally {
 			closeSession(session);
 		}
@@ -1986,7 +1983,7 @@ public class DB {
 			session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
-				Strings.log(String.format("Database error modifying: %s", id));
+				BadLogger.log(String.format("Database error modifying: %s", id));
 				throw new DBException("Database error");
 			}
 		} finally {
@@ -1995,36 +1992,39 @@ public class DB {
 		
 	}
 	
+	private static List<DBEmailChange> getPruneEmailQueue(Session session, Date yesterday) {
+		CriteriaBuilder cb = session.getCriteriaBuilder();
+		CriteriaQuery<DBEmailChange> query = cb.createQuery(DBEmailChange.class);
+		Root<DBEmailChange> root = query.from(DBEmailChange.class);
+		query.select(root).where(cb.lessThan(root.get("date"), yesterday));
+		return session.createQuery(query).list();
+	}
+	
+	private static List<DBPotentialUser> getPrunePuQueue(Session session, Date yesterday) {
+		CriteriaBuilder cb = session.getCriteriaBuilder();
+		CriteriaQuery<DBPotentialUser> query = cb.createQuery(DBPotentialUser.class);
+		Root<DBPotentialUser> root = query.from(DBPotentialUser.class);
+		query.select(root).where(cb.lessThan(root.get("date"), yesterday));
+		return session.createQuery(query).list();
+	}
+	
+	private static List<DBPasswordReset> getPrunePrQueue(Session session, Date yesterday) {
+		CriteriaBuilder cb = session.getCriteriaBuilder();
+		CriteriaQuery<DBPasswordReset> query = cb.createQuery(DBPasswordReset.class);
+		Root<DBPasswordReset> root = query.from(DBPasswordReset.class);
+		query.select(root).where(cb.lessThan(root.get("date"), yesterday));
+		return session.createQuery(query).list();
+	}
+	
 	public static void pruneQueues() {
 		Session session = openSession();
 		try {
 			Calendar cal = Calendar.getInstance();
 			cal.add(Calendar.HOUR_OF_DAY, -24);
 			Date yesterday = cal.getTime();
-			List<DBEmailChange> ecList;
-			List<DBPotentialUser> puList;
-			List<DBPasswordReset> prList;
-			{
-				CriteriaBuilder cb = session.getCriteriaBuilder();
-				CriteriaQuery<DBEmailChange> query = cb.createQuery(DBEmailChange.class);
-				Root<DBEmailChange> root = query.from(DBEmailChange.class);
-				query.select(root).where(cb.lessThan(root.get("date"), yesterday));
-				ecList = session.createQuery(query).list();
-			}
-			{
-				CriteriaBuilder cb = session.getCriteriaBuilder();
-				CriteriaQuery<DBPotentialUser> query = cb.createQuery(DBPotentialUser.class);
-				Root<DBPotentialUser> root = query.from(DBPotentialUser.class);
-				query.select(root).where(cb.lessThan(root.get("date"), yesterday));
-				puList = session.createQuery(query).list();
-			}
-			{
-				CriteriaBuilder cb = session.getCriteriaBuilder();
-				CriteriaQuery<DBPasswordReset> query = cb.createQuery(DBPasswordReset.class);
-				Root<DBPasswordReset> root = query.from(DBPasswordReset.class);
-				query.select(root).where(cb.lessThan(root.get("date"), yesterday));
-				prList = session.createQuery(query).list();
-			}
+			List<DBEmailChange> ecList = getPruneEmailQueue(session, yesterday);
+			List<DBPotentialUser> puList = getPrunePuQueue(session, yesterday);
+			List<DBPasswordReset> prList = getPrunePrQueue(session, yesterday);
 			
 			try {
 				session.beginTransaction();
@@ -2064,13 +2064,13 @@ public class DB {
 			ec.setNewEmail(newEmail);
 			ec.setUser(user);
 			String token;
-			{
+			
 				DBEmailChange asdf;
 				do {
 					token = newToken();
 					asdf = session.get(DBEmailChange.class, token);
 				} while (asdf != null);
-			}
+			
 			ec.setToken(token);
 			
 			user.setEmailChange(ec);
@@ -2187,7 +2187,7 @@ public class DB {
 			user.setDate(new Date());
 			DBTheme defaultTheme; 
 			boolean addDefaultTheme = false;
-			{
+			
 				defaultTheme = session.get(DBTheme.class, Theme.DEFAULT_NAME);
 				if (defaultTheme == null) {
 					defaultTheme = new DBTheme();
@@ -2196,7 +2196,7 @@ public class DB {
 					addDefaultTheme = true;
 				}
 				user.setTheme(defaultTheme);
-			}
+			
 			try {
 				session.beginTransaction();
 				if (addDefaultTheme) session.save(defaultTheme);
@@ -2213,60 +2213,13 @@ public class DB {
 		}}
 	}
 	
-	public static void updateAllAcountDates() {
-		HashSet<String> users = new HashSet<>();
-		Session session = openSession();
-		try {
-			int nullCount;
-			{
-				CriteriaBuilder cb = session.getCriteriaBuilder();
-				CriteriaQuery<Long> query = cb.createQuery(Long.class);
-				Root<DBUser> root = query.from(DBUser.class);
-				query.select(cb.count(root)).where(cb.isNull(root.get("date")));
-				nullCount = session.createQuery(query).uniqueResult().intValue();
-				System.out.println("****** Null dates: " + nullCount);
-			}
-			{
-				CriteriaBuilder cb = session.getCriteriaBuilder();
-				CriteriaQuery<DBUser> query = cb.createQuery(DBUser.class);
-				Root<DBUser> root = query.from(DBUser.class);
-				query.select(root).where(cb.isNull(root.get("date")));
-				for (int i=0; i<nullCount; i+=STREAM_SIZE) {
-					Stream<DBUser> stream = session.createQuery(query).stream();
-					stream.forEach(user->{
-						users.add(user.getId());
-					});
-				}
-			}
-			{
-				int count = ((Long)session.createQuery("select count(*) from DBEpisode ep where ep.author.date is not null and ep.date<ep.author.date").uniqueResult()).intValue();
-				System.out.println("****** Early dates: " + count);
-
-				for (int i=0; i<count; i+=STREAM_SIZE) {
-					Stream<DBEpisode> stream = session.createQuery("from DBEpisode ep where ep.author.date is not null and ep.date<ep.author.date", DBEpisode.class).stream();
-					stream.forEach(ep->{
-						users.add(ep.getAuthor().getId());
-					});
-					System.out.println("***** " + i);
-				}
-			}
-			System.out.println("********* Found " + users.size() + " users");
-			
-			for (String username : users)  {
-				try {
-					DB.updateAccountDate(session, username);
-					Strings.log("Updated date for user: " + username);
-				} catch (DBException e) {
-					Strings.log(e);
-				} 
-			}
-			
-			Strings.log("Finished updating dates");
-		} finally {
-			closeSession(session);
-		}
-	}
-	public static void updateAccountDate(Session session, String username) throws DBException {
+	/**
+	 * Sets the account creation date of a user to be the older of the current creation date and the oldest episode creation date
+	 * @param session
+	 * @param username
+	 * @throws DBException
+	 */
+	private static void updateAccountDate(Session session, String username) throws DBException {
 		DBUser user = DB.getUserById(session, username);
 		if (user == null) throw new DBException("Not found: " + username);
 		DBEpisode oldest = null;
@@ -2288,12 +2241,12 @@ public class DB {
 		try {
 			DBUser a = DB.getUserById(session, userA);
 			DBUser b = DB.getUserById(session, userB);
-			{
+			
 				ArrayList<String> notFound = new ArrayList<>(2);
 				if (a==null) notFound.add(userA);
 				if (b==null) notFound.add(userB);
-				if (notFound.size() > 0) throw new DBException("Not found: " + notFound);
-			}
+				if (!notFound.isEmpty()) throw new DBException("Not found: " + notFound);
+			
 			System.out.println("Found both users");
 			userA = userA.toLowerCase();
 			userB = userB.toLowerCase();
@@ -2465,7 +2418,7 @@ public class DB {
 	public static List<ArchiveToken> getArchiveTokens() {
 		Session session = openSession();
 		try {
-			return session.createQuery("from DBArchiveToken a order by a.date asc", DBArchiveToken.class).stream().map(at -> new ArchiveToken(at)).collect(Collectors.toCollection(ArrayList::new));
+			return session.createQuery("from DBArchiveToken a order by a.date asc", DBArchiveToken.class).stream().map(ArchiveToken::new).collect(Collectors.toCollection(ArrayList::new));
 		} finally {
 			closeSession(session);
 		}
@@ -2474,13 +2427,13 @@ public class DB {
 	public static boolean isValidArchiveToken(String token) {
 		Session session = openSession();
 		try {
-			return session.createQuery("from DBArchiveToken a where a.token='" + token + "'", DBArchiveToken.class).list().size() > 0;
+			return !session.createQuery("from DBArchiveToken a where a.token='" + token + "'", DBArchiveToken.class).list().isEmpty();
 		} finally {
 			closeSession(session);
 		}
 	}
 	
-	public static enum PopularEpisode{
+	public enum PopularEpisode{
 		HITS ("order by hits desc, upvotes desc, views desc"),
 		VIEWS ("order by views desc, upvotes desc, hits desc"),
 		UPVOTES ("order by upvotes desc, views desc, hits desc");
@@ -2490,7 +2443,7 @@ public class DB {
 		}
 	}
 	
-	public static enum PopularUser{
+	public enum PopularUser{
 		HITS ("order by hits desc, upvotes desc, views desc, episodes desc"),
 		VIEWS ("order by views desc, upvotes desc, hits desc, episodes desc"),
 		UPVOTES ("order by upvotes desc, views desc, hits desc, episodes desc"),
@@ -2501,7 +2454,7 @@ public class DB {
 		}
 	}
 	
-	public static enum PopularUserTime{
+	public enum PopularUserTime{
 		ALL (""),
 		WEEK ("and fbepisodes.date > (now() - interval '7 days')"),
 		MONTH("and fbepisodes.date > (now() - interval '30 days')");
@@ -2552,8 +2505,9 @@ public class DB {
 		Session session = openSession();
 		try {
 			
-			return (ArrayList<Episode>)session.createNativeQuery(POPULAR_QUERY + pop.ORDER_BY + " \nlimit 100;").stream()
-			.map(o->{
+			Stream<Object> stream = session.createNativeQuery(POPULAR_QUERY + pop.ORDER_BY + " \nlimit 100;").stream();
+			
+			return stream.map(o->{
 				Object[] x = (Object[])o;
 				long generatedId = ((BigInteger)x[0]).longValue();
 				String newMap = (String)x[1];
@@ -2596,8 +2550,9 @@ public class DB {
 		Session session = openSession();
 		try {
 			
-			return (List<User>)session.createNativeQuery(POPULAR_USERS_QUERY.replace("$TIMELIMIT", time.TIMELIMIT) + pop.ORDER_BY + " \nlimit 100;").stream()
-			.map(o->{
+			Stream<Object> stream = session.createNativeQuery(POPULAR_USERS_QUERY.replace("$TIMELIMIT", time.TIMELIMIT) + pop.ORDER_BY + " \nlimit 100;").stream();
+			
+			return stream.map(o->{
 				Object[] x = (Object[])o;
 				String username = (String)x[0];
 				String author = (String)x[1];
@@ -2682,8 +2637,10 @@ public class DB {
 	public static List<Announcement> getAnnouncements(String username) {
 		Session session = openSession();
 		try {
-			return (List<Announcement>)session.createNativeQuery((username==null)?GET_ANNOUNCEMENTS_ANON:GET_ANNOUNCEMENTS.replace(ANNOUNCE_REPLACER, username)).stream()
-			.map(o->{
+			
+			Stream<Object> stream = session.createNativeQuery((username==null)?GET_ANNOUNCEMENTS_ANON:GET_ANNOUNCEMENTS.replace(ANNOUNCE_REPLACER, username)).stream();
+			
+			return stream.map(o->{
 				Object[] x = (Object[])o;
 				long id = ((BigInteger)x[0]).longValue();
 				Date date = (Date)x[1];
@@ -2935,9 +2892,11 @@ public class DB {
 			DBUser user = DB.getUserById(session, username);
 			if (user == null) throw new DBException("You must be logged in to do that");
 			
-			int count = session.createQuery("select count(*) from DBNotification note where note.user.id='"+username+"' and note.read=false", Long.class).uniqueResult().intValue();
+			return session
+					.createQuery("select count(*) from DBNotification note where note.user.id='"+username+"' and note.read=false", Long.class)
+					.uniqueResult()
+					.intValue();
 
-			return count;
 						
 		} finally {
 			closeSession(session);
@@ -3026,10 +2985,10 @@ public class DB {
 	 * Gets a list of names (primary keys) of all themes
 	 * @return
 	 */
-	public static ArrayList<String> getThemeNames() {
+	public static List<String> getThemeNames() {
 		Session session = openSession();
 		try {
-			return session.createQuery("from DBTheme", DBTheme.class).stream().map(t->t.getName()).collect(Collectors.toCollection(ArrayList::new));
+			return session.createQuery("from DBTheme", DBTheme.class).stream().map(DBTheme::getName).collect(Collectors.toCollection(ArrayList::new));
 		} finally {
 			closeSession(session);
 		}
@@ -3041,18 +3000,17 @@ public class DB {
 		return token.toString();
 	}
  	
- 	public static Comparator<String> newMapComparator = new Comparator<String>() {
- 		@Override
-		public int compare(String A, String B) {
-			List<Long> a = DB.newMapToIdList(A);
-			List<Long> b = DB.newMapToIdList(B);
-			for (int i=0; i<a.size() && i<b.size(); ++i) {
-				Long x = a.get(i);
-				Long y = b.get(i);
-				int comp = x.compareTo(y);
-				if (comp != 0) return comp;
-			}
-			return Integer.compare(a.size(), b.size());
+ 	public static final Comparator<String> newMapComparator = (a,b)->{
+ 		List<Long> aList = DB.newMapToIdList(a);
+		List<Long> bList = DB.newMapToIdList(b);
+		for (int i=0; i<aList.size() && i<bList.size(); ++i) {
+			Long x = aList.get(i);
+			Long y = bList.get(i);
+			int comp = x.compareTo(y);
+			if (comp != 0) return comp;
 		}
+		return Integer.compare(aList.size(), bList.size());
  	};
+ 	
+ 	private DB() {}
 }

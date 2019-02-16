@@ -31,9 +31,6 @@ public class DBModEpisode {
 	
 	@OneToOne
 	private DBEpisode episode;
-	
-	// The following constructor, getters, and setters are required for JPA persistence
-	public DBModEpisode() {} 
 
 	public long getId() {
 		return id;

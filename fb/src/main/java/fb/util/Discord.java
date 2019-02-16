@@ -22,7 +22,7 @@ public class Discord {
 			jsonMap.put("content", message);
 
 			String postData = new Gson().toJson(jsonMap);
-			byte[] postDataBytes = postData.toString().getBytes("UTF-8");
+			byte[] postDataBytes = postData.getBytes("UTF-8");
 
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
@@ -59,7 +59,7 @@ public class Discord {
 		String username = sb + " - " + ep.authorName;
 				
 		String desc = String.format(
-				"By [%s](%s)\n\n", 
+				"By [%s](%s)%n%n", 
 				ep.authorName, 
 				"https://" + Strings.getDOMAIN() + "/fb/user/" + ep.authorId
 			) + ep.body;
@@ -84,7 +84,7 @@ public class Discord {
 		
 		try {
 			String postData = new Gson().toJson(form);
-			byte[] postDataBytes = postData.toString().getBytes("UTF-8");
+			byte[] postDataBytes = postData.getBytes("UTF-8");
 			
 			URL url = new URL(Strings.getDISCORD_NEW_EPISODE_HOOK());
 
@@ -139,4 +139,6 @@ public class Discord {
 		}
 		 
 	}
+	
+	private Discord() {}
 }

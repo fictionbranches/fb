@@ -81,9 +81,6 @@ public class DBEpisode {
 	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbEpisodeAnalyzer"))
 	private String body;
 	
-	// The following constructor, getters, and setters are required for JPA persistence
-	public DBEpisode() {} 
-	
 	public long getGeneratedId() {
 		return generatedId;
 	}

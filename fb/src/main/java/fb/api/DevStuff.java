@@ -23,6 +23,8 @@ import fb.util.Strings;
 @Path("")
 public class DevStuff {	
 	
+	private DevStuff() {}
+	
 	@GET
 	public static Response getRoot() {
 		return Response.seeOther(GetStuff.createURI("/fb")).build();

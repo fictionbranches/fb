@@ -5,11 +5,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Dates {
-	private static final ThreadLocal<DateFormat> outputDate = new ThreadLocal<DateFormat>() {
-		protected DateFormat initialValue() {
-			return new SimpleDateFormat("EEE, MMM d yyyy HH:mm:ss");
-		}
-	};
+	
+	private Dates() {}
+	
+	private static final ThreadLocal<DateFormat> outputDate = ThreadLocal.withInitial(()->new SimpleDateFormat("EEE, MMM d yyyy HH:mm:ss"));
 
 	/**
 	 * "EEE, MMM d yyyy HH:mm:ss"
@@ -20,11 +19,7 @@ public class Dates {
 		return outputDate.get().format(date);
 	}
 
-	private static final ThreadLocal<DateFormat> simpleDate = new ThreadLocal<DateFormat>() {
-		protected DateFormat initialValue() {
-			return new SimpleDateFormat("yyyy-MM-dd");
-		}
-	};
+	private static final ThreadLocal<DateFormat> simpleDate = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd"));
 
 	/**
 	 * "yyyy-MM-dd"
@@ -37,11 +32,7 @@ public class Dates {
 		return simpleDate.get().format(date);
 	}
 	
-	private static final ThreadLocal<DateFormat> simpleDateTime = new ThreadLocal<DateFormat>() {
-		protected DateFormat initialValue() {
-			return new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-		}
-	};
+	private static final ThreadLocal<DateFormat> simpleDateTime = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"));
 	
 	/**
 	 * "yyyy-MM-dd hh:mm:ss"
@@ -54,11 +45,7 @@ public class Dates {
 		return simpleDateTime.get().format(date);
 	}
 
-	private static final ThreadLocal<DateFormat> completeSimpleDate = new ThreadLocal<DateFormat>() {
-		protected DateFormat initialValue() {
-			return new SimpleDateFormat("yyyyMMddHHmmss");
-		}
-	};
+	private static final ThreadLocal<DateFormat> completeSimpleDate = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyyMMddHHmmss"));
 
 	/**
 	 * "yyyyMMddHHmmss"

@@ -21,8 +21,6 @@ public class DBEmailChange {
 	
 	private Date date;
 	
-	public DBEmailChange() {}
-
 	public String getToken() {
 		return token;
 	}

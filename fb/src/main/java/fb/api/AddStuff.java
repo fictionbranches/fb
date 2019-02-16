@@ -45,11 +45,7 @@ public class AddStuff {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 		return Response.ok(Story.addForm(generatedId, fbtoken)).build();
 	}
-	
-	/*private static String EPISODE_TOO_LONG = ""
-			+ "<p>At this time, no one may add episodes here as the URL is getting too long for some browsers to handle properly.</p>\n"
-			+ "<p>We are aware of the problem and the solution is still in development. Please be patient, and feel free to contribute to other branches in the meantime!</p>";*/
-	
+
 	/**
 	 * Returns the form for adding new episodes
 	 * 
@@ -222,19 +218,18 @@ public class AddStuff {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response archiveapi(String json) {
-		ArchiveResponse ar = new ArchiveResponse();
 		
 		System.out.println(json);
 		
 		ArchiveObject ao = new Gson().fromJson(json, ArchiveObject.class);
 		if (ao.token == null || ao.parentid == null || ao.author == null || ao.title==null || ao.link==null || ao.body==null || ao.date == null) {
-			ar.error="NullError";
+			ArchiveResponse ar = new ArchiveResponse(null, "NullError");
 			System.out.println("NullArgument");
 			return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).status(400).build();
 		}
 		
 		if (!DB.isValidArchiveToken(ao.token)) {
-			ar.error = "BadToken";
+			ArchiveResponse ar = new ArchiveResponse(null, "BadToken");
 			System.out.println("BadToken");
 			return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).status(400).build();
 		}
@@ -242,7 +237,7 @@ public class AddStuff {
 		try {
 			date = parseDate(ao.date);
 		} catch (Exception e1) {
-			ar.error = "BadDate";
+			ArchiveResponse ar = new ArchiveResponse(null, "BadDate");
 			System.out.println("BadDate");
 			return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).status(400).build();
 		} 
@@ -252,18 +247,22 @@ public class AddStuff {
 			generatedId = DB.addArchiveEp(ao.parentid, ao.link, ao.title, ao.body, ao.author, date);
 		} catch (DBException e) {
 			System.out.println(e.getMessage());
-			ar.error = "BadParent";
+			ArchiveResponse ar = new ArchiveResponse(null, "BadParent");
 			System.out.println("BadParent");
 
 			return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).status(400).build();
 		}
-		ar.id = generatedId;
+		ArchiveResponse ar = new ArchiveResponse(generatedId, null);
 		System.out.println("ID: " + generatedId);
 		return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).build();
 	}
 	public static class ArchiveResponse {
-		public long id;
-		public String error;
+		public final Long id;
+		public final String error;
+		public ArchiveResponse(Long id, String error) {
+			this.id = id;
+			this.error = error;
+		}
 	}
 	public static class ArchiveObject {
 		public final String token;
