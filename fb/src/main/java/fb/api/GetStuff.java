@@ -141,6 +141,7 @@ public class GetStuff {
 		
 		boolean advancedChildren = false;
 		if (fbadvancedchildren != null && fbadvancedchildren.getValue().equals("true")) advancedChildren = true;
+		//if (InitWebsite.DEV_MODE) advancedChildren = true; /* TODO */
 		
 		if (sort != null) {
 			ResponseBuilder ret = Response.seeOther(createURI("/fb/story/" + generatedId + "#children"));
@@ -173,7 +174,7 @@ public class GetStuff {
 			sortNum = 4;
 			break;
 		}
-		return Response.ok(Story.getHTML(generatedId, sortNum, InitWebsite.DEV_MODE||advancedChildren /* TODO advancedChildren*/, fbtoken)).build();
+		return Response.ok(Story.getHTML(generatedId, sortNum, advancedChildren, fbtoken)).build();
 	}
 	
 	/**

@@ -1305,7 +1305,7 @@ public class DB {
 					
 					String query = "" 
 							+ "select generatedId, link, depth, fbusers.id, fbusers.author "
-							+ "from fbepisodes,fbusers where fbepisodes.newmap like '" + EP_PREFIX + ep.getNewMap() + EP_INFIX + "%' and fbepisodes.author_id=fbusers.id "
+							+ "from fbepisodes,fbusers where fbepisodes.newmap like '" + ep.getNewMap() + EP_INFIX + "%' and fbepisodes.author_id=fbusers.id "
 							+ "order by (CAST(string_to_array(replace(replace(fbepisodes.newmap,'B','-'),'A',''),'-') AS bigint[])) asc LIMIT " + OUTLINE_PAGE_SIZE + " OFFSET " + (page*OUTLINE_PAGE_SIZE) + "";
 						try {							
 							final ReturnedSomething returnedSomething = new ReturnedSomething();
@@ -1313,7 +1313,7 @@ public class DB {
 							@SuppressWarnings("unchecked")
 							Stream<Object[]> stream = session.createNativeQuery(query).stream();
 							stream.forEach(x -> {
-								long id = (long) x[0];
+								long id = ((BigInteger) x[0]).longValue();
 								String link = (String) x[1];
 								int depth = (int) x[2];
 								String authorUsername = (String) x[3];
@@ -2635,7 +2635,7 @@ public class DB {
 			"        where fbepisodes.generatedid=fbupvotes.episode_generatedid\n" + 
 			"        group by fbepisodes.generatedid)\n" + 
 			"    ) as countstuff\n" + 
-			"group by generatedid,id,link,title,date \n";
+			"group by generatedid,newmap,link,title,date \n";
 	
 	private static final String POPULAR_USERS_QUERY = "select username, author, date, max(episodescount) as episodes, max(hitscount) as hits, max(viewscount) as views, max(upvotescount) as upvotes from (\n" + 
 			"(select fbusers.id as username, author,fbusers.date as date,count(*) as episodescount, 0 as hitscount, 0 as upvotescount, 0 as viewscount\n" + 
@@ -2667,7 +2667,7 @@ public class DB {
 			return (ArrayList<Episode>)session.createNativeQuery(POPULAR_QUERY + pop.ORDER_BY + " \nlimit 100;").stream()
 			.map(o->{
 				Object[] x = (Object[])o;
-				long generatedId = ((Long)x[0]).longValue();
+				long generatedId = ((BigInteger)x[0]).longValue();
 				String newMap = (String)x[1];
 				String link = (String)x[2];
 				String title = (String)x[3];
