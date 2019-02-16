@@ -258,14 +258,6 @@ public class DB {
 		}
 	}
 	
-	/*public static String mapToId(String map) {
-		return EP_PREFIX + map.replace('-', EP_INFIX);
-	}
-	
-	public static String idToMap(String id) {
-		return id.substring(1, id.length()).replace(EP_INFIX,'-');
-	}*/
-	
 	/**
 	 * 
 	 * @return {flags, mods, commentflags}
@@ -281,20 +273,6 @@ public class DB {
 			closeSession(session);
 		}
 	}
-	
-	/**
-	 * 
-	 * @param id 1-2-3
-	 * @return null if episodes does not exist
-	 */
-	/*static DBEpisode getEpById(Session session, String id) {
-		CriteriaBuilder cb = session.getCriteriaBuilder();
-		CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-		Root<DBEpisode> root = query.from(DBEpisode.class);
-		query.select(root).where(cb.equal(root.get("id"), mapToId(id)));
-		DBEpisode result = session.createQuery(query).uniqueResult();
-		return result;
-	}*/
 	
 	/**
 	 * Returns null if id does not exist
@@ -382,23 +360,6 @@ public class DB {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
 			}
-			
-			/*String oldChildId;
-			{
-				List<DBEpisode> children = session.createQuery("from DBEpisode ep where ep.parent.generatedId=" + parent.getGeneratedId(), DBEpisode.class).list();
-				ArrayList<String> list = new ArrayList<>();
-				//for (DBEpisode ep : parent.getChildren()) list.add(ep.getMap());
-				for (DBEpisode ep : children) list.add(ep.getMap());
-				if (list.size() == 0) {
-					oldChildId = parent.getMap() + "-1";
-				} else {
-					Collections.sort(list, DB.keyStringComparator);
-					int[] arr = DB.keyToArr(list.get(list.size()-1));
-					oldChildId = parent.getMap() + "-" + (arr[arr.length-1]+1);
-				}
-			}
-			
-			child.setMap(oldChildId);*/
 			
 			child.setNewMap(parent.getNewMap() + DB.EP_INFIX + childId);
 			child.setDepth(parent.getDepth()+1);
@@ -516,23 +477,7 @@ public class DB {
 				throw new DBException("Database error");
 			}
 			
-			/*String oldChildId;
-			{
-				List<DBEpisode> children = session.createQuery("from DBEpisode ep where ep.parent.generatedId=" + parent.getGeneratedId(), DBEpisode.class).list();
-				ArrayList<String> list = new ArrayList<>();
-				for (DBEpisode ep : children) list.add(ep.getMap());
-				if (list.size() == 0) {
-					oldChildId = parent.getMap() + "-1";
-				} else {
-					Collections.sort(list, DB.keyStringComparator);
-					int[] arr = DB.keyToArr(list.get(list.size()-1));
-					oldChildId = parent.getMap() + "-" + (arr[arr.length-1]+1);
-				}
-			}*/
-			
 			child.setNewMap(parent.getNewMap() + EP_INFIX + "" + childId);
-			
-
 			
 			StringBuilder sb = new StringBuilder("update DBEpisode ep set ep.childCount=(ep.childCount+1) where ");
 
@@ -588,13 +533,10 @@ public class DB {
 		synchronized(epLock) {
 			Session session = openSession();
 			try {				
-				//DBEpisode ep = DB.getEpById(session, id);
 				DBEpisode ep = session.get(DBEpisode.class, generatedId);
 				if (ep == null) throw new DBException("Not found: " + generatedId);
 				if (session.createQuery("select count(*) from DBEpisode ep where ep.parent.generatedId=" + ep.getGeneratedId(), Long.class).uniqueResult() > 0l) throw new DBException("Episode " + generatedId + " has children");
-				
-				//long generatedId = ep.getGeneratedId();
-				
+								
 				String parentMap = ep.getParent().getNewMap();
 				
 				DBUser actor = DB.getUserById(session, username);
@@ -612,18 +554,10 @@ public class DB {
 					mergeUsers.add(ep.getEditor());
 					ep.setEditor(null);
 					
-					/*for (DBFlaggedEpisode flag : session.createQuery("from DBFlaggedEpisode flag where flag.episode.generatedId=" + generatedId, DBFlaggedEpisode.class).list()) {
-						mergeUsers.add(flag.getUser());
-						flag.setUser(null);
-						flag.setEpisode(null);
-						deleteFlags.add(flag);
-					}*/
-					
 					session.createQuery("delete DBFlaggedEpisode flag where flag.episode.generatedId=" + generatedId).executeUpdate();
 					session.createQuery("delete DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					
-					//session.createQuery("delete DBFlaggedComment fc where fc.comment.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createNativeQuery(
 							"delete from fbflaggedcomments "
 							+ "using fbcomments, fbepisodes "
@@ -682,16 +616,10 @@ public class DB {
 		Session session = openSession();
 		try {
 			DBUser author = getUserById(session, authorId);
-			
-			//List<DBEpisode> roots = getRoots(session);
-
 			if (author == null) throw new DBException("Author does not exist");
 
 			DBEpisode child = new DBEpisode();
 			
-			//String childId = "" + (Integer.parseInt(roots.get(roots.size()-1).getMap()) + 1);
-
-			//child.setMap(childId);
 			child.setDepth(1);
 			
 			child.setTitle(title);
@@ -721,13 +649,11 @@ public class DB {
 				session.beginTransaction();
 				session.merge(child);
 				session.getTransaction().commit();
-				//Story.rootNames.put(childId, link);
 			} catch (Exception e) {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
 			}
 			Strings.log(String.format("New: <%s> %s %s", author, title, childId+""));
-			//return new FlatEpisode(child);
 			return childId;
 		} finally {
 			closeSession(session);
@@ -749,11 +675,6 @@ public class DB {
 			query.select(root).where(combPred).orderBy(cb.asc(root.get("author")));
 			
 			return session.createQuery(query).stream().map(x->new FlatUser(x)).collect(Collectors.toList());
-			
-			/*List<DBUser> result = session.createQuery(query).list();
-			FlatUser[] ret = new FlatUser[result.size()];
-			for (int i=0; i<result.size(); ++i) ret[i] = new FlatUser(result.get(i));
-			return ret;*/
 		} finally {
 			closeSession(session);
 		}
@@ -850,17 +771,6 @@ public class DB {
 			
 			String q = "SELECT * FROM fbepisodes WHERE author_id!='" + episode.getAuthor().getId() + "' AND newmap LIKE '" + episode.getNewMap() + "%';";
 			
-			
-			/*
-			CriteriaBuilder cb = session.getCriteriaBuilder();
-			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-			Root<DBEpisode> root = query.from(DBEpisode.class);
-			
-			query.select(root).where(cb.and(cb.notEqual(root.join("author").get("id"), episode.getAuthor().getId()), cb.like(root.get("id"), mapToId(id)+EP_INFIX+"%")));
-			
-			List<DBEpisode> result = session.createQuery(query).setMaxResults(1).list();*/
-			
-			
 			List<DBEpisode> result = session.createNativeQuery(q, DBEpisode.class).setMaxResults(1).list();
 			if (result.size() > 0) return 1;
 			return 0;
@@ -947,23 +857,6 @@ public class DB {
 				String authorName = (String)arr[11];
 				return new Episode(childGeneratedId,newMap,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName);
 			}).collect(Collectors.toCollection(ArrayList::new));
-			
-			/*ArrayList<Episode> children = new ArrayList<>();
-			@SuppressWarnings("unchecked")
-			List<Object[]> result = session.createNativeQuery(query).list();
-			result.forEach(x->{
-				String childId = idToMap((String)x[2]);
-				String link = (String)x[3];
-				String title = (String)x[4];
-				Date date = (Date)x[5];
-				int childcount = (int) x[6];
-				long hits = ((BigInteger)x[7]).longValue();
-				long views = ((BigInteger)x[8]).longValue();
-				long childUpvotes = ((BigInteger)x[9]).longValue();
-				children.add(new Episode(childId,link,title,date,childcount,hits,views,childUpvotes));
-			});*/
-			
-			//"from DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId() + " and uv.user.id='" + user.getId() + "'", DBUpvote.class
 			
 			ArrayList<String> pathIds = new ArrayList<>();
 			{
@@ -1176,6 +1069,12 @@ public class DB {
 		}
 	}
 	
+	/**
+	 * 
+	 * @param oldMap like 1-2-3
+	 * @return
+	 * @throws DBException
+	 */
 	public static FlatEpisode getEpByOldMap(String oldMap) throws DBException {	
 		Session session = openSession();
 		try {
@@ -1306,7 +1205,7 @@ public class DB {
 					String query = "" 
 							+ "select generatedId, link, depth, fbusers.id, fbusers.author "
 							+ "from fbepisodes,fbusers where fbepisodes.newmap like '" + ep.getNewMap() + EP_INFIX + "%' and fbepisodes.author_id=fbusers.id "
-							+ "order by (CAST(string_to_array(replace(replace(fbepisodes.newmap,'B','-'),'A',''),'-') AS bigint[])) asc LIMIT " + OUTLINE_PAGE_SIZE + " OFFSET " + (page*OUTLINE_PAGE_SIZE) + "";
+							+ "order by (CAST(string_to_array(replace(replace(fbepisodes.newmap,'"+EP_INFIX+"','-'),'"+EP_PREFIX+"',''),'-') AS bigint[])) asc LIMIT " + OUTLINE_PAGE_SIZE + " OFFSET " + (page*OUTLINE_PAGE_SIZE) + "";
 						try {							
 							final ReturnedSomething returnedSomething = new ReturnedSomething();
 
@@ -1403,17 +1302,6 @@ public class DB {
 			closeSession(session);
 		}
 	}
-	
-	/*private static List<String> getPathIds(String parentId) {
-		String[] arr = parentId.split("-");
-		List<String> ret = new ArrayList<>(arr.length);
-		for (int i=0; i<arr.length; ++i) {
-			StringBuilder sb = new StringBuilder();
-			for (int j=0; j<=i; ++j) sb.append(arr[j] + "-");
-			ret.add(sb.substring(0, sb.length()-1));
-		}
-		return ret;
-	}*/
 	
 	public static List<Long> newMapToIdList(String newMap) {
 		String[] arr = newMap.substring(1,newMap.length()).split(""+EP_INFIX);
@@ -3115,14 +3003,7 @@ public class DB {
 							"UPDATE fbepisodes\n" + 
 							"SET newmap = replace(newmap,'"+oldNewMap+"','"+generatedId+"'), depth = depth - "+oldParentDepth+"\n" + 
 							"WHERE newmap='"+oldNewMap+"' OR newmap LIKE '"+oldNewMap+""+DB.EP_INFIX+"%';").executeUpdate();
-					/*int[] arr = DB.keyToArr(DB.idToMap(oldId));
-					ArrayList<String> path = new ArrayList<>();
-					StringBuilder sb = new StringBuilder();
-					sb.append("A" + arr[0]);
-					for (int i=1; i<arr.length; ++i) {
-						path.add(sb.toString());
-						sb.append("B" + arr[i]);
-					}*/
+					
 					Stream<Long> path = DB.newMapToIdList(oldNewMap).stream();
 					String where = path.filter(gid->gid!=generatedId).map(gid->"generatedId=" + gid).collect(Collectors.joining(" OR "));
 					session.createNativeQuery("UPDATE fbepisodes\n" + 
@@ -3160,45 +3041,6 @@ public class DB {
 		return token.toString();
 	}
  	
- 	/**
- 	 * Converts an map id ("1-2-3") to an int[] ({1,2,3})
- 	 * @param s
- 	 * @return
- 	 * @throws NumberFormatException
- 	 */
- 	/*public static int[] keyToArr(String s) throws NumberFormatException {
-		String[] arr = s.split("-");
-		int[] ret = new int[arr.length];
-		for (int i=0; i<arr.length; ++i) ret[i] = Integer.parseInt(arr[i]);
-		return ret;
-	}*/
-
-	/**
-	 * Correctly sorts key strings. 1-10 will come after 1-9 instead of after 1-1
-	 */
-	/*public static Comparator<String> keyStringComparator = new Comparator<String>() {
-		@Override
-		public int compare(String A, String B) {
-			int[] a, b;
-			try {
-				a = keyToArr(A);
-			} catch (NumberFormatException e) {
-				throw new RuntimeException("Illegal keystring: " + A);
-			}	
-			try {
-				b = keyToArr(B);
-			} catch (NumberFormatException e) {
-				throw new RuntimeException("Illegal keystring: " + B);
-			}	
-			for (int i=0; i<a.length && i<b.length; ++i) {
-				Integer x = a[i];
-				Integer y = b[i];
-				int comp = x.compareTo(y);
-				if (comp != 0) return comp;
-			}
-			return Integer.compare(a.length, b.length);
-		}
-	};*/
  	public static Comparator<String> newMapComparator = new Comparator<String>() {
  		@Override
 		public int compare(String A, String B) {
