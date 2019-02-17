@@ -188,7 +188,7 @@ public class Accounts {
 		if (user.level>=(byte)10) {
 			int[] sizes = DB.queueSizes();
 			if (sizes[0] > 0) response.append("<a href=/fb/flagqueue>" + sizes[0] + " flagged episodes</a><br/>");
-			if (sizes[1] > 0) response.append("<a href=/fb/modqueue>" + sizes[1] + " episode modification requests)</a><br/>");
+			if (sizes[1] > 0) response.append("<a href=/fb/modqueue>" + sizes[1] + " episode modification requests</a><br/>");
 			if (sizes[2] > 0) response.append("<a href=/fb/commentflagqueue>" + sizes[2] + " flagged comments</a><br/>");
 			
 			response.append("<a href=/fb/modhelp>Moderator guidelines</a>");
@@ -886,12 +886,7 @@ public class Accounts {
 		sb.append("<p><hr/><h4>New link:</h4> " + Strings.escape(mod.link) + "</p>\n");
 		sb.append("<p><hr/><h4>New title:</h4> " + Strings.escape(mod.title) + "</p>\n");
 		if (doDiff) {
-			String oldBody;
-			try {
-				 oldBody = DB.getFlatEp(mod.episodeGeneratedId).body;
-			} catch (DBException e) {
-				return Strings.getFile("generic.html", user).replace("$EXTRA","Found modification, but not original episode. Tell Phoenix about this immediately.");
-			}
+			String oldBody = mod.currentEpisode.body;
 			try {
 				
 				DiffRowGenerator generator = DiffRowGenerator.create()
@@ -937,7 +932,7 @@ public class Accounts {
 		}
 		return list;
 	}
-		
+	
 	public static void clearMod(long id, Cookie fbtoken, boolean accepted) throws FBLoginException {
 		FlatUser user;
 		try {

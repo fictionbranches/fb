@@ -763,9 +763,9 @@ public class DB {
 			
 			if (episode.getMod() != null) return 2;
 			
-			String q = "SELECT * FROM fbepisodes WHERE author_id!='" + episode.getAuthor().getId() + "' AND newmap LIKE '" + episode.getNewMap() + "%';";
+			String q = "from DBEpisode ep where ep.author.id != '" + episode.getAuthor().getId() + "' and newMap like '" + episode.getNewMap() + "%'";
 			
-			List<DBEpisode> result = session.createNativeQuery(q, DBEpisode.class).setMaxResults(1).list();
+			List<DBEpisode> result = session.createQuery(q, DBEpisode.class).setMaxResults(1).list();
 			if (!result.isEmpty()) return 1;
 			return 0;
 		} finally {

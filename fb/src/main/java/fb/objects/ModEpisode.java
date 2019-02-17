@@ -19,6 +19,7 @@ public class ModEpisode {
 	public final String userId;
 	public final String author;
 	public final String oldLink;
+	public final FlatEpisode currentEpisode;
 
 	public ModEpisode(DBModEpisode ep) {
 		modId = ep.getId();
@@ -34,5 +35,6 @@ public class ModEpisode {
 		DBUser user = episode.getAuthor();
 		userId = user.getId();
 		author = user.getAuthor();
+		currentEpisode = new FlatEpisode(episode);
 	}
 }
