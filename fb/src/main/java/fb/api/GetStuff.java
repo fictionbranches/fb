@@ -57,7 +57,6 @@ public class GetStuff {
 			for (Entry<String,String> param : params) ub = ub.queryParam(param.getKey(), param.getValue());
 			uri = ub.build();
 		}
-		System.out.println("Redirecting to " + uri);
 		return uri;
 	}
 	
@@ -78,8 +77,7 @@ public class GetStuff {
 				true, 
 				true);
 		} catch (Exception e) {
-			System.err.println(e);
-			e.printStackTrace();
+			BadLogger.log(e);
 			throw new RuntimeException(e);
 		}
 		return ret;

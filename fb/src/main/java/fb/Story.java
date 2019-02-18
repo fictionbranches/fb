@@ -172,14 +172,14 @@ public class Story {
 			commentHTML.append("<div id='comment" + c.id + "' class=\"fbcomment\">\n");
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
 			commentHTML.append("<p>" + Story.formatBody(c.text) + "</p><hr/>");
-			commentHTML.append(((c.user.avatar==null)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" />"))+"<a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a><br/>\n");
-			commentHTML.append(Strings.escape(Dates.outputDateFormat(c.date)));
+			commentHTML.append(((c.user.avatar==null)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a><br/>\n");
+			commentHTML.append("<p><a href=/fb/story/" + ep.generatedId + "#comment" + c.id + ">" + Strings.escape(Dates.outputDateFormat(c.date)) + "</a>");
 			if (user != null) {
 				if (c.user.id.equals(user.id)) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete</a>");
 				else if (user.level>=10) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete as mod</a>");
 				else commentHTML.append(" - <a href=/fb/flagcomment/" + c.id + ">Flag</a>");
 			}
-			commentHTML.append("</div>\n");
+			commentHTML.append("</p></div>\n");
 		}
 		if (!InitWebsite.READ_ONLY_MODE && user != null) commentHTML.append(commentFormHTML);
 
@@ -551,9 +551,7 @@ public class Story {
 	public static String getCompleteHTML(Cookie token, long generatedId) {
 		List<FlatEpisode> path; 
 		try {
-			System.out.println("Getting episodes from DB");
 			path = DB.getFullStory(generatedId);
-			System.out.println("Got episodes from DB");
 		} catch (DBException e) {
 			return Strings.getFileWithToken("generic.html", token).replace("$EXTRA", e.getMessage());
 		}
@@ -1113,7 +1111,6 @@ public class Story {
 		options.set(Parser.INDENTED_CODE_BLOCK_PARSER, false);
 		options.set(Parser.HTML_BLOCK_PARSER, false);
 		options.set(Parser.BLOCK_QUOTE_PARSER, false);
-		//HtmlRenderer.tag
 				
 		parser = Parser.builder(options).build();
 		renderer = HtmlRenderer.builder(options).build();

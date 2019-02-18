@@ -117,13 +117,13 @@ public class DB {
 				if (scan.hasNextLine()) connectionUsername = scan.nextLine().trim();
 				if (scan.hasNextLine()) connectionPassword = scan.nextLine().trim();
 			} catch (Exception e) {
-				e.printStackTrace();
+				BadLogger.log(e);
 				System.exit(1);
 				throw new RuntimeException(e);
 			}
 		} else {
 			RuntimeException e = new RuntimeException(dbSettingsFilename + " not found");
-			e.printStackTrace();
+			BadLogger.log(e);
 			System.exit(1);
 			throw e;
 		}
@@ -167,7 +167,7 @@ public class DB {
 		try {
 			return configuration.buildSessionFactory(builder.build());
 		} catch (Exception e) {
-			e.printStackTrace();
+			BadLogger.log(e);
 			System.exit(1);
 			throw new RuntimeException(e);
 		}
@@ -490,7 +490,7 @@ public class DB {
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
-				e.printStackTrace();
+				BadLogger.log(e);
 				throw new DBException("Database error");
 			}
 			BadLogger.log(String.format("New: <%s> %s %s", author, title, child.getGeneratedId()));
@@ -584,7 +584,7 @@ public class DB {
 					
 				} catch (Exception e) {
 					session.getTransaction().rollback();
-					e.printStackTrace();
+					BadLogger.log(e);
 					throw new DBException("Database error");
 				}
 			} finally {
@@ -964,7 +964,6 @@ public class DB {
 			
 			Query searchQuery = qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery();
 			Query combinedQuery = qb.bool().must(searchQuery).must(idQuery).createQuery();
-			System.out.println("Searching from page " + page);
 			
 			try {
 				
@@ -995,7 +994,6 @@ public class DB {
 			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBUser.class).get();
 			
 			Query searchQuery = qb.simpleQueryString().onFields("author","id").matching(search).createQuery();
-			System.out.println("Searching from page " + page);			
 			
 			@SuppressWarnings("unchecked")
 			Stream<Object> stream = sesh.createFullTextQuery(searchQuery, DBUser.class)
@@ -1028,11 +1026,11 @@ public class DB {
 		try {
 			FullTextSession sesh = Search.getFullTextSession(session);
 			long start = System.nanoTime();
-			System.out.println("Beginning indexing");
+			BadLogger.log("Beginning indexing");
 			sesh.createIndexer().startAndWait();
-			System.out.println("Done indexing " + (((double)(System.nanoTime()-start))/1000000000.0));
+			BadLogger.log("Done indexing " + (((double)(System.nanoTime()-start))/1000000000.0));
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			BadLogger.log(e);
 		} finally {
 			DB.closeSession(session);
 		}
@@ -1164,7 +1162,6 @@ public class DB {
 	}
 	
 	public static StreamingOutput getOutlinePage(Cookie token, long generatedId, int pageNum) {
-		System.out.println("Getting outline " + generatedId + " page " + pageNum);
 		final int page = pageNum - 1;
 		final int OUTLINE_PAGE_SIZE = 300;
 		return new StreamingOutput() {
@@ -2247,14 +2244,15 @@ public class DB {
 				if (b==null) notFound.add(userB);
 				if (!notFound.isEmpty()) throw new DBException("Not found: " + notFound);
 			
-			System.out.println("Found both users");
 			userA = userA.toLowerCase();
 			userB = userB.toLowerCase();
 			try {
 				session.beginTransaction();
-				System.out.println("Result " + session.createQuery("update DBEpisode ep set ep.author=(from DBUser as user where id='" + userA + "') where ep.author.id='" + userB + "'").executeUpdate());
-				System.out.println("Result " + session.createQuery("update DBEpisode ep set ep.editor=(from DBUser as user where id='" + userA + "') where ep.editor.id='" + userB + "'").executeUpdate());
-				System.out.println("Result " + session.createQuery("update DBFlaggedEpisode ep set ep.user=(from DBUser as user where id='" + userA + "') where ep.user.id='" + userB + "'").executeUpdate());
+				
+				session.createQuery("update DBEpisode ep set ep.author=(from DBUser as user where id='" + userA + "') where ep.author.id='" + userB + "'").executeUpdate();
+				session.createQuery("update DBEpisode ep set ep.editor=(from DBUser as user where id='" + userA + "') where ep.editor.id='" + userB + "'").executeUpdate();
+				session.createQuery("update DBFlaggedEpisode ep set ep.user=(from DBUser as user where id='" + userA + "') where ep.user.id='" + userB + "'").executeUpdate();
+				
 				session.createQuery("delete DBEpisodeView ev where ev.user.id='" + userB + "'").executeUpdate();
 				session.createQuery("delete DBUpvote uv where uv.user.id='" + userB + "'").executeUpdate();
 				session.createQuery("delete DBAnnouncementView uv where uv.viewer.id='" + userB + "'").executeUpdate();
@@ -2268,7 +2266,7 @@ public class DB {
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
-				e.printStackTrace();
+				BadLogger.log(e);
 			}
 			DB.updateAccountDate(session, userA);
 		} finally {
@@ -2970,7 +2968,7 @@ public class DB {
 							"WHERE " + where + ";").executeUpdate();
 					session.getTransaction().commit();
 				} catch (Exception e) {
-					e.printStackTrace();
+					BadLogger.log(e);
 					session.getTransaction().rollback();
 					throw new DBException("rollback");
 				}

@@ -36,7 +36,6 @@ public class DevStuff {
 		@Path("becomeadmin")
 		@Produces(MediaType.TEXT_HTML)
 		public Response becomeAdmin(@CookieParam("fbtoken") Cookie fbtoken) {
-			System.out.println("Become admin");
 			return Response.ok(devModeBecomeAdmin(fbtoken)).build();
 		}
 
@@ -110,7 +109,6 @@ public class DevStuff {
 	
 	private static Response getPNGFromResource(String filename) {
 		try {
-			System.out.println("Reading image resource: " + filename);
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		    ImageIO.write(ImageIO.read(Thread.currentThread().getContextClassLoader().getResourceAsStream(filename)), "png", baos);
 		    byte[] imageData = baos.toByteArray();

@@ -219,18 +219,15 @@ public class AddStuff {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response archiveapi(String json) {
 		
-		System.out.println(json);
 		
 		ArchiveObject ao = new Gson().fromJson(json, ArchiveObject.class);
 		if (ao.token == null || ao.parentid == null || ao.author == null || ao.title==null || ao.link==null || ao.body==null || ao.date == null) {
 			ArchiveResponse ar = new ArchiveResponse(null, "NullError");
-			System.out.println("NullArgument");
 			return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).status(400).build();
 		}
 		
 		if (!DB.isValidArchiveToken(ao.token)) {
 			ArchiveResponse ar = new ArchiveResponse(null, "BadToken");
-			System.out.println("BadToken");
 			return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).status(400).build();
 		}
 		Date date;
@@ -238,7 +235,6 @@ public class AddStuff {
 			date = parseDate(ao.date);
 		} catch (Exception e1) {
 			ArchiveResponse ar = new ArchiveResponse(null, "BadDate");
-			System.out.println("BadDate");
 			return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).status(400).build();
 		} 
 		
@@ -246,14 +242,11 @@ public class AddStuff {
 		try {
 			generatedId = DB.addArchiveEp(ao.parentid, ao.link, ao.title, ao.body, ao.author, date);
 		} catch (DBException e) {
-			System.out.println(e.getMessage());
 			ArchiveResponse ar = new ArchiveResponse(null, "BadParent");
-			System.out.println("BadParent");
 
 			return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).status(400).build();
 		}
 		ArchiveResponse ar = new ArchiveResponse(generatedId, null);
-		System.out.println("ID: " + generatedId);
 		return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).build();
 	}
 	public static class ArchiveResponse {

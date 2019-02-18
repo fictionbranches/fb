@@ -10,6 +10,7 @@ import org.glassfish.grizzly.http.server.ErrorPageGenerator;
 import org.glassfish.grizzly.http.server.Request;
 
 import fb.InitWebsite;
+import fb.util.BadLogger;
 import fb.util.Discord;
 import fb.util.Strings;
 
@@ -18,14 +19,14 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 	@Override
 	public String generate(Request request, int status, String reasonPhrase, String description,
 			Throwable exception) {
-		System.out.println("************NEW ERROR PAGE*****************");
-		System.out.printf("Error page URL\t%s%n", request.getRequestURL());
-		System.out.printf("Error page request\t%s%n", request);
-		System.out.printf("Error page status \t%s%n", status);
-		System.out.printf("Error page reason \t%s%n", reasonPhrase);
-		System.out.printf("Error page descrip\t%s%n", description);
-		if (exception != null) System.out.printf("Error page exceptn\t%s%n", exception.getMessage());
-		else System.out.printf("Error page exceptn\t%s%n", "null");
+		BadLogger.log("************NEW ERROR PAGE*****************");
+		BadLogger.log(String.format("Error page URL\t%s%n", request.getRequestURL()));
+		BadLogger.log(String.format("Error page request\t%s%n", request));
+		BadLogger.log(String.format("Error page status \t%s%n", status));
+		BadLogger.log(String.format("Error page reason \t%s%n", reasonPhrase));
+		BadLogger.log(String.format("Error page descrip\t%s%n", description));
+		if (exception != null) BadLogger.log(String.format("Error page exceptn\t%s%n", exception.getMessage()));
+		else BadLogger.log(String.format("Error page exceptn\t%s%n", "null"));
 		
 		
 		if (exception != null) new Thread(()->notifyDiscord(request, status, reasonPhrase, description, exception)).start();
@@ -53,11 +54,11 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 	
 	private static synchronized void notifyDiscord(Request request, int status, String reasonPhrase, String description, Throwable exception) {
 		if (System.currentTimeMillis() - lastError.get() < (10000l /*1 minute*/)) {
-			System.out.println("Skipping Discord notification, less than 1 minute since last request");
+			BadLogger.log("Skipping Discord notification, less than 1 minute since last request");
 			return;
 		}
 		if (InitWebsite.DEV_MODE) {
-			System.out.println("Skipping Discord notification, dev mode");
+			BadLogger.log("Skipping Discord notification, dev mode");
 			return;
 		}
 		try {
@@ -70,7 +71,7 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 			Discord.notifyError(message.toString());
 
 			if (exception != null) {
-				List<String> lines = Strings.traceToLines(exception);
+				List<String> lines = BadLogger.traceToLines(exception);
 				final String header = "```\n";
 				message = new StringBuilder(header);
 				for (String line : lines) {
@@ -89,8 +90,8 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 				}
 			}
 		} catch (Exception e) {
-			System.out.println("Failed to build Discord notification " + e + " " + e.getMessage());
-			e.printStackTrace();
+			BadLogger.log("Failed to build Discord notification " + e + " " + e.getMessage());
+			BadLogger.log(e);
 		}
 	}
 

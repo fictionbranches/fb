@@ -214,7 +214,7 @@ public class Strings {
 	}
 	
 	private static void readSnippetsFile(String filename, HashMap<String,String> fileMap) {
-		System.out.println("Reading snippets/" + filename);
+		BadLogger.log("Reading snippets/" + filename);
 		try (Scanner scan = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream("snippets/" + filename))) { 
 			StringBuilder sb = new StringBuilder(); 
 			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
@@ -301,25 +301,6 @@ public class Strings {
 		return sb.toString();
 	}
 	
-	public static List<String> traceToLines(Throwable e) {
-		if (e==null) return Stream.of("null").collect(Collectors.toList());
-		try (StringWriter sw = new StringWriter()) {
-			try (PrintWriter writer = new PrintWriter(sw)) {
-				e.printStackTrace(writer);
-			}
-			ArrayList<String> lines = new ArrayList<>();
-			try (Scanner s = new Scanner(sw.getBuffer().toString())) {
-				while (s.hasNext()) lines.add(s.nextLine());
-			}
-			return lines;
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-			BadLogger.log(e.getMessage());
-			BadLogger.log("Trouble logging previous exception's stack trace: " + ioe.getMessage());
-			return new ArrayList<>();
-		}
-	}
-	
 	public static String getSelectThemes() {
 		List<String> list = DB.getThemeNames();
 		Collections.sort(list);
@@ -350,7 +331,7 @@ public class Strings {
 					});
 				} catch (IOException e) {
 					BadLogger.log("Error deleting directory " + dirPath);
-					e.printStackTrace();
+					BadLogger.log(e);
 				}
 			} else {
 				f.delete();

@@ -438,14 +438,10 @@ public class AdminStuff {
 		}
 		
 		try {
-			System.out.println("Merging");
 			DB.mergeAccounts(usera, userb);
-			System.out.println("Merged successfully");
 		} catch (DBException e) {
-			System.out.println("Caught exception");
 			return Response.ok(Strings.getFile("adminform.html", user).replace("$EXTRA", e.getMessage())).build();
 		}
-		System.out.println("Returning");
 		return Response.ok(Strings.getFile("adminform.html", user).replace("$EXTRA", "Accounts merged successfully")).build();
 	}
 	

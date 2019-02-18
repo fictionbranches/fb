@@ -40,11 +40,9 @@ public class Discord {
 			StringBuilder result = new StringBuilder();
 			for (int c; (c = in.read()) >= 0;) result.append((char) c);
 
-			System.out.println("Discord response: " + result);
 
 		} catch (Exception e) {
-			System.out.println("Failed to notify Discord " + e + " " + e.getMessage());
-			e.printStackTrace();
+			BadLogger.log(e);
 		}
 	}
 	
@@ -103,11 +101,9 @@ public class Discord {
 			StringBuilder result = new StringBuilder();
 			for (int c; (c = in.read()) >= 0;) result.append((char) c);
 
-			System.out.println("Discord response: " + result);
 
 		} catch (Exception e) {
-			System.out.println("Failed to notify Discord " + e + " " + e.getMessage());
-			e.printStackTrace();
+			BadLogger.log(e);
 		}
 	}
 	

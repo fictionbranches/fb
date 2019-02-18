@@ -3,8 +3,14 @@ package fb.util;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Scanner;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import fb.InitWebsite;
 
@@ -37,9 +43,26 @@ public class BadLogger {
 	}
 
 	public static void log(Exception e) {
-		List<String> lines = Strings.traceToLines(e);
+		List<String> lines = traceToLines(e);
 		if (!lines.isEmpty()) synchronized (logLock) {
 			for (String line : lines) log(line);
+		}
+	}
+	
+	public static List<String> traceToLines(Throwable e) {
+		if (e==null) return Stream.of("null").collect(Collectors.toList());
+		try (StringWriter sw = new StringWriter()) {
+			try (PrintWriter writer = new PrintWriter(sw)) {
+				e.printStackTrace(writer);
+			}
+			ArrayList<String> lines = new ArrayList<>();
+			try (Scanner s = new Scanner(sw.getBuffer().toString())) {
+				while (s.hasNext()) lines.add(s.nextLine());
+			}
+			return lines;
+		} catch (IOException ioe) {
+			BadLogger.log("Trouble logging previous exception's stack trace: " + ioe.getMessage());
+			return new ArrayList<>();
 		}
 	}
 	

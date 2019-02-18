@@ -67,7 +67,7 @@ public class Accounts {
 				out.write(new Gson().toJson(entry.getValue()));
 				out.flush();
 			} catch (IOException e) {
-				e.printStackTrace();
+				BadLogger.log(e);
 				BadLogger.log("Error writing user sessions queue: " + e.getMessage());
 			}
 		}
@@ -917,7 +917,7 @@ public class Accounts {
 				out.append("</tbody></table>");
 				sb.append("<p><hr/><h4>Diffed body:</h4> " + out.toString() + "</p>\n");
 			} catch (Exception e) {
-				e.printStackTrace();
+				BadLogger.log(e);
 				sb.append("<p><hr/><h4>New body:</h4> " + Story.formatBody(mod.body) + "</p>\n");
 				return Strings.getFile("generic.html", user).replace("$EXTRA","<p>Diff threw an exception: " + e.getMessage() + "</p>" + sb.toString());
 			}
