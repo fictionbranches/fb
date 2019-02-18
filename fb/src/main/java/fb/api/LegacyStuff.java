@@ -112,7 +112,6 @@ public class LegacyStuff {
 	@Path("legacy/{anything}/{anything2}/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response legacyCatchAll(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken, @PathParam("anything") String anything, @PathParam("anything2") String anything2) {
-		System.out.println("2Redirecting to " + GetStuff.createURI("/fb"));
 		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		return legacy(oldId, fbtoken);
 	}
@@ -121,7 +120,6 @@ public class LegacyStuff {
 	@Path("legacy/{anything}/{anything2}/{anything3}/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response legacyCatchAll(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken, @PathParam("anything") String anything, @PathParam("anything3") String anything3, @PathParam("anything2") String anything2) {
-		System.out.println("3Redirecting to " + GetStuff.createURI("/fb"));
 		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		return legacy(oldId, fbtoken);
 	}

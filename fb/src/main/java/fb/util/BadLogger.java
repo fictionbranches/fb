@@ -17,7 +17,7 @@ import fb.InitWebsite;
 public class BadLogger {
 	
 	private static Object logLock = new Object();
-
+	
 	/**
 	 * Prepends message with the current date, and writes it to stdout
 	 * @param message
@@ -35,9 +35,9 @@ public class BadLogger {
 				out.write(String.format("%04d-%02d-%02d %02d:%02d:%02d %s", y, mo, d, h, mi, s, message));
 				out.newLine();
 			} catch (IOException e) {
-				System.err.printf("%04d-%02d-%02d %02d:%02d:%02d %s%n", y, mo, d, h, mi, s, "Could not open log file");
+				System.err.printf("%04d-%02d-%02d %02d:%02d:%02d %s%n", y, mo, d, h, mi, s, "Could not open log file");//NOSONAR
 			} finally {
-				System.out.printf("%04d-%02d-%02d %02d:%02d:%02d %s%n", y, mo, d, h, mi, s, message);
+				System.out.printf("%04d-%02d-%02d %02d:%02d:%02d %s%n", y, mo, d, h, mi, s, message);//NOSONAR
 			}
 		}
 	}

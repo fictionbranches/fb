@@ -7,9 +7,12 @@ import java.util.Date;
 public class Dates {
 	
 	private Dates() {}
+	
+	private static final ThreadLocal<DateFormat> outputDate = 
+			ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"));
 
 	/**
-	 * "EEE, MMM d yyyy HH:mm:ss"
+	 * "yyyy-MM-dd hh:mm:ss"
 	 * @param date
 	 * @return
 	 */
@@ -17,7 +20,8 @@ public class Dates {
 		return outputDate.get().format(date);
 	}
 
-	private static final ThreadLocal<DateFormat> simpleDate = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd"));
+	private static final ThreadLocal<DateFormat> simpleDate = 
+			ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd"));
 
 	/**
 	 * "yyyy-MM-dd"
@@ -30,22 +34,8 @@ public class Dates {
 		return simpleDate.get().format(date);
 	}
 	
-	private static final ThreadLocal<DateFormat> simpleDateTime = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"));
-	
-	private static final ThreadLocal<DateFormat> outputDate = simpleDateTime;
-	
-	/**
-	 * "yyyy-MM-dd hh:mm:ss"
-	 * @param date
-	 * @return
-	 */
-	public static String simpleDateTimeFormat(Date date) {
-		if (date == null)
-			return "since the beforefore times";
-		return simpleDateTime.get().format(date);
-	}
-
-	private static final ThreadLocal<DateFormat> completeSimpleDate = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyyMMddHHmmss"));
+	private static final ThreadLocal<DateFormat> completeSimpleDate = 
+			ThreadLocal.withInitial(()->new SimpleDateFormat("yyyyMMddHHmmss"));
 
 	/**
 	 * "yyyyMMddHHmmss"

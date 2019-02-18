@@ -1088,7 +1088,7 @@ public class Accounts {
 		sb.append("<hr/>\n");
 		for (Notification a : list) {
 			sb.append("<p>" + (a.body) + "</p>\n");
-			sb.append("<p>(" + Dates.simpleDateTimeFormat(a.date) + ")</p>\n");
+			sb.append("<p>(" + Dates.outputDateFormat(a.date) + ")</p>\n");
 			sb.append("<hr/>\n");
 		}
 		

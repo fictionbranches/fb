@@ -57,17 +57,18 @@ public class InitWebsite {
 	/**
 	 * set this value to the default (will revert to this value after restarts)
 	 */
-	public static boolean READ_ONLY_MODE = false;
+	public static boolean READ_ONLY_MODE = false;//NOSONAR
 	/**
 	 * Gets set to false if no search indexes are detected, then back to true after search indexes have been built
 	 */
-	public static boolean SEARCHING_ALLOWED = true;
+	public static boolean SEARCHING_ALLOWED = true;//NOSONAR
 	
 	/**
 	 * true to check recaptchas
 	 */
 	public static final boolean RECAPTCHA = true;
 
+	@SuppressWarnings("squid:S106")
 	public static void main(String[] args) {
 		if (args.length == 0) runServer();
 		else if (args[0].trim().length() == 0) runServer();
@@ -89,6 +90,7 @@ public class InitWebsite {
 			}
 	}
 	
+	@SuppressWarnings("squid:S106")
 	private static void usage() {
 		System.err.println("USAGE: (run | init | count)");
 		System.err.println("If no option is specified, run is default");
@@ -111,9 +113,9 @@ public class InitWebsite {
 			
 			
 			if (searchIndexer != null) {
-				System.out.println("Starting search indexer");
+				BadLogger.log("Starting search indexer");
 				searchIndexer.start();
-				System.out.println("Search indexer started");
+				BadLogger.log("Search indexer started");
 			}
 			
 			BadLogger.log("Starting server");
@@ -147,7 +149,7 @@ public class InitWebsite {
 	}
 	
 	private static void checkDatabase() {
-		System.out.println("Checking database");
+		BadLogger.log("Checking database");
 		for (FlatEpisode rootEp : DB.getRoots()) {
 			BadLogger.log("Found root episode: " + rootEp.generatedId + " " + rootEp.link);
 		}
@@ -155,15 +157,15 @@ public class InitWebsite {
 	}
 	
 	private static Thread checkBaseDirAndIndexes() {
-		System.out.println("Checking base dir");
+		BadLogger.log("Checking base dir");
 		File baseDir = new File(InitWebsite.BASE_DIR);
 		if (baseDir.exists()) {
 			if (!baseDir.isDirectory()) {
-				System.err.println("Base dir " + baseDir.getAbsolutePath() + " could not be created, file with same name exists");
+				BadLogger.log("Base dir " + baseDir.getAbsolutePath() + " could not be created, file with same name exists");
 				System.exit(24);
 			}
 		} else if (!(new File(InitWebsite.BASE_DIR).mkdirs())) {
-			System.err.println("Base dir " + baseDir.getAbsolutePath() + " does not exist and could not be created");
+			BadLogger.log("Base dir " + baseDir.getAbsolutePath() + " does not exist and could not be created");
 			System.exit(24);
 		}
 		File indexDir = new File(InitWebsite.BASE_DIR + "/search-indexes");
@@ -178,10 +180,10 @@ public class InitWebsite {
 				InitWebsite.SEARCHING_ALLOWED = true;
 			});
 			t.setName("SearchIndexerThread");
-			System.out.println("Started search indexer thread");
+			BadLogger.log("Started search indexer thread");
 			return t;
 		}
-		System.out.println("Finished check base dir");
+		BadLogger.log("Finished check base dir");
 		return null;
 	}
 	
@@ -212,7 +214,7 @@ public class InitWebsite {
 			keystore = new byte[keyList.size()];
 			for (int i=0; i<keyList.size(); ++i) keystore[i] = keyList.get(i);
 			
-			System.out.println("Finished reading " + keystore.length + " bytes into the keystore");
+			BadLogger.log("Finished reading " + keystore.length + " bytes into the keystore");
 		} catch (IOException e) {
 			//never happens
 			BadLogger.log(e);
@@ -277,7 +279,7 @@ public class InitWebsite {
 				sb.append(df.format(d) + " ");
 				sum+=d;
 			}
-			System.out.println(sb);
+			BadLogger.log(sb.toString());
 			if (sum/((double)arr.length) > 0.3) break;
 		}
 	}

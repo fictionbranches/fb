@@ -68,7 +68,6 @@ public class JSONStuff {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getEpisode(String json) {
 		try {
-			System.out.println("jsongetepisode: " + json);
 			JSONGetEpisodeRequest jepreq = g.get().fromJson(json, JSONGetEpisodeRequest.class);
 			String token = null;
 			long generatedId;
@@ -97,7 +96,7 @@ public class JSONStuff {
 
 			return Response.ok(g().toJson(new JSONGetEpisodeResponse(ep, user, sendhtml))).build();
 		} catch (Exception e) {
-			e.printStackTrace();
+			BadLogger.log(e);
 			return Response.ok(g().toJson(new JSONError(e.getMessage()))).build();
 		}
 	}
