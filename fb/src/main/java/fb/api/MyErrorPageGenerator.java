@@ -9,32 +9,36 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.glassfish.grizzly.http.server.ErrorPageGenerator;
 import org.glassfish.grizzly.http.server.Request;
 
-import fb.InitWebsite;
 import fb.util.BadLogger;
 import fb.util.Discord;
 import fb.util.Strings;
 
+/**
+ * BE CAREFUL EDITING THIS CLASS!!!!!!!!!!!!
+ * 
+ * Something's with the way errors are handled is very finicky. 
+ * Small changes can have weird effects. Be careful.
+ */
 public class MyErrorPageGenerator implements ErrorPageGenerator {
 
 	@Override
 	public String generate(Request request, int status, String reasonPhrase, String description,
 			Throwable exception) {
 		BadLogger.log("************NEW ERROR PAGE*****************");
-		BadLogger.log(String.format("Error page URL\t%s%n", request.getRequestURL()));
-		BadLogger.log(String.format("Error page request\t%s%n", request));
-		BadLogger.log(String.format("Error page status \t%s%n", status));
-		BadLogger.log(String.format("Error page reason \t%s%n", reasonPhrase));
-		BadLogger.log(String.format("Error page descrip\t%s%n", description));
-		if (exception != null) BadLogger.log(String.format("Error page exceptn\t%s%n", exception.getMessage()));
-		else BadLogger.log(String.format("Error page exceptn\t%s%n", "null"));
+		BadLogger.log(String.format("Error page URL\t%s", request.getRequestURL()));
+		BadLogger.log(String.format("Error page request\t%s", request));
+		BadLogger.log(String.format("Error page status \t%s", status));
+		BadLogger.log(String.format("Error page reason \t%s", reasonPhrase));
+		BadLogger.log(String.format("Error page descrip\t%s", description));
+		if (exception != null) BadLogger.log(String.format("Error page exceptn\t%s", exception.getMessage()));
+		else BadLogger.log(String.format("Error page exceptn\t%s", "null"));
 		
 		
 		if (exception != null) new Thread(()->notifyDiscord(request, status, reasonPhrase, description, exception)).start();
 		
-		
 		try (StringWriter sw = new StringWriter()) {
 			 try (PrintWriter pw = new PrintWriter(sw)) {
-				if (exception != null) exception.printStackTrace(pw);
+				exception.printStackTrace(pw); // NOSONAR this isn't really logging
 			}
 			StringBuilder sb = new StringBuilder();
 			sb.append("<p><h1>You ran into an uncaught exception.</h1><br/>\n");
