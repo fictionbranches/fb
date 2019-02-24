@@ -480,6 +480,7 @@ public class Story {
 				.replace("$TITLE", reverse?"Oldest":"Recent");
 	}
 	
+	private static Object rootEpisodesCacheLock = new Object();
 	private static LinkedHashMap<Long,FlatEpisode> rootEpisodesCache2 = new LinkedHashMap<>();
 	static {
 		updateRootEpisodesCache();
@@ -506,11 +507,13 @@ public class Story {
 		return Story.rootEpisodesCache2.get(generatedId);
 	}
 	
-	private static Object rootEpisodesCacheLock = new Object();
 	public static void updateRootEpisodesCache() {
 		synchronized (rootEpisodesCacheLock) {
 			LinkedHashMap<Long, FlatEpisode> newCache = new LinkedHashMap<>();
-			for (FlatEpisode root : DB.getRoots()) newCache.put(root.generatedId, root);
+			FlatEpisode[] arr = DB.getRoots();
+			System.out.println("Found " + arr.length + " roots");
+			
+			for (FlatEpisode root : arr) newCache.put(root.generatedId, root);
 			rootEpisodesCache2 = newCache;
 		}
 	}
