@@ -7,10 +7,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -213,6 +213,24 @@ public class Story {
 				.replace("$COMMENTS", commentHTML.toString())
 				.replace("$PATHTOHERE", pathbox.toString())
 				.replace("$CHILDREN", childHTML.toString());
+	}
+	
+	public static String getWelcome(Cookie token) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(token);
+		} catch (FBLoginException e) {
+			user = null;
+		}
+				
+		StringBuilder sb = new StringBuilder();
+		sb.append("<table class=\"noborder\">\n");
+		for (FlatEpisode ep : Story.getRootEpisodes()) {
+			sb.append("<h3><a href=/fb/story/" + ep.generatedId + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/feed/" + ep.generatedId + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent?story=" + ep.generatedId + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
+		}
+		sb.append("</table>");
+		return Strings.getFile("welcome.html", user).replace("$EPISODES", sb.toString());
+		
 	}
 	
 	public static String getDeleteCommentConfirmation(Cookie token, long id) {
@@ -462,11 +480,7 @@ public class Story {
 				.replace("$TITLE", reverse?"Oldest":"Recent");
 	}
 	
-	private static ConcurrentHashMap<Long,FlatEpisode> rootEpisodesCache2 = new ConcurrentHashMap<>();
-	static {
-		updateRootEpisodesCache();		
-	}
-	
+	private static LinkedHashMap<Long,FlatEpisode> rootEpisodesCache2 = new LinkedHashMap<>();
 	static {
 		updateRootEpisodesCache();
 		Thread t = new Thread(()->{
@@ -485,17 +499,20 @@ public class Story {
 	}
 	
 	public static List<FlatEpisode> getRootEpisodes() {
-		return Story.rootEpisodesCache2.values().stream().sorted((a,b)->a.date.compareTo(b.date)).collect(Collectors.toList());
+		return Story.rootEpisodesCache2.values().stream().collect(Collectors.toList());
 	}
 	
 	public static FlatEpisode getRootEpisodeById(long generatedId) {
 		return Story.rootEpisodesCache2.get(generatedId);
 	}
 	
+	private static Object rootEpisodesCacheLock = new Object();
 	public static void updateRootEpisodesCache() {
-		ConcurrentHashMap<Long,FlatEpisode> newCache = new ConcurrentHashMap<>();
-		for (FlatEpisode root : DB.getRoots()) newCache.put(root.generatedId, root);
-		rootEpisodesCache2 = newCache;
+		synchronized (rootEpisodesCacheLock) {
+			LinkedHashMap<Long, FlatEpisode> newCache = new LinkedHashMap<>();
+			for (FlatEpisode root : DB.getRoots()) newCache.put(root.generatedId, root);
+			rootEpisodesCache2 = newCache;
+		}
 	}
 	
 	public static String getOutlineScrollable(Cookie token, long generatedId) {
@@ -635,22 +652,6 @@ public class Story {
 				"  <input type=\"hidden\" name=\"page\" value=\""+page+"\" />\n" + 
 				"  <input class=\"simplebutton\" type=\"submit\" value=\""+name+"\" />\n" + 
 				"</form>";
-	}
-	
-	public static String getWelcome(Cookie token) {
-		FlatUser user;
-		try {
-			user = Accounts.getFlatUser(token);
-		} catch (FBLoginException e) {
-			user = null;
-		}
-				
-		StringBuilder sb = new StringBuilder();
-		for (FlatEpisode ep : Story.getRootEpisodes()) {
-			sb.append("<h3><a href=/fb/story/" + ep.generatedId + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/feed/" + ep.generatedId + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent?story=" + ep.generatedId + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
-		}
-		return Strings.getFile("welcome.html", user).replace("$EPISODES", sb.toString());
-		
 	}
 	
 	public static String getMostHits(Cookie token) {

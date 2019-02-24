@@ -7,6 +7,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -85,9 +86,7 @@ public class RssStuff {
 			}
 		} finally {
 			feeds = list;
-			StringBuilder sb = new StringBuilder("Updated RSS feeds: ");
-			for (long id : list.keySet()) sb.append(id + " ");
-			BadLogger.log(sb.toString());
+			BadLogger.log("Updated RSS feeds: " + list.keySet().stream().map(Object::toString).collect(Collectors.joining(" ")));
 		}
 	}
 	

@@ -84,7 +84,7 @@ public class GetStuff {
 	}
 	
 	/**
-	 * Displays welcome page (not intro page, which is statically served by nginx)
+	 * Displays welcome page
 	 * 
 	 * @return HTML welcome page
 	 */

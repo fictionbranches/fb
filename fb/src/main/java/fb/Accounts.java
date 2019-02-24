@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.TreeSet;
@@ -62,7 +61,7 @@ public class Accounts {
 	public static void writeSessionsToFile() {
 		BadLogger.log("Writing queues to file");
 		new File(SESSION_PATH).mkdirs();
-		for (Entry<String,UserSession> entry : active.entrySet()) {
+		active.entrySet().forEach(entry->{
 			try (BufferedWriter out = new BufferedWriter(new FileWriter(SESSION_PATH + entry.getKey()))) {
 				out.write(new Gson().toJson(entry.getValue()));
 				out.flush();
@@ -70,7 +69,7 @@ public class Accounts {
 				BadLogger.log(e);
 				BadLogger.log("Error writing user sessions queue: " + e.getMessage());
 			}
-		}
+		});
 		BadLogger.log("Done writing queues to file");
 	}
 	
@@ -97,12 +96,9 @@ public class Accounts {
 	 * Removes any login sessions more than 7 days old
 	 */
 	private static void pruneSessions() {
-		active.entrySet().removeIf(e->{
-			long then = e.getValue().lastActive().getTime();
-			long now = System.currentTimeMillis();
-			double hours = ((double) (now - then)) / (1000.0 * 60.0 * 60.0);
-			return hours > 24*7; // expires after 7 days
-		});
+		final long now = System.currentTimeMillis();
+		final long sevenDaysMillis = 24l*7l*60l*60l*1000l;
+		active.entrySet().removeIf(e->now - e.getValue().lastActive().getTime() > sevenDaysMillis);
 	}
 	
 	public static void bump() {

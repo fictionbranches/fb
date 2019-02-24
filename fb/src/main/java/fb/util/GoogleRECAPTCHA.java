@@ -13,6 +13,7 @@ import java.net.URLEncoder;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 
@@ -55,6 +56,34 @@ public class GoogleRECAPTCHA {
 	}
 	
 	/**
+	 * Wraps URLEncoder.encode(String, "UTF-8") to avoid the UnsupportedEncodingException
+	 * UTF-8 will never cause UnsupportedEncodingException
+	 * @param s
+	 * @return
+	 */
+	private static String encodeURLComponent(String s) {
+		try {
+			return URLEncoder.encode(s, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			throw new AssertionError("UTF-8 is not supported");
+		}
+	}
+	
+	/**
+	 * Wraps String.getBytes("UTF-8") to avoid the UnsupportedEncodingException
+	 * UTF-8 will never cause UnsupportedEncodingException
+	 * @param s
+	 * @return
+	 */
+	private static byte[] getBytes(String s) {
+		try {
+			return s.getBytes("UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			throw new AssertionError("UTF-8 is not supported");
+		}
+	}
+	
+	/**
 	 * Check a recaptcha response token
 	 * @return "true" if user passed, "false" if user failed, anything else indicated an error
 	 */
@@ -69,21 +98,9 @@ public class GoogleRECAPTCHA {
 		Map<String, String> params = new LinkedHashMap<>();
 		params.put("secret", Strings.getRECAPTCHA_SECRET());
 		params.put("response", google);
-		StringBuilder postData = new StringBuilder();
-		byte[] postDataBytes;
-		try {
-			for (Map.Entry<String, String> param : params.entrySet()) {
-				if (postData.length() != 0)
-					postData.append('&');
-				postData.append(URLEncoder.encode(param.getKey(), "UTF-8"));
-				postData.append('=');
-				postData.append(URLEncoder.encode(String.valueOf(param.getValue()), "UTF-8"));
-			}
-			postDataBytes = postData.toString().getBytes("UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			BadLogger.log("UnsupportedEncodingException? Really? wtf " + e.getMessage());
-			throw new GoogleCheckException("Tell Phoenix you got recaptcha UnsupportedEncodingException");
-		}
+		byte[] postDataBytes = getBytes(params.entrySet().stream()
+				.map(param->encodeURLComponent(param.getKey()) + '=' + encodeURLComponent(String.valueOf(param.getValue())))
+				.collect(Collectors.joining("&")));
 		HttpURLConnection conn;
 		try {
 			conn = (HttpURLConnection) url.openConnection();
