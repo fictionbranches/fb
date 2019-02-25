@@ -2359,7 +2359,7 @@ public class DB {
 				session.createQuery("delete DBFlaggedComment uv where uv.user.id='" + userB + "'").executeUpdate();
 				session.createQuery("delete DBComment uv where uv.user.id='" + userB + "'").executeUpdate();
 				
-				session.createQuery("delete DBNotifiction note where note.user.id='" + userB + "'").executeUpdate();
+				session.createQuery("delete DBNotification note where note.user.id='" + userB + "'").executeUpdate();
 
 				session.delete(b);
 				session.getTransaction().commit();
