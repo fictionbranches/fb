@@ -174,7 +174,7 @@ public class Story {
 			commentHTML.append("<div id='comment" + c.id + "' class=\"fbcomment\">\n");
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
 			commentHTML.append("<p>" + Story.formatBody(c.text) + "</p><hr/>");
-			commentHTML.append(((c.user.avatar==null)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a><br/>\n");
+			commentHTML.append(((c.user.avatar==null||c.user.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a><br/>\n");
 			commentHTML.append("<p><a href=/fb/story/" + ep.generatedId + "#comment" + c.id + ">" + Strings.escape(Dates.outputDateFormat(c.date)) + "</a>");
 			if (user != null) {
 				if (c.user.id.equals(user.id)) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete</a>");
@@ -200,7 +200,7 @@ public class Story {
 				.replace("$RAWBODY", Strings.escape("By " + ep.authorName + System.lineSeparator() + ep.body))
 				.replace("$AUTHORID", ep.authorId)
 				.replace("$AUTHORNAME", escape(ep.authorName))
-				.replace("$AVATARURL", (ep.authorAvatar==null)?"":(Strings.getString("story_avatar").replace("$AVATARURL", Strings.escape(ep.authorAvatar))))
+				.replace("$AVATARURL", (ep.authorAvatar==null||ep.authorAvatar.trim().length()==0)?"":(Strings.getString("story_avatar").replace("$AVATARURL", Strings.escape(ep.authorAvatar))))
 				.replace("$PARENTID", (ep.parentId == null) ? ".." : (""+ep.parentId))
 				.replace("$ID", ""+generatedId)
 				.replace("$DATE", escape(Dates.outputDateFormat(ep.date)) + editHTML)
@@ -511,8 +511,7 @@ public class Story {
 		synchronized (rootEpisodesCacheLock) {
 			LinkedHashMap<Long, FlatEpisode> newCache = new LinkedHashMap<>();
 			FlatEpisode[] arr = DB.getRoots();
-			System.out.println("Found " + arr.length + " roots");
-			
+			BadLogger.log("Found " + arr.length + " roots");
 			for (FlatEpisode root : arr) newCache.put(root.generatedId, root);
 			rootEpisodesCache2 = newCache;
 		}

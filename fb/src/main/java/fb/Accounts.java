@@ -244,7 +244,7 @@ public class Accounts {
 			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"fbtable\">" + Strings.escape(story) + "</td></tr>");
 		}
 		sb.append("</table>");
-		String avatar = (profileUser.user.avatar==null)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + Strings.escape(profileUser.user.avatar) + "\" /> ");
+		String avatar = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + Strings.escape(profileUser.user.avatar) + "\" /> ");
 		String bio = profileUser.user.bio==null?"":Story.formatBody(profileUser.user.bio);
 		String pageCount = "";
 		
@@ -359,7 +359,7 @@ public class Accounts {
 		sb.append("<h1> Fiction Branches Staff</h1><hr/>");
 		
 		for (FlatUser staff : DB.getStaff()) {
-			String avatar = (staff.avatar==null)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\"" + Strings.escape(staff.avatar) + "\" /> ");
+			String avatar = (staff.avatar==null||staff.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\"" + Strings.escape(staff.avatar) + "\" /> ");
 			sb.append("<h3>" + avatar + "<a href=/fb/user/" + staff.id + ">" + Strings.escape(staff.author) + "</a></h3>\n");
 			if (staff.level >= 100) sb.append("<p>Admin</p>\n");
 			else if (staff.level >= 10) sb.append("<p>Moderator</p>\n");

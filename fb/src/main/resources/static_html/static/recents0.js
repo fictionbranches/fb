@@ -23,7 +23,7 @@ $(document).ready(function(event) {
 	}
 	
 	function rebuildPageSelector(root,page,reverse) {
-		prevNext = "<div id=recentcontainer>";
+		let prevNext = "<div id=recentcontainer>";
 		page-=0;
 		if (numPages <= 8) {
 			for (let i=1; i<=numPages; ++i) {
