@@ -15,6 +15,7 @@ $STYLE
 <meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
 <script  src="/static/formatting0.js"></script>
 <script src=/static/all_pages3.js></script></head>
+<script src=/static/addform.js></script></head>
 <body>
 
 <div class="topcorner">
@@ -34,8 +35,9 @@ $ACCOUNT
                 <iframe id="formattingFrame" src=/static/formatting3.html frameborder="0" scrolling="no" style="position: relative; width: 100%;"></iframe>
 			</div>
 			
-			Body<br/><textarea name= "body" placeholder="Body" rows= "40" maxlength="100000"></textarea>
+			Body<br/><textarea id="bodytextarea" name= "body" placeholder="Body" rows= "40" maxlength="100000"></textarea>
 		</p>
+		<div id="bodypreview"></div>
 		<p>
 			Link <input type= "text" name= "link" size="100" placeholder= "Link text" maxlength="255"/>
 		</p>

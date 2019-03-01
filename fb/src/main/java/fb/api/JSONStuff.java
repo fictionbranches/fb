@@ -3,16 +3,21 @@ package fb.api;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -21,6 +26,7 @@ import fb.Accounts;
 import fb.DB;
 import fb.DB.DBException;
 import fb.Story;
+import fb.Accounts.FBLoginException;
 import fb.objects.Episode;
 import fb.objects.EpisodeWithChildren;
 import fb.objects.FlatEpisode;
@@ -43,7 +49,22 @@ public class JSONStuff {
 		return jdf.get().format(date);
 	}
 	
+	/*@POST
+	@Path("markdowntohtml")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response markdownToHTML(@QueryParam("body") String body) {
+		String bodyHTML = Story.formatBody(body);
+		HashMap<String,String> map = new HashMap<>();
+		map.put("convertedbody",bodyHTML);
+		return Response.ok(g().toJson(map)).build(); 
+	}*/
 	
+	@POST
+	@Path("markdowntohtml")
+	@Produces(MediaType.TEXT_HTML)
+	public Response markdownToHTML(@FormParam("body") String body) {
+		return Response.ok(Story.formatBody(body)).build();
+	}
 	
 	@POST
 	@Path("getroots")

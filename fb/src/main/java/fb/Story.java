@@ -1093,16 +1093,7 @@ public class Story {
 	 * @return HTML formatted body
 	 */
 	public static String formatBody(String body) {
-		return markdownToHTML(escape(body));
-	}
-	
-	/**
-	 * Convert markdown to HTML but do not escape text first
-	 * @param s
-	 * @return
-	 */
-	public static String markdownToHTML(String s) {
-		return renderer.render(parser.parse(s));
+		return renderer.render(parser.parse((escape(body))));
 	}
 	
 	private static final Parser parser;
