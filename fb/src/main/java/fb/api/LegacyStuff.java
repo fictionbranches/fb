@@ -40,7 +40,7 @@ public class LegacyStuff {
 	@GET
 	@Path("legacy/{legacyId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacy(@PathParam("legacyId") String legacyId, @CookieParam("fbtoken") Cookie fbtoken) {
+	public Response legacy(@PathParam("legacyId") String legacyId) {
 		if (legacyId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		FlatEpisode ep;
 		try {
@@ -54,36 +54,36 @@ public class LegacyStuff {
 	@GET
 	@Path("legacy/the-forum/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacy1(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken) {
-		return legacy(oldId, fbtoken);
+	public Response legacy1(@PathParam("oldId") String oldId) {
+		return legacy(oldId);
 	}
 	
 	@GET 
 	@Path("legacy/you-are-what-you-wish/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacy2(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken) {
-		return legacy(oldId, fbtoken);
+	public Response legacy2(@PathParam("oldId") String oldId) {
+		return legacy(oldId);
 	}
 	
 	@GET
 	@Path("legacy/altered-fates/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacy3(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken) {
-		return legacy(oldId, fbtoken);
+	public Response legacy3(@PathParam("oldId") String oldId) {
+		return legacy(oldId);
 	}
 	
 	@GET
 	@Path("legacy/the-future-of-gaming/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacy4(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken) {
-		return legacy(oldId, fbtoken);
+	public Response legacy4(@PathParam("oldId") String oldId) {
+		return legacy(oldId);
 	}
 	
 	@GET
 	@Path("legacy/cgi-bin/fbstorypage.pl")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacy5(@QueryParam("page") String oldId, @CookieParam("fbtoken") Cookie fbtoken) {
-		return legacy(oldId, fbtoken);
+	public Response legacy5(@QueryParam("page") String oldId) {
+		return legacy(oldId);
 	}
 	
 	@GET
@@ -103,25 +103,25 @@ public class LegacyStuff {
 	@GET
 	@Path("legacy/{anything}/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacyCatchAll(@PathParam("oldId") String oldId, @PathParam("anything") String anything, @CookieParam("fbtoken") Cookie fbtoken) {
+	public Response legacyCatchAll(@PathParam("oldId") String oldId, @PathParam("anything") String anything) {
 		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
-		return legacy(oldId, fbtoken);
+		return legacy(oldId);
 	}
 	
 	@GET
 	@Path("legacy/{anything}/{anything2}/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacyCatchAll(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken, @PathParam("anything") String anything, @PathParam("anything2") String anything2) {
+	public Response legacyCatchAll(@PathParam("oldId") String oldId, @PathParam("anything") String anything, @PathParam("anything2") String anything2) {
 		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
-		return legacy(oldId, fbtoken);
+		return legacy(oldId);
 	}
 	
 	@GET
 	@Path("legacy/{anything}/{anything2}/{anything3}/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacyCatchAll(@PathParam("oldId") String oldId, @CookieParam("fbtoken") Cookie fbtoken, @PathParam("anything") String anything, @PathParam("anything3") String anything3, @PathParam("anything2") String anything2) {
+	public Response legacyCatchAll(@PathParam("oldId") String oldId, @PathParam("anything") String anything, @PathParam("anything3") String anything3, @PathParam("anything2") String anything2) {
 		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
-		return legacy(oldId, fbtoken);
+		return legacy(oldId);
 	}
 	
 }

@@ -388,6 +388,7 @@ public class Accounts {
 	 * @throws FBLoginException if not logged in, or if id does not exist
 	 */
 	public static FlatUser getFlatUserUsingTokenString(String token)  throws FBLoginException {
+		if (token == null || token.trim().length()==0) throw new FBLoginException("");
 		UserSession sesh = active.get(token);
 		if (sesh == null) throw new FBLoginException("");
 		try {

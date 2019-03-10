@@ -280,6 +280,7 @@ public class DB {
 	 * @return
 	 */
 	static DBUser getUserById(Session session, String id) {
+		if (id==null) return null;
 		return session.get(DBUser.class, id.toLowerCase());
 	}
 	
