@@ -41,7 +41,7 @@ public class LegacyStuff {
 	@Path("legacy/{legacyId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response legacy(@PathParam("legacyId") String legacyId) {
-		if (legacyId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
+		if (legacyId == null || (legacyId.trim().toLowerCase().compareTo("root") == 0)) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		FlatEpisode ep;
 		try {
 			ep = DB.getEpByLegacyId(legacyId);
