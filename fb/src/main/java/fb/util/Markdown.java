@@ -34,22 +34,22 @@ public class Markdown {
 	}
 	
 	public static String formatBody(String body) {
-		return formatBody(body,engineComm);
+		return formatBody(body,engine);
 	}
 	
 	public static void main(String[] args) {
-		Strings.readRawFileFromJar("");
+		new ScriptEngineManager().getEngineFactories().forEach(System.out::println);;
 	}
 	
-	private static final String SCRIPT_COMM = 
-			getJsFromURL("https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js") +
+	private static final String SCRIPT = 
+			getJsFromURL("https://cdnjs.cloudflare.com/ajax/libs/markdown-it/8.4.2/markdown-it.min.js") + 
 			" ; \n" + 
 			getJsFromJar("static_html/static/markdown.js");
 
-	private static final ScriptEngine engineComm = new ScriptEngineManager().getEngineByName("nashorn");
+	private static final ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
 	static {
 		try {
-			engineComm.eval(SCRIPT_COMM);
+			engine.eval(SCRIPT);
 		} catch (ScriptException e) {
 			throw new RuntimeException(e);
 		}
