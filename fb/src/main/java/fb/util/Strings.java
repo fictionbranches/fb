@@ -19,7 +19,6 @@ import java.util.Scanner;
 
 import javax.ws.rs.core.Cookie;
 
-import org.apache.commons.text.StringEscapeUtils;
 import org.hibernate.Session;
 
 import fb.Accounts;
@@ -163,57 +162,67 @@ public class Strings {
 	private static Map<String,String> readInFilesMap() {
 		HashMap<String,String> fileMap = new HashMap<>();
 		
-		readSnippetsFile("accountconfirmed.html", fileMap);
-		readSnippetsFile("addform.html", fileMap);
-		readSnippetsFile("adminform.html", fileMap);
-		readSnippetsFile("announcements.md", fileMap);
-		readSnippetsFile("changeauthorform.html", fileMap);
-		readSnippetsFile("changeavatarform.html", fileMap);
-		readSnippetsFile("changebioform.html", fileMap);
-		readSnippetsFile("changeemailform.html", fileMap);
-		readSnippetsFile("changepasswordform.html", fileMap);
-		readSnippetsFile("changethemeform.html", fileMap);
-		readSnippetsFile("commentflagform.html", fileMap);
-		readSnippetsFile("completestory.html", fileMap);
-		readSnippetsFile("confirmpasswordresetform.html", fileMap);
-		readSnippetsFile("createaccountform.html", fileMap);
-		readSnippetsFile("emptygeneric.html", fileMap);
-		readSnippetsFile("failure.html", fileMap);
-		readSnippetsFile("faq.md", fileMap);
-		readSnippetsFile("flagform.html", fileMap);
-		readSnippetsFile("generic.html", fileMap);
-		readSnippetsFile("genericfooter.html", fileMap);
-		readSnippetsFile("genericheader.html", fileMap);
-		readSnippetsFile("loginform.html", fileMap);
-		readSnippetsFile("modhelp.md", fileMap);
-		readSnippetsFile("modifyform.html", fileMap);
-		readSnippetsFile("newrootform.html", fileMap);
-		readSnippetsFile("outline.html", fileMap);
-		readSnippetsFile("outlinescroll.html", fileMap);
-		readSnippetsFile("passwordresetform.html", fileMap);
-		readSnippetsFile("path.html", fileMap);
-		readSnippetsFile("popularnav.html", fileMap);
-		readSnippetsFile("profilepage.html", fileMap);
-		readSnippetsFile("recents.html", fileMap);
-		readSnippetsFile("searchform.html", fileMap);
-		readSnippetsFile("searchhelp.html", fileMap);
-		readSnippetsFile("sitesettingsform.html", fileMap);
-		readSnippetsFile("story.html", fileMap);
-		readSnippetsFile("success.html", fileMap);
-		readSnippetsFile("useraccount.html", fileMap);
-		readSnippetsFile("usersearchform.html", fileMap);
-		readSnippetsFile("verifyaccount.html", fileMap);
-		readSnippetsFile("welcome.html", fileMap);
+		readSnippetsFile("snippets", "accountconfirmed.html", fileMap);
+		readSnippetsFile("snippets", "addform.html", fileMap);
+		readSnippetsFile("snippets", "adminform.html", fileMap);
+		readSnippetsFile("snippets", "announcements.md", fileMap);
+		readSnippetsFile("snippets", "changeauthorform.html", fileMap);
+		readSnippetsFile("snippets", "changeavatarform.html", fileMap);
+		readSnippetsFile("snippets", "changebioform.html", fileMap);
+		readSnippetsFile("snippets", "changeemailform.html", fileMap);
+		readSnippetsFile("snippets", "changepasswordform.html", fileMap);
+		readSnippetsFile("snippets", "changethemeform.html", fileMap);
+		readSnippetsFile("snippets", "commentflagform.html", fileMap);
+		readSnippetsFile("snippets", "completestory.html", fileMap);
+		readSnippetsFile("snippets", "confirmpasswordresetform.html", fileMap);
+		readSnippetsFile("snippets", "createaccountform.html", fileMap);
+		readSnippetsFile("snippets", "emptygeneric.html", fileMap);
+		readSnippetsFile("snippets", "failure.html", fileMap);
+		readSnippetsFile("snippets", "faq.md", fileMap);
+		readSnippetsFile("snippets", "flagform.html", fileMap);
+		readSnippetsFile("snippets", "generic.html", fileMap);
+		readSnippetsFile("snippets", "genericfooter.html", fileMap);
+		readSnippetsFile("snippets", "genericheader.html", fileMap);
+		readSnippetsFile("snippets", "loginform.html", fileMap);
+		readSnippetsFile("snippets", "modhelp.md", fileMap);
+		readSnippetsFile("snippets", "modifyform.html", fileMap);
+		readSnippetsFile("snippets", "newrootform.html", fileMap);
+		readSnippetsFile("snippets", "outline.html", fileMap);
+		readSnippetsFile("snippets", "outlinescroll.html", fileMap);
+		readSnippetsFile("snippets", "passwordresetform.html", fileMap);
+		readSnippetsFile("snippets", "path.html", fileMap);
+		readSnippetsFile("snippets", "popularnav.html", fileMap);
+		readSnippetsFile("snippets", "profilepage.html", fileMap);
+		readSnippetsFile("snippets", "recents.html", fileMap);
+		readSnippetsFile("snippets", "searchform.html", fileMap);
+		readSnippetsFile("snippets", "searchhelp.html", fileMap);
+		readSnippetsFile("snippets", "sitesettingsform.html", fileMap);
+		readSnippetsFile("snippets", "story.html", fileMap);
+		readSnippetsFile("snippets", "success.html", fileMap);
+		readSnippetsFile("snippets", "useraccount.html", fileMap);
+		readSnippetsFile("snippets", "usersearchform.html", fileMap);
+		readSnippetsFile("snippets", "verifyaccount.html", fileMap);
+		readSnippetsFile("snippets", "welcome.html", fileMap);
 		
 		return Collections.unmodifiableMap(fileMap);
 	}
 	
-	private static void readSnippetsFile(String filename, HashMap<String,String> fileMap) {
-		BadLogger.log("Reading snippets/" + filename);
-		try (Scanner scan = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream("snippets/" + filename))) { 
+	private static void readSnippetsFile(String dir, String filename, HashMap<String,String> fileMap) {
+		BadLogger.log("Reading " + dir + "/" + filename);
+		/*try (Scanner scan = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream(dir + "/" + filename))) { 
 			StringBuilder sb = new StringBuilder(); 
 			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
 			fileMap.put(filename, sb.toString());
+		}*/
+		
+		fileMap.put(filename, readRawFileFromJar(dir + "/" + filename)); 
+	}
+	
+	public static String readRawFileFromJar(String filepath) {
+		try (Scanner scan = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath))) { 
+			StringBuilder sb = new StringBuilder(); 
+			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
+			return sb.toString();
 		}
 	}
 	
@@ -242,7 +251,7 @@ public class Strings {
 	}
 	
 	public static String escape(String string) {
-		return StringEscapeUtils.escapeHtml4(string);
+		return Markdown.escape(string);
 	}
 	
 	public static String getString(String name) {

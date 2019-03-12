@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.glassfish.grizzly.http.server.ErrorPageGenerator;
 import org.glassfish.grizzly.http.server.Request;
 
+import fb.InitWebsite;
 import fb.util.BadLogger;
 import fb.util.Discord;
 import fb.util.Strings;
@@ -61,10 +62,10 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 			BadLogger.log("Skipping Discord notification, less than 1 minute since last request");
 			return;
 		}
-		/*if (InitWebsite.DEV_MODE) {
+		if (InitWebsite.DEV_MODE) {
 			BadLogger.log("Skipping Discord notification, dev mode");
 			return;
-		}*/
+		}
 		try {
 			StringBuilder message = new StringBuilder();
 			message.append("Error on page " + request.getRequestURL() + "\n");

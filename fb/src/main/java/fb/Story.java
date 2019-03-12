@@ -16,14 +16,6 @@ import java.util.stream.Stream;
 
 import javax.ws.rs.core.Cookie;
 
-import com.vladsch.flexmark.ext.autolink.AutolinkExtension;
-import com.vladsch.flexmark.ext.gfm.strikethrough.StrikethroughExtension;
-import com.vladsch.flexmark.ext.tables.TablesExtension;
-import com.vladsch.flexmark.html.HtmlRenderer;
-import com.vladsch.flexmark.parser.Parser;
-import com.vladsch.flexmark.superscript.SuperscriptExtension;
-import com.vladsch.flexmark.util.options.MutableDataSet;
-
 import fb.Accounts.FBLoginException;
 import fb.DB.DBException;
 import fb.DB.DeleteCommentConfirmation;
@@ -36,6 +28,7 @@ import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.util.BadLogger;
 import fb.util.Dates;
+import fb.util.Markdown;
 import fb.util.Strings;
 
 /**
@@ -1093,23 +1086,7 @@ public class Story {
 	 * @return HTML formatted body
 	 */
 	public static String formatBody(String body) {
-		return renderer.render(parser.parse((escape(body))));
-	}
-	
-	private static final Parser parser;
-	private static final HtmlRenderer renderer;
-	
-	static {
-		MutableDataSet options = new MutableDataSet();
-		options.set(Parser.EXTENSIONS,Stream.of(TablesExtension.create(), StrikethroughExtension.create(), AutolinkExtension.create(), SuperscriptExtension.create()).collect(Collectors.toList()));
-		options.set(HtmlRenderer.SOFT_BREAK, "<br />\n");
-		options.set(Parser.FENCED_CODE_BLOCK_PARSER, false);
-		options.set(Parser.INDENTED_CODE_BLOCK_PARSER, false);
-		options.set(Parser.HTML_BLOCK_PARSER, false);
-		options.set(Parser.BLOCK_QUOTE_PARSER, false);
-				
-		parser = Parser.builder(options).build();
-		renderer = HtmlRenderer.builder(options).build();
+		return Markdown.formatBody(body);
 	}
 
 	private Story() {}

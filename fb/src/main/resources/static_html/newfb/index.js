@@ -1,4 +1,6 @@
 $(document).ready(function(event) {
+	let converter = new showdown.Converter();
+	
 	function escapeHtml(str) {
 		let div = document.createElement('div');
 		div.appendChild(document.createTextNode(str));
@@ -33,7 +35,7 @@ $(document).ready(function(event) {
 		req.setRequestHeader("Content-type", "application/json");
 		req.onload = function() {
 			let resultString = req.responseText;
-			result = JSON.parse(resultString);
+			let result = JSON.parse(resultString);
 			operator(result);
 		}
 		let obj = {};
@@ -52,9 +54,9 @@ $(document).ready(function(event) {
 		}
 		
 		html += "<hr/>";
-		html += ep.body;
+		html += converter.makeHtml(ep.body);
 		html += '<br/><hr/><br/>';
-		for (child of ep.children) { 
+		for (let child of ep.children) { 
 			html += '<p><a id="link' + child.id + '" href="?ep=' + child.id + '">' + escapeHtml(child.link) + '</a> (' + child.childCount + ')</p>';
 		}
 		$("#resultDiv").html(html);
@@ -63,7 +65,7 @@ $(document).ready(function(event) {
 	
 	function initDisplayRoots(roots) {
 		var html = "";
-		for (ep of roots.episodes) {
+		for (let ep of roots.episodes) {
 			html += '<p><h1><a href="?ep=' + ep.id + '">' + escapeHtml(ep.link) + '</a> (' + ep.childCount + ')</h1>';
 			html += 'By ' + escapeHtml(ep.authorName) + " (" + escapeHtml(ep.authorUsername) + ") at " + ep.date + "</p>";
 		}
