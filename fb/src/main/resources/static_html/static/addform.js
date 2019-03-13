@@ -5,16 +5,16 @@ let onBodyChange = (e,previewDiv) => {
 		previewDiv.html('');
 		return;
 	}
+	previewDiv.html('<h4>Body preview</h4><div class="fbcomment"><p>' + markdownToHTML(body) + '</p></div>');
 	
-	let req = new XMLHttpRequest();
+	/*let req = new XMLHttpRequest();
 	req.open( "POST", "/fbapi/markdowntohtml", true );
 	req.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 	req.onload = function() {
 		let result = req.responseText;
 		previewDiv.html('<h4>Body preview</h4><div class="fbcomment"><p>' + result + '</p></div>');
 	}
-	req.send("body="+encodeURIComponent(body));
-	
+	req.send("body="+encodeURIComponent(body));*/
 };
 let initReady = () => {
 	let bodyText = $("#bodytextarea");

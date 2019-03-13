@@ -50,6 +50,7 @@ public class JSONStuff {
 	@Path("markdowntohtml")
 	@Produces(MediaType.TEXT_HTML)
 	public Response markdownToHTML(@FormParam("body") String body) {
+		System.out.println("markdownToHTML API request: " + body.length());
 		return Response.ok(Story.formatBody(body)).build();
 	}
 	

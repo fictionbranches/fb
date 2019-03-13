@@ -39,6 +39,7 @@ import fb.api.NotFoundExceptionMapper;
 import fb.api.RssStuff;
 import fb.objects.FlatEpisode;
 import fb.util.BadLogger;
+import fb.util.Markdown;
 import fb.util.Strings;
 
 public class InitWebsite {
@@ -117,6 +118,8 @@ public class InitWebsite {
 				searchIndexer.start();
 				BadLogger.log("Search indexer started");
 			}
+			
+			new Thread(()->Markdown.formatBody("This call inits the js engine")).start();
 			
 			BadLogger.log("Starting server");
 			
