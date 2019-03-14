@@ -2,18 +2,19 @@ package fb;
 
 import static fb.util.Strings.escape;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.io.StringReader;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
-import java.util.Scanner;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import javax.mail.Authenticator;
 import javax.mail.Message;
@@ -923,11 +924,7 @@ public class Accounts {
 	}
 	
 	private static List<String> listify(String s) {
-		ArrayList<String> list = new ArrayList<>();
-		try (Scanner scan = new Scanner(s)) {
-			while (scan.hasNext()) list.add(scan.nextLine());
-		}
-		return list;
+		return new BufferedReader(new StringReader(s)).lines().collect(Collectors.toList());
 	}
 	
 	public static void clearMod(long id, Cookie fbtoken, boolean accepted) throws FBLoginException {

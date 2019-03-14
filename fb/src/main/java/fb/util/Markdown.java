@@ -13,25 +13,25 @@ import org.apache.commons.text.StringEscapeUtils;
 public class Markdown {
 	
 	public static String formatBody(String body) {
-		return formatBody(body,engineNashorn);
+		synchronized (engine) {
+			try {
+				return (String) ((Invocable) engine).invokeFunction("markdownToHTML", escape(body));
+			} catch (NoSuchMethodException | ScriptException e) {
+				System.err.println(e + " " + e.getMessage());
+				return body;
+			}
+		}
 	}
 	
-	private static final ScriptEngine engineNashorn = new ScriptEngineManager().getEngineByName("javascript");
-	static {
+	private final static ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
+	static { 
+		if (engine == null) throw new RuntimeException("No javascript engine");
 		try {
-			engineNashorn.eval(getJsReaderFromJar("static_html/static/markdown-it.js"));
-			engineNashorn.eval(getJsReaderFromJar("static_html/static/markdown.js"));
+			engine.eval(getJsReaderFromJar("static_html/static/markdown-it.js"));
+			engine.eval(getJsReaderFromJar("static_html/static/markdown.js"));
 		} catch (ScriptException e) {
 			throw new RuntimeException(e);
-		}
-	}
-	
-	public static String formatBody(String body, ScriptEngine engine) {
-		try {
-			return (String) ((Invocable) engine).invokeFunction("markdownToHTML", escape(body));
-		} catch (NoSuchMethodException | ScriptException e) {
-			return body;
-		}
+		} 
 	}
 	
 	/**
