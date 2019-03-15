@@ -1,5 +1,5 @@
 plugins {
-  id "com.github.jk1.dependency-license-report" version "0.7.1"
+  id "com.github.jk1.dependency-license-report" version "1.6"
 }
 apply plugin: 'java-library'
 apply plugin:'application'
@@ -33,16 +33,37 @@ run {
 tasks.withType(JavaExec) {
     jvmArgs = ["-Xss16m", "-Xmx3072m"]
 }
+
+configurations {
+	implementation {
+		exclude group: 'javax.activation', module: 'activation'
+		exclude group: 'javax.activation', module: 'javax.activation-api'
+		exclude group: 'org.jvnet.staxex', module: 'stax-ex'
+	}
+	compile {
+		exclude group: 'javax.activation', module: 'activation'
+		exclude group: 'javax.activation', module: 'javax.activation-api'
+		exclude group: 'org.jvnet.staxex', module: 'stax-ex'
+	}
+	runtime {
+		exclude group: 'javax.activation', module: 'activation'
+		exclude group: 'javax.activation', module: 'javax.activation-api'
+		exclude group: 'org.jvnet.staxex', module: 'stax-ex'
+	}
+}
+
 dependencies {
 	
+	compile group: 'jakarta.activation', name: 'jakarta.activation-api', version: '1.2.1'
+	
 	// Stuff required for embedded jax-rs (jersey, grizzly)
-	compile group: 'org.glassfish.jersey.containers', name: 'jersey-container-grizzly2-http', version: '2.28'
-	compile group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '2.28'
+	compile (group: 'org.glassfish.jersey.containers', name: 'jersey-container-grizzly2-http', version: '2.28') 
+	compile (group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '2.28') 
 	
 	// Database access
-	compile group: 'org.hibernate', name: 'hibernate-core', version: '5.4.1.Final'
-	compile group: 'org.hibernate', name: 'hibernate-c3p0', version: '5.4.1.Final'
-	compile group: 'org.hibernate', name: 'hibernate-search-orm', version: '5.11.0.Final'
+	compile ('org.hibernate:hibernate-core:5.4.1.Final') 
+	compile (group: 'org.hibernate', name: 'hibernate-c3p0', version: '5.4.1.Final') 
+	compile (group: 'org.hibernate', name: 'hibernate-search-orm', version: '5.11.0.Final') 
 	compile group: 'org.postgresql', name: 'postgresql', version: '42.2.5'
 		
 	// HTMLEscaper
@@ -67,7 +88,7 @@ dependencies {
 	compile group: 'commons-validator', name: 'commons-validator', version: '1.6'
 	
 	// Sending email
-	compile group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2'
+	compile (group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2') 
 	
 	// Generating RSS feeds
 	compile group: 'com.rometools', name: 'rome', version: '1.12.0'

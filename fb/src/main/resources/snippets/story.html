@@ -17,8 +17,11 @@ $STYLE
 <meta property="og:site_name" content="Fiction Branches" />
 <script  src="/static/formatting0.js"></script>
 <script  src="/static/sorttable.js"></script>
-<script src=/static/all_pages3.js></script>
+<script src=/static/all_pages5.js></script>
 <script src=/static/story.js></script>
+<script src=/static/markdown-it.js></script>
+<script src=/static/markdown.js></script>
+<script src=/static/markdown_html.js></script>
 
 <meta name="description" content="$RAWBODY" />
 <meta property="og:description" content="$RAWBODY" />
@@ -46,7 +49,7 @@ $ACCOUNT
 	<a href="#comments">Jump to comments</a> <br/> $MODIFY
 	<hr />
 </header>
-<div class="entry-content fbepisodebody">
+<div class="entry-content fbepisodebody $MARKDOWNSTATUS">
 	$BODY
 </div>
 <a name="children"/>

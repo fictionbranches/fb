@@ -1,4 +1,7 @@
 $(document).ready(function(event) {
+	
+	if (document.cookie.indexOf("fbjs=") < 0) document.cookie = "fbjs=true; max-age=" + (60 * 60 * 24 * 365 * 100);
+	
 	$("#logoutButton").submit(function( event ) {
 		var req = new XMLHttpRequest();
 		req.open( "GET", "/fb/logout", true );

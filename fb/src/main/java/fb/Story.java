@@ -51,7 +51,7 @@ public class Story {
 	 * @param id id of episode
 	 * @return HTML episode
 	 */
-	public static String getHTML(long generatedId, int sort, boolean advancedChildren, Cookie token) {
+	public static String getHTML(long generatedId, int sort, boolean advancedChildren, Cookie token, boolean parseMarkdown) {
 		EpisodeWithChildren ep;
 		try {
 			ep = DB.getFullEp(generatedId, Accounts.getUsernameFromCookie(token));
@@ -166,7 +166,7 @@ public class Story {
 		for (Comment c : ep.comments) {
 			commentHTML.append("<div id='comment" + c.id + "' class=\"fbcomment\">\n");
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
-			commentHTML.append("<p>" + Story.formatBody(c.text) + "</p><hr/>");
+			commentHTML.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p><hr/>");
 			commentHTML.append(((c.user.avatar==null||c.user.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a><br/>\n");
 			commentHTML.append("<p><a href=/fb/story/" + ep.generatedId + "#comment" + c.id + ">" + Strings.escape(Dates.outputDateFormat(c.date)) + "</a>");
 			if (user != null) {
@@ -189,7 +189,8 @@ public class Story {
 
 		return Strings.getFile("story.html", user)
 				.replace("$TITLE", escape(ep.title))
-				.replace("$BODY", formatBody(ep.body))
+				.replace("$BODY", parseMarkdown?formatBody(ep.body):escape(ep.body))
+				.replace("$MARKDOWNSTATUS", parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")
 				.replace("$RAWBODY", Strings.escape("By " + ep.authorName + System.lineSeparator() + ep.body))
 				.replace("$AUTHORID", ep.authorId)
 				.replace("$AUTHORNAME", escape(ep.authorName))
