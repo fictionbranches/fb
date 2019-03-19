@@ -210,7 +210,8 @@ public class JSONStuff {
 			user = null;
 		}
 		HashMap<String,Object> ret = new HashMap<>();
-		ret.put("episodes",roots.stream().map(JSONSimpleEpisode::new).collect(Collectors.toList()));
+		List<JSONSimpleEpisode> episodes = roots.stream().map(JSONSimpleEpisode::new).collect(Collectors.toList());
+		ret.put("episodes",episodes);
 		if (user != null) ret.put("user",new JSONUser(user));
 		return Response.ok(g().toJson(ret)).build();
 	}

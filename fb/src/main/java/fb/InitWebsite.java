@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,6 +23,8 @@ import org.glassfish.grizzly.strategies.SimpleDynamicNIOStrategy;
 import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import fb.api.AccountStuff;
@@ -38,11 +39,12 @@ import fb.api.MyErrorPageGenerator;
 import fb.api.NotFoundExceptionMapper;
 import fb.api.RssStuff;
 import fb.objects.FlatEpisode;
-import fb.util.BadLogger;
 import fb.util.Markdown;
 import fb.util.Strings;
 
 public class InitWebsite {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	/**
 	 * Where all the stuff is.
@@ -102,7 +104,7 @@ public class InitWebsite {
 		HttpServer server;
 		{
 			Thread searchIndexer = checkBaseDirAndIndexes();
-			BadLogger.log("Started. Connecting to postgres"); // This line also starts the file watcher threads
+			LOGGER.info("Started. Connecting to postgres"); // This line also starts the file watcher threads
 			checkDatabase();
 		
 			Accounts.bump(); // Force temp accounts to be loaded and account cleaner thread to start
@@ -114,14 +116,14 @@ public class InitWebsite {
 			
 			
 			if (searchIndexer != null) {
-				BadLogger.log("Starting search indexer");
+				LOGGER.warn("Starting search indexer");
 				searchIndexer.start();
-				BadLogger.log("Search indexer started");
+				LOGGER.warn("Search indexer started");
 			}
 			
 			new Thread(()->Markdown.formatBody("This call inits the js engine")).start();
 			
-			BadLogger.log("Starting server");
+			LOGGER.info("Starting server");
 			
 			int port; try {
 				port = Integer.parseInt(Strings.getBACKEND_PORT());
@@ -144,38 +146,34 @@ public class InitWebsite {
 		try {
 			server.start();
 		} catch (IOException e) {
-			BadLogger.log(e);
+			LOGGER.error("Failed to start server", e);
 			System.exit(26);
 			throw new RuntimeException(e);
 		}
-		BadLogger.log("Server started");
+		LOGGER.info("Server started");
 	}
 	
 	private static void checkDatabase() {
-		BadLogger.log("Checking database");
+		LOGGER.info("Checking database");
 		for (FlatEpisode rootEp : DB.getRoots()) {
-			BadLogger.log("Found root episode: " + rootEp.generatedId + " " + rootEp.link);
+			LOGGER.info("Found root episode: " + rootEp.generatedId + " " + rootEp.link);
 		}
-		BadLogger.log("Postgres connected successfully");
+		LOGGER.info("Postgres connected successfully");
 	}
 	
 	private static Thread checkBaseDirAndIndexes() {
-		BadLogger.log("Checking base dir");
+		LOGGER.info("Checking base dir");
 		File baseDir = new File(InitWebsite.BASE_DIR);
 		if (baseDir.exists()) {
 			if (!baseDir.isDirectory()) {
-				BadLogger.log("Base dir " + baseDir.getAbsolutePath() + " could not be created, file with same name exists");
-				System.exit(24);
+				bye("Base dir " + baseDir.getAbsolutePath() + " could not be created, file with same name exists");
 			}
 		} else if (!(new File(InitWebsite.BASE_DIR).mkdirs())) {
-			BadLogger.log("Base dir " + baseDir.getAbsolutePath() + " does not exist and could not be created");
-			System.exit(24);
+			bye("Base dir " + baseDir.getAbsolutePath() + " does not exist and could not be created");
 		}
 		File indexDir = new File(InitWebsite.BASE_DIR + "/search-indexes");
 		if (indexDir.exists() && indexDir.isFile()) {
-			BadLogger.log("Search index directory " + indexDir.getAbsolutePath() + " is a file");
-			DB.closeSessionFactory();
-			System.exit(1);
+			bye("Search index directory " + indexDir.getAbsolutePath() + " is a file");
 		} else if (!indexDir.exists() || indexDir.list().length==0) {
 			InitWebsite.SEARCHING_ALLOWED = false;
 			Thread t = new Thread(()->{
@@ -183,11 +181,18 @@ public class InitWebsite {
 				InitWebsite.SEARCHING_ALLOWED = true;
 			});
 			t.setName("SearchIndexerThread");
-			BadLogger.log("Started search indexer thread");
+			LOGGER.warn("Started search indexer thread");
 			return t;
 		}
-		BadLogger.log("Finished check base dir");
+		LOGGER.info("Finished check base dir");
 		return null;
+	}
+	
+	private static void bye(String msg) {
+		LOGGER.error(msg);
+		DB.closeSessionFactory();
+		System.exit(24);
+		throw new RuntimeException(msg);
 	}
 	
 	private static ResourceConfig jaxrsConfig() {
@@ -217,10 +222,10 @@ public class InitWebsite {
 			keystore = new byte[keyList.size()];
 			for (int i=0; i<keyList.size(); ++i) keystore[i] = keyList.get(i);
 			
-			BadLogger.log("Finished reading " + keystore.length + " bytes into the keystore");
+			LOGGER.info("Finished reading " + keystore.length + " bytes into the keystore");
 		} catch (IOException e) {
 			//never happens
-			BadLogger.log(e);
+			LOGGER.error("This should never happen", e);
 			System.exit(25);
 			throw new RuntimeException(e);
 		}
@@ -241,14 +246,14 @@ public class InitWebsite {
 					.setQueueLimit(512))
 				.build();
 		for (NetworkListener nl : server.getListeners()) {
-			BadLogger.log("Set transport for listener: " + nl);
+			LOGGER.info("Set transport for listener: " + nl);
 			nl.setTransport(transport);
 		}
 	}
 	
 	private static void enableExceptionLogging() {
 		// Enable exception logging
-		Logger l = Logger.getLogger("org.glassfish.grizzly.http.server.HttpHandler");
+		java.util.logging.Logger l = java.util.logging.Logger.getLogger("org.glassfish.grizzly.http.server.HttpHandler");
 		l.setLevel(Level.FINE);
 		l.setUseParentHandlers(false);
 		ConsoleHandler ch = new ConsoleHandler();
@@ -282,7 +287,7 @@ public class InitWebsite {
 				sb.append(df.format(d) + " ");
 				sum+=d;
 			}
-			BadLogger.log(sb.toString());
+			LOGGER.info("Salt test result: " + sb.toString());
 			if (sum/((double)arr.length) > 0.3) break;
 		}
 	}

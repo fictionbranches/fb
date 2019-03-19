@@ -13,12 +13,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -388,10 +388,11 @@ public class DB {
 				
 				if (sendSiteNotification) {
 					DBNotification note = new DBNotification();
+					note.setType(DBNotification.NEW_CHILD_EPISODE);
 					note.setDate(new Date());
 					note.setRead(false);
 					note.setUser(parent.getAuthor());
-					note.setBody("<a href=\"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>");
+					note.setEpisode(child);
 					session.save(note);
 				}
 				if (sendMailNotification) new Thread(()->
@@ -1644,19 +1645,26 @@ public class DB {
 				
 				if (sendSiteNotification) {
 					DBNotification note = new DBNotification();
-					note.setBody("<a href=\"/fb/user/" + author.getId() + "\">" + Strings.escape(author.getAuthor()) + "</a> left a <a href=\"/fb/story/" + generatedId + "#comment" + comment.getId() + "\">comment</a> on " + Strings.escape(comment.getEpisode().getTitle()));
+					note.setType(DBNotification.NEW_COMMENT_ON_OWN_EPISODE);
 					note.setDate(new Date());
 					note.setRead(false);
 					note.setUser(comment.getEpisode().getAuthor());
+					note.setComment(comment);
 					session.save(note);
 				}
 				
-				if (sendMailNotification) new Thread(()-> // send the email
-					Accounts.sendEmail(comment.getEpisode().getAuthor().getEmail(), "Someone commented on your episode", 
-							"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + author.getId() + "\">" + Strings.escape(author.getAuthor()) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + generatedId + "#comment" + comment.getId() + "\">comment</a> on " + Strings.escape(comment.getEpisode().getTitle()))
-					
-
-				).start();
+				if (sendMailNotification) {
+					final String email = comment.getEpisode().getAuthor().getEmail();
+					final String authorid = author.getId();
+					final String authorauthor = author.getAuthor();
+					final String epTitle = comment.getEpisode().getTitle();
+					final long cid = comment.getId();
+					final long gid = generatedId;
+					new Thread(()-> // send the email
+						Accounts.sendEmail(email, "Someone commented on your episode", 
+								"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + authorid + "\">" + Strings.escape(authorauthor) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + gid + "#comment" + cid + "\">comment</a> on " + Strings.escape(epTitle))
+					).start();
+				}
 				
 				session.getTransaction().commit();
 				
@@ -2567,7 +2575,8 @@ public class DB {
 		}
 	}
 	
-	private static Map<PopularUserEnumContainer, PopularUserContainer> popularUsersMap = Collections.synchronizedMap(new HashMap<PopularUserEnumContainer,PopularUserContainer>()); 
+	//private static Map<PopularUserEnumContainer, PopularUserContainer> popularUsersMap = Collections.synchronizedMap(new HashMap<PopularUserEnumContainer,PopularUserContainer>()); 
+	private static ConcurrentHashMap<PopularUserEnumContainer, PopularUserContainer> popularUsersMap = new ConcurrentHashMap<>(); 
 	
 	private static class PopularUserEnumContainer {
 		public final PopularUser pop;
@@ -2784,31 +2793,6 @@ public class DB {
 			
 			return result;
 			
-		} finally {
-			closeSession(session);
-		}
-	}
-		
-	public static void createNotification(String username, String body) throws DBException {
-		Session session = openSession();
-		try {
-			DBUser user = DB.getUserById(session, username);
-			if (user == null) throw new DBException("Username not found: " + username);
-			
-			DBNotification not = new DBNotification();
-			not.setDate(new Date());
-			not.setRead(false);
-			not.setUser(user);
-			not.setBody(body);
-			
-			try {
-				session.beginTransaction();
-				session.save(not);
-				session.getTransaction().commit();
-			} catch (Exception e) {
-				session.getTransaction().rollback();
-				throw new DBException("Database error");
-			}
 		} finally {
 			closeSession(session);
 		}

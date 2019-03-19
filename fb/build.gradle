@@ -10,8 +10,8 @@ repositories {
 	mavenCentral()
 }
 mainClassName = 'fb.InitWebsite'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = 1.11
+targetCompatibility = 1.11
 
 jar {
 	from {
@@ -55,6 +55,8 @@ configurations {
 dependencies {
 	
 	compile group: 'jakarta.activation', name: 'jakarta.activation-api', version: '1.2.1'
+	
+	compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.26'
 	
 	// Stuff required for embedded jax-rs (jersey, grizzly)
 	compile (group: 'org.glassfish.jersey.containers', name: 'jersey-container-grizzly2-http', version: '2.28') 

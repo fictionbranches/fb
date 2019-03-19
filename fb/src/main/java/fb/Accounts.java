@@ -26,6 +26,8 @@ import javax.mail.internet.MimeMessage;
 import javax.ws.rs.core.Cookie;
 
 import org.apache.commons.validator.routines.EmailValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import com.github.difflib.text.DiffRow;
@@ -36,6 +38,7 @@ import fb.DB.AuthorSearchResult;
 import fb.DB.DBException;
 import fb.DB.EpisodeResultList;
 import fb.DB.PasswordResetException;
+import fb.db.DBNotification;
 import fb.objects.Comment;
 import fb.objects.FlaggedComment;
 import fb.objects.FlaggedEpisode;
@@ -44,11 +47,12 @@ import fb.objects.FlatUser;
 import fb.objects.ModEpisode;
 import fb.objects.Notification;
 import fb.objects.User;
-import fb.util.BadLogger;
 import fb.util.Dates;
 import fb.util.Strings;
 
 public class Accounts {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	public static final int AUTHOR_LENGTH_LIMIT = 32;
 	
@@ -60,25 +64,24 @@ public class Accounts {
 	 * Writes out all current login sessions to json files inside the home directory
 	 */
 	public static void writeSessionsToFile() {
-		BadLogger.log("Writing queues to file");
+		LOGGER.info("Writing queues to file");
 		new File(SESSION_PATH).mkdirs();
 		active.entrySet().forEach(entry->{
 			try (BufferedWriter out = new BufferedWriter(new FileWriter(SESSION_PATH + entry.getKey()))) {
 				out.write(new Gson().toJson(entry.getValue()));
 				out.flush();
 			} catch (IOException e) {
-				BadLogger.log(e);
-				BadLogger.log("Error writing user sessions queue: " + e.getMessage());
+				LOGGER.error("Error writing user sessions queue", e);
 			}
 		});
-		BadLogger.log("Done writing queues to file");
+		LOGGER.info("Done writing queues to file");
 	}
 	
 	/**
 	 * Reads in all current login sessions from json files inside the home directory
 	 */
 	private static void readSessionsFromFile() {
-		BadLogger.log("Reading queues from file");
+		LOGGER.info("Reading queues from file");
 		File dir = new File(SESSION_PATH);
 		if (dir.exists()) {
 			if (dir.isDirectory()) {
@@ -87,10 +90,10 @@ public class Accounts {
 					String token = f.getName();
 					active.put(token, sesh);
 				}
-			} else BadLogger.log("Session directory " + SESSION_PATH + " exists but is a file");
-		} else BadLogger.log("Session directory " + SESSION_PATH + " does not exist");
+			} else LOGGER.error("Session directory " + SESSION_PATH + " exists but is a file");
+		} else LOGGER.error("Session directory " + SESSION_PATH + " does not exist");
 		Strings.safeDeleteFileDirectory(SESSION_PATH);
-		BadLogger.log("Done reading queues from file");
+		LOGGER.info("Done reading queues from file");
 	}
 	
 	/**
@@ -123,7 +126,7 @@ public class Accounts {
 				try {
 					Thread.sleep(1000l * 60l * 60l);// run every hour
 				} catch (InterruptedException e) {
-					BadLogger.log("session prunning thread interrupted " + e.getMessage());
+					LOGGER.error("session prunning thread interrupted", e);
 				}
 				Accounts.pruneSessions();
 				DB.pruneQueues();
@@ -473,7 +476,7 @@ public class Accounts {
 	public static String verify(String createToken) {
 		try {
 			String user = DB.addUser(createToken);
-			BadLogger.log("Created user " + user);
+			LOGGER.info("Created user " + user);
 			return Strings.getFile("accountconfirmed.html", null);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html",null).replace("$EXTRA", e.getMessage());
@@ -915,7 +918,7 @@ public class Accounts {
 				out.append("</tbody></table>");
 				sb.append("<p><hr/><h4>Diffed body:</h4> " + out.toString() + "</p>\n");
 			} catch (Exception e) {
-				BadLogger.log(e);
+				LOGGER.error("Diff threw an exception", e);
 				sb.append("<p><hr/><h4>New body:</h4> " + Story.formatBody(mod.body) + "</p>\n");
 				return Strings.getFile("generic.html", user).replace("$EXTRA","<p>Diff threw an exception: " + e.getMessage() + "</p>" + sb.toString());
 			}
@@ -1081,7 +1084,18 @@ public class Accounts {
 		if (!all) sb.append("<p><a href=\"/fb/notifications?all=true\">Show all</a></p>\n");
 		sb.append("<hr/>\n");
 		for (Notification a : list) {
-			sb.append("<p>" + (a.body) + "</p>\n");
+			
+			switch (a.type) {
+			case DBNotification.LEGACY_NOTE:
+				sb.append("<p>" + a.body + "</p>\n");
+				break;
+			case DBNotification.NEW_CHILD_EPISODE:
+				sb.append("<p><a href=\"/fb/user/" + a.episode.authorId + "\">" + Strings.escape(a.episode.authorName) + "</a> wrote a <a href=\"/fb/story/" + a.episode.generatedId + "\">new child episode</a> of <a href=/fb/story/" + a.parentEpisode.generatedId +">" + Strings.escape(a.parentEpisode.title) + "</a></p>\n");
+				break;
+			case DBNotification.NEW_COMMENT_ON_OWN_EPISODE:
+				sb.append("<a href=\"/fb/user/" + a.comment.user.id + "\">" + Strings.escape(a.comment.user.author) + "</a> left a <a href=\"/fb/story/" + a.comment.episode.generatedId + "#comment" + a.comment.id + "\">comment</a> on " + Strings.escape(a.comment.episode.title));
+				break;
+			}
 			sb.append("<p>(" + Dates.outputDateFormat(a.date) + ")</p>\n");
 			sb.append("<hr/>\n");
 		}

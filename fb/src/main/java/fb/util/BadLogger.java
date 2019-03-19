@@ -22,6 +22,7 @@ public class BadLogger {
 	 * Prepends message with the current date, and writes it to stdout
 	 * @param message
 	 */
+	@Deprecated
 	public static void log(String message) {
 		synchronized (logLock) {
 			Calendar c = Calendar.getInstance();
@@ -42,6 +43,7 @@ public class BadLogger {
 		}
 	}
 
+	@Deprecated
 	public static void log(Exception e) {
 		List<String> lines = traceToLines(e);
 		if (!lines.isEmpty()) synchronized (logLock) {
