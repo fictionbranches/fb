@@ -425,14 +425,8 @@ public class DB {
 		Session session = openSession();
 		try {
 			DBEpisode parent = session.get(DBEpisode.class, parentId);
-			DBUser author = null;
-			{
-				CriteriaBuilder cb = session.getCriteriaBuilder();
-				CriteriaQuery<DBUser> query = cb.createQuery(DBUser.class);
-				Root<DBUser> root = query.from(DBUser.class);
-				query.select(root).where(cb.and(cb.like(root.get("id"), "archive%")), cb.equal(root.get("author"), authorName));
-				author = session.createQuery(query).setMaxResults(1).uniqueResult();
-			}
+			DBUser author = session.createQuery("from DBUser u where id like 'archive%' and author='" + authorName + "'",DBUser.class).setMaxResults(1).uniqueResult();
+			
 			boolean newAuthor = false;
 			if (author == null) {
 				newAuthor = true;
@@ -467,6 +461,8 @@ public class DB {
 			Long childId;
 			try {
 				session.beginTransaction();
+				if (newAuthor) session.save(author);
+				else session.merge(author);
 				childId = (Long) session.save(child);
 				session.getTransaction().commit();
 			} catch (Exception e) {
@@ -486,8 +482,7 @@ public class DB {
 			try {
 				session.beginTransaction();
 				session.save(child);
-				if (newAuthor) session.save(author);
-				else session.merge(author);
+				
 				session.createQuery(updateCounts).executeUpdate();
 				session.getTransaction().commit();
 			} catch (Exception e) {

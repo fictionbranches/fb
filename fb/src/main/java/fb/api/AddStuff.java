@@ -244,6 +244,8 @@ public class AddStuff {
 		} catch (DBException e) {
 			ArchiveResponse ar = new ArchiveResponse(null, "BadParent");
 
+			e.printStackTrace();
+			
 			return Response.ok(new GsonBuilder().setPrettyPrinting().create().toJson(ar)).status(400).build();
 		}
 		ArchiveResponse ar = new ArchiveResponse(generatedId, null);
