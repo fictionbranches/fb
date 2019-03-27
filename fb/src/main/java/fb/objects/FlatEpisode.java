@@ -2,6 +2,7 @@ package fb.objects;
 
 import java.util.Date;
 
+import fb.DB;
 import fb.db.DBEpisode;
 
 /**
@@ -44,9 +45,10 @@ public class FlatEpisode {
 		this.editDate = ep.getEditDate();
 		this.editorId = ep.getEditor().getId();
 		this.editorName = ep.getEditor().getAuthor();
-		this.depth = ep.getDepth();
 		this.childCount = ep.getChildCount();
 		this.hits = ep.getViewCount();
 		this.parentId = (ep.getParent() == null) ? null : ep.getParent().getGeneratedId();
+		
+		this.depth = ep.episodeDepthFromNewMap();
 	}
 }

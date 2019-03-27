@@ -78,6 +78,7 @@ import fb.util.BadLogger;
 import fb.util.Discord;
 import fb.util.Strings;
 
+@SuppressWarnings("deprecation") // TODO
 public class DB {
 	public static final String ROOT_ID = "fbadministrator1";
 	public static final String MESSENGER_ID = "fictionbranches";
@@ -359,7 +360,6 @@ public class DB {
 			}
 			
 			child.setNewMap(parent.getNewMap() + DB.EP_INFIX + childId);
-			child.setDepth(parent.getDepth()+1);
 			
 			
 		
@@ -456,7 +456,6 @@ public class DB {
 			child.setChildCount(1);
 			child.setEditDate(date);
 			child.setEditor(author);
-			child.setDepth(parent.getDepth()+1);
 			
 			Long childId;
 			try {
@@ -612,7 +611,6 @@ public class DB {
 
 			DBEpisode child = new DBEpisode();
 			
-			child.setDepth(1);
 			
 			child.setTitle(title);
 			child.setLink(link);
@@ -1100,7 +1098,8 @@ public class DB {
 			if (generatedId != 0) {
 				DBEpisode ep = session.get(DBEpisode.class, generatedId);
 				if (ep == null) throw new DBException("Not found: " + generatedId);
-				if (ep.getDepth() != 1) generatedId = DB.newMapToIdList(ep.getNewMap()).get(0);
+				List<Long> newMapList = DB.newMapToIdList(ep.getNewMap());
+				if (newMapList.size() != 1) generatedId = newMapList.get(0);
 			}
 			
 			ArrayList<FlatEpisode> alist = session.createNativeQuery(
@@ -1192,12 +1191,12 @@ public class DB {
 						writer.flush();
 						return;
 					}
-					int minDepth = ep.getDepth();
+					int minDepth = ep.episodeDepthFromNewMap();
 					
 					writer.write("\n<!-- BEGIN PAGE " + page + "-->\n");
 					
 					String query = "" 
-							+ "select generatedId, link, depth, fbusers.id, fbusers.author "
+							+ "select generatedId, link, array_length(CAST(string_to_array(replace(replace(fbepisodes.newmap,'"+EP_INFIX+"','-'),'"+EP_PREFIX+"',''),'-') AS bigint[]),1) as depth, fbusers.id, fbusers.author "
 							+ "from fbepisodes,fbusers where fbepisodes.newmap like '" + ep.getNewMap() + EP_INFIX + "%' and fbepisodes.author_id=fbusers.id "
 							+ "order by (CAST(string_to_array(replace(replace(fbepisodes.newmap,'"+EP_INFIX+"','-'),'"+EP_PREFIX+"',''),'-') AS bigint[])) asc LIMIT " + OUTLINE_PAGE_SIZE + " OFFSET " + (page*OUTLINE_PAGE_SIZE) + "";
 						try {							
@@ -1251,21 +1250,28 @@ public class DB {
 			
 			BadLogger.log("Processing path " + ep.getNewMap());
 			
-			CriteriaBuilder cb = session.getCriteriaBuilder();
+			List<Long> ids = DB.newMapToIdList(ep.getNewMap());
+			
+			String query = "select * from fbepisodes where " + 
+				ids.stream().map(id->"generatedid="+id).collect(Collectors.joining(" or ")) + 
+				" order by array_length(CAST(string_to_array(replace(replace(fbepisodes.newmap,'"+EP_INFIX+"','-'),'"+EP_PREFIX+"',''),'-') AS bigint[]),1) asc";
+			return session.createNativeQuery(query,DBEpisode.class).stream()
+				.map(FlatEpisode::new)
+				.collect(Collectors.toUnmodifiableList());
+			
+			/*CriteriaBuilder cb = session.getCriteriaBuilder();
 			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
 			Root<DBEpisode> root = query.from(DBEpisode.class);
 			
-			
-			List<Long> ids = DB.newMapToIdList(ep.getNewMap());
 			Predicate[] preds = ids.stream().map(id->cb.equal(root.get("generatedId"), id)).toArray(length->new Predicate[length]);
 			
-			query.select(root).where(cb.or(preds)).orderBy(cb.asc(root.get("depth")));
+			query.select(root).where(cb.or(preds)).orderBy(cb.asc(root.get("generatedId")));
 			
 			final ArrayList<FlatEpisode> list = new ArrayList<>(ids.size());
 			for (int i=0; i<=ids.size(); i+=STREAM_SIZE) {
 				session.createQuery(query).setFirstResult(i).setMaxResults(STREAM_SIZE).stream().forEach(pathEp->list.add(new FlatEpisode(pathEp)));
 			}
-			return list;
+			return list;*/
 		} finally {
 			closeSession(session);
 			BadLogger.log("Total path took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
@@ -1278,7 +1284,17 @@ public class DB {
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			
-			CriteriaBuilder cb = session.getCriteriaBuilder();
+			List<Long> ids = DB.newMapToIdList(ep.getNewMap());
+			if (ids.size() > 30) ids = ids.subList(ids.size()-30, ids.size());
+			
+			String query = "select * from fbepisodes where " + 
+				ids.stream().map(id->"generatedid="+id).collect(Collectors.joining(" or ")) + 
+				" order by array_length(CAST(string_to_array(replace(replace(fbepisodes.newmap,'"+EP_INFIX+"','-'),'"+EP_PREFIX+"',''),'-') AS bigint[]),1) asc";
+			return session.createNativeQuery(query,DBEpisode.class).stream()
+				.map(FlatEpisode::new)
+				.collect(Collectors.toUnmodifiableList());
+			
+			/*CriteriaBuilder cb = session.getCriteriaBuilder();
 			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
 			Root<DBEpisode> root = query.from(DBEpisode.class);
 			
@@ -1289,7 +1305,7 @@ public class DB {
 			
 			query.select(root).where(cb.or(preds)).orderBy(cb.asc(root.get("depth")));
 			
-			return session.createQuery(query).list().stream().map(FlatEpisode::new).collect(Collectors.toCollection(ArrayList::new));
+			return session.createQuery(query).list().stream().map(FlatEpisode::new).collect(Collectors.toCollection(ArrayList::new));*/
 
 		} finally {
 			closeSession(session);
@@ -2922,10 +2938,9 @@ public class DB {
 			
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("not found: " + generatedId);
-			if (ep.getDepth() == 1) return; // already a root episode
+			if (ep.episodeDepthFromNewMap() == 1) return; // already a root episode
 			
 			synchronized (epLock) {
-				final int oldParentDepth = ep.getDepth()-1;
 				final int branchSize = ep.getChildCount();
 				
 				final String oldNewMap = ep.getNewMap();
@@ -2938,11 +2953,10 @@ public class DB {
 							"WHERE generatedid="+generatedId+";").executeUpdate();
 					session.createNativeQuery( // set newMap of all episodes in branch (including root)
 							"UPDATE fbepisodes\n" + 
-							"SET newmap = replace(newmap,'"+oldNewMap+"','"+generatedId+"'), depth = depth - "+oldParentDepth+"\n" + 
+							"SET newmap = replace(newmap,'"+oldNewMap+"','"+generatedId+"')\n" + 
 							"WHERE newmap='"+oldNewMap+"' OR newmap LIKE '"+oldNewMap+""+DB.EP_INFIX+"%';").executeUpdate();
 					
-					Stream<Long> path = DB.newMapToIdList(oldNewMap).stream();
-					String where = path.filter(gid->gid!=generatedId).map(gid->"generatedId=" + gid).collect(Collectors.joining(" OR "));
+					String where = DB.newMapToIdList(oldNewMap).stream().filter(gid->gid!=generatedId).map(gid->"generatedId=" + gid).collect(Collectors.joining(" OR "));
 					session.createNativeQuery("UPDATE fbepisodes\n" + 
 							"SET childcount = childcount - "+branchSize+"\n" + 
 							"WHERE " + where + ";").executeUpdate();

@@ -10,6 +10,7 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import org.apache.lucene.analysis.core.LowerCaseFilterFactory;
 import org.apache.lucene.analysis.standard.StandardFilterFactory;
@@ -23,6 +24,8 @@ import org.hibernate.search.annotations.Indexed;
 import org.hibernate.search.annotations.Store;
 import org.hibernate.search.annotations.TokenFilterDef;
 import org.hibernate.search.annotations.TokenizerDef;
+
+import fb.DB;
 
 @Entity
 @Table(name="fbepisodes")
@@ -54,8 +57,6 @@ public class DBEpisode {
 	
 	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbEpisodeAnalyzer"))
 	private String link;
-		
-	private int depth;
 	
 	private int childCount;
 	
@@ -80,6 +81,10 @@ public class DBEpisode {
 	@Column(columnDefinition = "text")
 	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbEpisodeAnalyzer"))
 	private String body;
+	
+	public int episodeDepthFromNewMap() {
+		return DB.newMapToIdList(newMap).size();
+	}
 	
 	public long getGeneratedId() {
 		return generatedId;
@@ -124,14 +129,6 @@ public class DBEpisode {
 	}
 	public void setLink(String link) {
 		this.link = link;
-	}
-
-	public int getDepth() {
-		return depth;
-	}
-
-	public void setDepth(int depth) {
-		this.depth = depth;
 	}
 
 	public int getChildCount() {

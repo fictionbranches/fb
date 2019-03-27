@@ -3,6 +3,7 @@ package fb.objects;
 import java.util.Date;
 import java.util.List;
 
+import fb.DB;
 import fb.db.DBEpisode;
 import fb.db.DBUser;
 
@@ -55,7 +56,6 @@ public class EpisodeWithChildren {
 		this.editorId = ep.getEditor().getId();
 		this.editorName = ep.getEditor().getAuthor();
 		this.isLegacy = ep.getAuthor().getEmail() == null;
-		this.depth = ep.getDepth();
 		this.childCount = ep.getChildCount();
 		this.hits = ep.getViewCount();
 		this.views = views;
@@ -66,5 +66,7 @@ public class EpisodeWithChildren {
 		this.viewerCanUpvote = viewerCanUpvote;
 		this.comments = comments;
 		this.pathbox = pathbox;
+		
+		this.depth = ep.episodeDepthFromNewMap();
 	}
 }

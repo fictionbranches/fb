@@ -97,7 +97,6 @@ public class InitDB {
 
 				DBEpisode child = new DBEpisode();
 				
-				child.setDepth(1);
 				
 				child.setTitle("Your First Story Title");
 				child.setLink("Your First Story");

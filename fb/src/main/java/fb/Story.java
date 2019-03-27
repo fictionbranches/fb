@@ -334,8 +334,14 @@ public class Story {
 		return Strings.getFile("searchhelp.html", user).replace("$EPISODES", sb.toString());
 	}
 	
+	/**
+	 * Generate HTML recents table
+	 * @param recents
+	 * @param root
+	 * @return
+	 */
 	private static String getRecentsTable(List<FlatEpisode> recents, int root) {
-		StringBuilder sb = new StringBuilder(Strings.getString("recents_table_head"));
+		StringBuilder sb = new StringBuilder(Strings.getString("recents_table_head" + (root==0?"_story_head":"")));
 		for (FlatEpisode child : recents) if (child != null){
 			long rootId = DB.newMapToIdList(child.newMap).get(0);
 			String story;
@@ -356,6 +362,7 @@ public class Story {
 					.replace("$AUTHORNAME", escape(child.authorName))
 					.replace("$DATE", escape(Dates.simpleDateFormat(child.date)))
 					.replace("$STORY", story)
+					.replace("$EPISODEDEPTH",""+child.depth)
 					.replace("$LINK", escape(child.link));
 			sb.append(row);
 		}
@@ -382,6 +389,11 @@ public class Story {
 		return getRecentsTable(episodes, root);
 	}
 	
+	/**
+	 * get the rootId of an episode id
+	 * @param rootId
+	 * @return
+	 */
 	private static int getRecentsRoot(String rootId) {
 		int root = -1;
 		{ // Check rootId is actually a root Id
@@ -402,7 +414,7 @@ public class Story {
 	}
 	
 	/**
-	 * Gets an list of recent episodes
+	 * Return the complete HTML page of the recents table, including data
 	 * 
 	 * @return HTML recents
 	 */
@@ -629,10 +641,10 @@ public class Story {
 		}
 		String prevNext = sb.toString();
 		if (!result.isEmpty()) {
-			sb.append("<table class=\"fbtable\">");
+			sb.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Author</th><th>Date</th><th>Depth</th></tr>");
 			for (FlatEpisode ep : result) {
 				sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + Strings.escape(ep.link) + "</a></td><td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + 
-						Strings.escape(ep.authorName) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td></tr>\n");
+						Strings.escape(ep.authorName) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>\n");
 			}
 			sb.append("</table>");
 		} else {

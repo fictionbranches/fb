@@ -36,6 +36,10 @@ table.fbtable, th.fbtable, td.fbtable {
     text-align: left;
 }
 
+.textalignright {
+    text-align: right;
+}
+
 .fbchildtable, .fbchildtablenumeric {
     border: none;
     white-space: nowrap;
