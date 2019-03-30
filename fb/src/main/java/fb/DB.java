@@ -2940,7 +2940,7 @@ public class DB {
 							"WHERE generatedid="+generatedId+";").executeUpdate();
 					session.createNativeQuery( // set newMap of all episodes in branch (including root)
 							"UPDATE fbepisodes\n" + 
-							"SET newmap = replace(newmap,'"+oldNewMap+"','"+generatedId+"')\n" + 
+							"SET newmap = replace(newmap,'"+oldNewMap+"','"+EP_PREFIX+generatedId+"')\n" + 
 							"WHERE newmap='"+oldNewMap+"' OR newmap LIKE '"+oldNewMap+""+DB.EP_INFIX+"%';").executeUpdate();
 					
 					String where = DB.newMapToIdList(oldNewMap).filter(gid->gid!=generatedId).map(gid->"generatedId=" + gid).collect(Collectors.joining(" OR "));
