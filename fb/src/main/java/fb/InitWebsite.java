@@ -121,7 +121,9 @@ public class InitWebsite {
 				LOGGER.warn("Search indexer started");
 			}
 			
-			new Thread(()->Markdown.formatBody("This call inits the js engine")).start();
+			Thread jsEngineStarter = new Thread(()->Markdown.formatBody("This call inits the js engine"));
+			jsEngineStarter.setName("jsEngineStarter");
+			jsEngineStarter.start();
 			
 			LOGGER.info("Starting server");
 			
@@ -141,6 +143,7 @@ public class InitWebsite {
 
 			// Enable custom error pages
 			server.getServerConfiguration().setDefaultErrorPageGenerator(new MyErrorPageGenerator());
+			try {jsEngineStarter.join();}catch(Exception e) {}
 		}
 
 		try {
