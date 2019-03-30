@@ -1,28 +1,28 @@
 package fb.util;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Scanner;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import fb.InitWebsite;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BadLogger {
 	
-	private static Object logLock = new Object();
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	
+	//private static Object logLock = new Object();
 	
 	/**
 	 * Prepends message with the current date, and writes it to stdout
 	 * @param message
 	 */
-	@Deprecated
+	/*@Deprecated
 	public static void log(String message) {
 		synchronized (logLock) {
 			Calendar c = Calendar.getInstance();
@@ -49,7 +49,7 @@ public class BadLogger {
 		if (!lines.isEmpty()) synchronized (logLock) {
 			for (String line : lines) log(line);
 		}
-	}
+	}*/
 	
 	public static List<String> traceToLines(Throwable e) {
 		if (e==null) return Stream.of("null").collect(Collectors.toList());
@@ -63,7 +63,7 @@ public class BadLogger {
 			}
 			return lines;
 		} catch (IOException ioe) {
-			BadLogger.log("Trouble logging previous exception's stack trace: " + ioe.getMessage());
+			LOGGER.error("Trouble logging previous exception's stack trace: ", ioe);
 			return new ArrayList<>();
 		}
 	}

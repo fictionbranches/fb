@@ -16,6 +16,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -28,10 +31,11 @@ import fb.objects.Episode;
 import fb.objects.EpisodeWithChildren;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
-import fb.util.BadLogger;
 
 @Path("fbapi")
 public class JSONStuff {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 
 	private final ThreadLocal<Gson> g = ThreadLocal.withInitial(()->new GsonBuilder().setPrettyPrinting().create());
 	public Gson g() {
@@ -253,7 +257,7 @@ public class JSONStuff {
 			if (user != null) ret.put("user",new JSONUser(user));
 			return Response.ok(g().toJson(ret)).build();
 		} catch (Exception e) {
-			BadLogger.log(e);
+			LOGGER.error("JSON getEpisode error", e);
 			return Response.ok(g().toJson(new JSONError(e.getMessage()))).build();
 		}
 	}

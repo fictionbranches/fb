@@ -16,6 +16,9 @@ import java.util.stream.Stream;
 
 import javax.ws.rs.core.Cookie;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import fb.Accounts.FBLoginException;
 import fb.DB.DBException;
 import fb.DB.DeleteCommentConfirmation;
@@ -26,7 +29,6 @@ import fb.objects.Episode;
 import fb.objects.EpisodeWithChildren;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
-import fb.util.BadLogger;
 import fb.util.Dates;
 import fb.util.Markdown;
 import fb.util.Strings;
@@ -35,6 +37,8 @@ import fb.util.Strings;
  * Contains the actual logic that controls how the site works
  */
 public class Story { 
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	/////////////////////////////////////// function to get episodes \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	
@@ -495,7 +499,7 @@ public class Story {
 				try {
 					Thread.sleep(1000l*60l*5l);
 				} catch (InterruptedException e) {
-					BadLogger.log("Root cache thread interrupted (should never happend): " + e.getMessage());
+					LOGGER.error("Root cache thread interrupted (should never happend) ", e);
 					break;
 				}
 				updateRootEpisodesCache();
@@ -517,7 +521,7 @@ public class Story {
 		synchronized (rootEpisodesCacheLock) {
 			LinkedHashMap<Long, FlatEpisode> newCache = new LinkedHashMap<>();
 			FlatEpisode[] arr = DB.getRoots();
-			BadLogger.log("Found " + arr.length + " roots");
+			LOGGER.info("Found " + arr.length + " roots");
 			for (FlatEpisode root : arr) newCache.put(root.generatedId, root);
 			rootEpisodesCache2 = newCache;
 		}
@@ -551,7 +555,7 @@ public class Story {
 	
 	public static String getPath(Cookie token, long generatedId) {
 		long start = System.nanoTime();
-		BadLogger.log("Generating a path page");
+		LOGGER.info("Generating a path page");
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -570,8 +574,8 @@ public class Story {
 			sb.append(child.depth + ". " + epLine(child));
 		}
 		String ret = Strings.getFile("path.html", user).replace("$ID", ""+generatedId).replace("$CHILDREN", sb.toString());
-		BadLogger.log("Took " + (((double)(System.nanoTime()-aStart))/1000000000.0) + " to generate html");
-		BadLogger.log("Total path page took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
+		LOGGER.info("Took " + (((double)(System.nanoTime()-aStart))/1000000000.0) + " to generate html");
+		LOGGER.info("Total path page took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
 		return ret;
 	}
 	

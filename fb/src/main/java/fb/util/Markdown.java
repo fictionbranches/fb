@@ -9,8 +9,12 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import org.apache.commons.text.StringEscapeUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Markdown {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	public static String formatBody(String body) {
 		synchronized (engine) {
@@ -23,12 +27,20 @@ public class Markdown {
 		}
 	}
 	
-	private final static ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
+	private final static ScriptEngine engine;
 	static { 
-		if (engine == null) throw new RuntimeException("No javascript engine");
+		long start = System.nanoTime();
+		engine  = new ScriptEngineManager().getEngineByName("javascript");
+		if (engine == null) {
+			LOGGER.error("No javascript engine");
+			System.exit(99);
+			throw new RuntimeException("No javascript engine");
+		}
 		try {
+			LOGGER.info("Got js engine in " + (((double)(System.nanoTime()-start))/1000000000.0));
 			engine.eval(getJsReaderFromJar("static_html/static/markdown-it.js"));
 			engine.eval(getJsReaderFromJar("static_html/static/markdown.js"));
+			LOGGER.info("js engine init in " + (((double)(System.nanoTime()-start))/1000000000.0));
 		} catch (ScriptException e) {
 			throw new RuntimeException(e);
 		} 

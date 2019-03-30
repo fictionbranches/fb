@@ -14,19 +14,23 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import fb.Accounts;
 import fb.Accounts.FBLoginException;
 import fb.DB;
 import fb.DB.DBException;
 import fb.InitWebsite;
 import fb.objects.FlatUser;
-import fb.util.BadLogger;
 import fb.util.GoogleRECAPTCHA;
 import fb.util.GoogleRECAPTCHA.GoogleCheckException;
 import fb.util.Strings;
 
 @Path("fb")
 public class AccountStuff {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	@GET
 	@Path("user/{id}")
@@ -82,7 +86,7 @@ public class AccountStuff {
 	public Response loginpost(@Context UriInfo uriInfo, @FormParam("email") String email, @FormParam("password") String password,
 			@FormParam("g-recaptcha-response") String google) {
 		
-		BadLogger.log("Login attempt: " + email);
+		LOGGER.info("Login attempt: " + email);
 		try {
 			String token = Accounts.login(email, password);
 			return Response.seeOther(GetStuff.createURI("/fb")).cookie(GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost())).build();
@@ -96,7 +100,7 @@ public class AccountStuff {
 	@Produces(MediaType.TEXT_HTML)
 	public Response loginpost2(@Context UriInfo uriInfo, @FormParam("email") String email, @FormParam("password") String password) {
 		
-		BadLogger.log("Login2 attempt: " + email);
+		LOGGER.info("Login2 attempt: " + email);
 		try {
 			String token = Accounts.login(email, password);
 			return Response.ok("loggedin").cookie(GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost())).build();
@@ -116,7 +120,7 @@ public class AccountStuff {
 	public Response confirmaccount(@PathParam("token") String token) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 		
-		BadLogger.log("Verifying: " + token);
+		LOGGER.info("Verifying: " + token);
 		return Response.ok(Accounts.verify(token)).build();
 	}
 	
@@ -393,7 +397,7 @@ public class AccountStuff {
 	public Response confirmemailchange(@PathParam("token") String token, @CookieParam("fbtoken") Cookie fbtoken) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 		
-		BadLogger.log("Verifying: " + token);
+		LOGGER.info("Verifying: " + token);
 		return Response.ok(Accounts.verifyNewEmail(token, fbtoken)).build();
 	}
 	

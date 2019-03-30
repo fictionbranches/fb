@@ -18,6 +18,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
@@ -29,17 +33,18 @@ import fb.InitWebsite;
 import fb.Story;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
-import fb.util.BadLogger;
 import fb.util.Dates;
 import fb.util.Strings;
 
 @Path("fb")
 public class GetStuff {
 	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	
 	@GET
 	@Path("asdf")
 	public static Response asdf() throws DBException {
-		BadLogger.log("asdf");
+		LOGGER.error("asdf");
 		throw new DBException("this is an exception asdf");
 	}
 	
@@ -77,7 +82,7 @@ public class GetStuff {
 				true, 
 				true);
 		} catch (Exception e) {
-			BadLogger.log(e);
+			LOGGER.error("newCookie exception", e);
 			throw new RuntimeException(e);
 		}
 		return ret;
@@ -345,7 +350,7 @@ public class GetStuff {
 			FlatUser user = Accounts.getFlatUser(fbtoken);
 			DB.markAnnouncementViewed(user.id, aid);
 		} catch (Exception e) {
-			BadLogger.log(e);
+			LOGGER.warn("Account not found", e);
 		}
 		return Response.seeOther(GetStuff.createURI("/fb/announcements")).build();
 	}

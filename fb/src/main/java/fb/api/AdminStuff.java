@@ -31,6 +31,8 @@ import fb.util.Strings;
 @Path("fb")
 public class AdminStuff {
 	
+	//private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	
 	@GET
 	@Path("admin")
 	@Produces(MediaType.TEXT_HTML)

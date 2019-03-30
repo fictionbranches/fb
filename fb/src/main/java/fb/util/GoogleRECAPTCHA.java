@@ -15,9 +15,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.gson.Gson;
 
 public class GoogleRECAPTCHA {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	private GoogleRECAPTCHA() {}
 	
@@ -92,7 +97,7 @@ public class GoogleRECAPTCHA {
 		try {
 			url = new URL("https://www.google.com/recaptcha/api/siteverify");
 		} catch (MalformedURLException e1) {
-			BadLogger.log("MalformedURLException? Really? wtf " + e1.getMessage());
+			LOGGER.error("MalformedURLException? Really? wtf ", e1);
 			throw new GoogleCheckException("Tell Phoenix you got recaptcha MalformedURLException");
 		}
 		Map<String, String> params = new LinkedHashMap<>();
@@ -105,13 +110,13 @@ public class GoogleRECAPTCHA {
 		try {
 			conn = (HttpURLConnection) url.openConnection();
 		} catch (IOException e) {
-			BadLogger.log("IOException1? Really? wtf " + e.getMessage());
+			LOGGER.error("IOException1? Really? wtf ", e);
 			throw new GoogleCheckException("Tell Phoenix you got recaptcha IOException1");
 		}
 		try {
 			conn.setRequestMethod("POST");
 		} catch (ProtocolException e) {
-			BadLogger.log("ProtocolException? Really? wtf " + e.getMessage());
+			LOGGER.error("ProtocolException? Really? wtf ", e);
 			throw new GoogleCheckException("Tell Phoenix you got recaptcha ProtocolException");
 		}
 		conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
@@ -120,17 +125,17 @@ public class GoogleRECAPTCHA {
 		try {
 			conn.getOutputStream().write(postDataBytes);
 		} catch (IOException e) {
-			BadLogger.log("IOException2? Really? wtf " + e.getMessage());
+			LOGGER.error("IOException2? Really? wtf ", e);
 			throw new GoogleCheckException("Tell Phoenix you got recaptcha IOException2");
 		}
 		Reader in;
 		try {
 			in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
 		} catch (UnsupportedEncodingException e) {
-			BadLogger.log("UnsupportedEncodingException2? Really? wtf " + e.getMessage());
+			LOGGER.error("UnsupportedEncodingException2? Really? wtf ", e);
 			throw new GoogleCheckException("Tell Phoenix you got recaptcha UnsupportedEncodingException2");
 		} catch (IOException e) {
-			BadLogger.log("IOException3? Really? wtf " + e.getMessage());
+			LOGGER.error("IOException3? Really? wtf ", e);
 			throw new GoogleCheckException("Tell Phoenix you got recaptcha IOException3");
 		}
 
@@ -139,7 +144,7 @@ public class GoogleRECAPTCHA {
 			for (int c; (c = in.read()) >= 0;)
 				json.append((char) c);
 		} catch (IOException e) {
-			BadLogger.log("IOException3? Really? wtf " + e.getMessage());
+			LOGGER.error("IOException3? Really? wtf ", e);
 			throw new GoogleCheckException("Tell Phoenix you got a IOException4 when adding an episode");
 		}
 		JsonCaptchaResponse response = new Gson().fromJson(json.toString(), JsonCaptchaResponse.class);

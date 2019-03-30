@@ -42,6 +42,8 @@ import org.hibernate.cfg.Configuration;
 import org.hibernate.search.FullTextSession;
 import org.hibernate.search.Search;
 import org.hibernate.search.query.dsl.QueryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import fb.db.DBAnnouncement;
@@ -74,12 +76,13 @@ import fb.objects.ModEpisode;
 import fb.objects.Notification;
 import fb.objects.Theme;
 import fb.objects.User;
-import fb.util.BadLogger;
 import fb.util.Discord;
 import fb.util.Strings;
 
-@SuppressWarnings("deprecation") // TODO
 public class DB {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	
 	public static final String ROOT_ID = "fbadministrator1";
 	public static final String MESSENGER_ID = "fictionbranches";
 	
@@ -98,7 +101,7 @@ public class DB {
 		synchronized (epLock) {
 		synchronized (userLock) { synchronized (ecLock) { synchronized (puLock) { synchronized (dumpLock) {
 			mySessionFactory = newSessionFactory();
-			BadLogger.log("Database success");
+			LOGGER.info("Database success");
 		}
 		} } } } 
 	}
@@ -117,13 +120,13 @@ public class DB {
 				if (scan.hasNextLine()) connectionUsername = scan.nextLine().trim();
 				if (scan.hasNextLine()) connectionPassword = scan.nextLine().trim();
 			} catch (Exception e) {
-				BadLogger.log(e);
+				LOGGER.error(e.getMessage(), e);
 				System.exit(1);
 				throw new RuntimeException(e);
 			}
 		} else {
 			RuntimeException e = new RuntimeException(dbSettingsFilename + " not found");
-			BadLogger.log(e);
+			LOGGER.error(dbSettingsFilename + " not found", e);
 			System.exit(1);
 			throw e;
 		}
@@ -167,7 +170,7 @@ public class DB {
 		try {
 			return configuration.buildSessionFactory(builder.build());
 		} catch (Exception e) {
-			BadLogger.log(e);
+			LOGGER.error("Error configuring db", e);
 			System.exit(1);
 			throw new RuntimeException(e);
 		}
@@ -175,27 +178,27 @@ public class DB {
 	
 	public static void closeSessionFactory() {
 		try {
-			BadLogger.log("Trying to close Session factory");
+			LOGGER.warn("Trying to close Session factory");
 			sessionLock.writeLock().lock();
-			BadLogger.log("Closing Session factory");
+			LOGGER.warn("Closing Session factory");
 			mySessionFactory.close();
 		} finally {
 			sessionLock.writeLock().unlock();
-			BadLogger.log("Session closed");
+			LOGGER.warn("Session closed");
 		}
 	}
 	
 	public static void restartSessionFactory() {
 		try {
-			BadLogger.log("Trying to restart Session factory");
+			LOGGER.warn("Trying to restart Session factory");
 			sessionLock.writeLock().lock();
-			BadLogger.log("Closing Session factory");
+			LOGGER.warn("Closing Session factory");
 			mySessionFactory.close();
-			BadLogger.log("Opening Session factory");
+			LOGGER.warn("Opening Session factory");
 			mySessionFactory = newSessionFactory();
 		} finally {
 			sessionLock.writeLock().unlock();
-			BadLogger.log("Session restarted");
+			LOGGER.warn("Session restarted");
 		}	
 	}
 	
@@ -223,6 +226,10 @@ public class DB {
 
 		public DBException(Exception e) {
 			super(e);
+		}
+		
+		public DBException(String message, Exception e) {
+			super(message, e);
 		}
 	}
 	
@@ -404,9 +411,10 @@ public class DB {
 				}
 			} catch (Exception e) {
 				session.getTransaction().rollback();
-				throw new DBException("Database error");
+				LOGGER.error("addEp rollback", e);
+				throw new DBException("Database error", e);
 			}
-			BadLogger.log(String.format("New: <%s> %s %s", author, title, childId));
+			LOGGER.info(String.format("New: <%s> %s %s", author, title, childId));
 			return childId;
 		} finally {
 			closeSession(session);
@@ -478,10 +486,10 @@ public class DB {
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
-				BadLogger.log(e);
-				throw new DBException("Database error");
+				LOGGER.error("addArchiveEp rollback",e);
+				throw new DBException("Database error",e);
 			}
-			BadLogger.log(String.format("New: <%s> %s %s", author, title, child.getGeneratedId()));
+			LOGGER.info(String.format("New: <%s> %s %s", author, title, child.getGeneratedId()));
 			return childId;
 		} finally {
 			closeSession(session);
@@ -578,8 +586,8 @@ public class DB {
 					
 				} catch (Exception e) {
 					session.getTransaction().rollback();
-					BadLogger.log(e);
-					throw new DBException("Database error");
+					LOGGER.error("deleteEp rollback", e);
+					throw new DBException("Database error", e);
 				}
 			} finally {
 				closeSession(session);
@@ -639,9 +647,10 @@ public class DB {
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
+				LOGGER.error("addRootEp rollback", e);
 				throw new DBException("Database error");
 			}
-			BadLogger.log(String.format("New: <%s> %s %s", author, title, childId+""));
+			LOGGER.info(String.format("New: <%s> %s %s", author, title, childId+""));
 			return childId;
 		} finally {
 			closeSession(session);
@@ -684,8 +693,8 @@ public class DB {
 			session.getTransaction().commit();
 		} catch (Exception e) {
 			session.getTransaction().rollback();
-			BadLogger.log(String.format("Database error modifying: %s", generatedId+""));
-			throw new DBException("Database error");
+			LOGGER.error(String.format("Database error modifying: %s", generatedId+""), e);
+			throw new DBException("Database error", e);
 		} finally {
 			closeSession(session);
 		}
@@ -707,7 +716,7 @@ public class DB {
 		session.merge(oldEditor);
 		session.merge(editor);
 
-		BadLogger.log(String.format("Modified: <%s> %s", title, generatedId));
+		LOGGER.info(String.format("Modified: <%s> %s", title, generatedId));
 	}
 		
 	public static void newEpisodeMod(long generatedId, String link, String title, String body) throws DBException {
@@ -729,9 +738,8 @@ public class DB {
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
-				BadLogger.log(e);
-				BadLogger.log(String.format("Database error submitting new modify: %s", generatedId+""));
-				throw new DBException("Database error");
+				LOGGER.error(String.format("Database error submitting new modify: %s", generatedId+""), e);
+				throw new DBException("Database error", e);
 			}
 		} finally {
 			closeSession(session);
@@ -946,7 +954,7 @@ public class DB {
 	}
 	
 	public static EpisodeResultList search(long generatedId, String search, int page) throws DBException {
-		BadLogger.log(String.format("Searching \"%s\" on page %d (page number %d", search, generatedId, page));
+		LOGGER.info(String.format("Searching \"%s\" on page %d (page number %d", search, generatedId, page));
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1022,11 +1030,11 @@ public class DB {
 		try {
 			FullTextSession sesh = Search.getFullTextSession(session);
 			long start = System.nanoTime();
-			BadLogger.log("Beginning indexing");
+			LOGGER.warn("Beginning indexing");
 			sesh.createIndexer().startAndWait();
-			BadLogger.log("Done indexing " + (((double)(System.nanoTime()-start))/1000000000.0));
+			LOGGER.warn("Done indexing " + (((double)(System.nanoTime()-start))/1000000000.0));
 		} catch (InterruptedException e) {
-			BadLogger.log(e);
+			LOGGER.error("Interrupted search index", e);
 		} finally {
 			DB.closeSession(session);
 		}
@@ -1235,7 +1243,7 @@ public class DB {
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			
-			BadLogger.log("Processing path " + ep.getNewMap());
+			LOGGER.info("Processing path " + ep.getNewMap());
 						
 			String query = "select * from fbepisodes where " + 
 				DB.newMapToIdList(ep.getNewMap()).map(id->"generatedid="+id).collect(Collectors.joining(" or ")) + 
@@ -1259,7 +1267,7 @@ public class DB {
 			return list;*/
 		} finally {
 			closeSession(session);
-			BadLogger.log("Total path took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
+			LOGGER.info("Total path took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
 		}
 	}
 	
@@ -1695,7 +1703,7 @@ public class DB {
 		} finally {
 			closeSession(session);
 		}
-		BadLogger.log(String.format("Comment edit: <%s> %s %s", commentId, username, commentDate));
+		LOGGER.info(String.format("Comment edit: <%s> %s %s", commentId, username, commentDate));
 	}
 	
 	public static class DeleteCommentConfirmation {
@@ -1803,7 +1811,7 @@ public class DB {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
 			}
-			BadLogger.log(String.format("Comment flag: <%s> %s %s", authorId, commentId, flagDate));
+			LOGGER.info(String.format("Comment flag: <%s> %s %s", authorId, commentId, flagDate));
 			return new FlatEpisode(comment.getEpisode());
 		} finally {
 			closeSession(session);
@@ -1850,7 +1858,7 @@ public class DB {
 		} finally {
 			closeSession(session);
 		}
-		BadLogger.log(String.format("Flag: <%s> %d %s", authorId, generatedId, flagDate));
+		LOGGER.info(String.format("Flag: <%s> %d %s", authorId, generatedId, flagDate));
 	}
 	
 	public static List<FlaggedEpisode> getFlags() {
@@ -1978,8 +1986,8 @@ public class DB {
 			session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
-				BadLogger.log(String.format("Database error modifying: %s", id));
-				throw new DBException("Database error");
+				LOGGER.error(String.format("Database error modifying: %s", id), e);
+				throw new DBException("Database error", e);
 			}
 		} finally {
 			closeSession(session);
@@ -2264,7 +2272,8 @@ public class DB {
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
-				BadLogger.log(e);
+				LOGGER.error("mergeAccounts() rollback", e);
+				throw new DBException("rollback", e);
 			}
 			DB.updateAccountDate(session, userA);
 		} finally {
@@ -2940,9 +2949,9 @@ public class DB {
 							"WHERE " + where + ";").executeUpdate();
 					session.getTransaction().commit();
 				} catch (Exception e) {
-					BadLogger.log(e);
+					LOGGER.error("moveEpisodeToRoot() rollback", e);
 					session.getTransaction().rollback();
-					throw new DBException("rollback");
+					throw new DBException("rollback", e);
 				}
 			}
 		} finally {

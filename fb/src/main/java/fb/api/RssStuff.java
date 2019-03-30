@@ -15,6 +15,9 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.rometools.rome.feed.synd.SyndContent;
 import com.rometools.rome.feed.synd.SyndContentImpl;
 import com.rometools.rome.feed.synd.SyndEntry;
@@ -28,11 +31,12 @@ import fb.DB;
 import fb.DB.DBException;
 import fb.Story;
 import fb.objects.FlatEpisode;
-import fb.util.BadLogger;
 import fb.util.Strings;
 
 @Path("fb")
 public class RssStuff {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	@GET
 	@Path("feed")
@@ -68,7 +72,7 @@ public class RssStuff {
 					Thread.sleep(sleepTime);
 					updateFeeds();
 				} catch (InterruptedException e) {
-					BadLogger.log("Feed updater thread interrupted");
+					LOGGER.error("Feed updater thread interrupted", e);
 				}
 			}
 		});
@@ -86,7 +90,7 @@ public class RssStuff {
 			}
 		} finally {
 			feeds = list;
-			BadLogger.log("Updated RSS feeds: " + list.keySet().stream().map(Object::toString).collect(Collectors.joining(" ")));
+			LOGGER.info("Updated RSS feeds: " + list.keySet().stream().map(Object::toString).collect(Collectors.joining(" ")));
 		}
 	}
 	
@@ -101,7 +105,7 @@ public class RssStuff {
 		try {
 			eps = DB.getRecents(story, 1, false).episodes;
 		} catch (DBException e) {
-			BadLogger.log("Couldn't get recents for RSS");
+			LOGGER.info("Couldn't get recents for RSS");
 			return feedToString(feed);
 		}
 		for (FlatEpisode ep : eps) {
@@ -144,9 +148,9 @@ public class RssStuff {
 		try {
 			new SyndFeedOutput().output(feed, writer);
 		} catch (IOException e) {
-			BadLogger.log("RSS: there was some problem writing to the Writer");
+			LOGGER.error("RSS: there was some problem writing to the Writer", e);
 		} catch (FeedException e) {
-			BadLogger.log("RSS: the XML representation for the feed could not be created");
+			LOGGER.error("RSS: the XML representation for the feed could not be created", e);
 		}
 		return writer.toString();
 	}

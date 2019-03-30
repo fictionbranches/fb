@@ -22,6 +22,8 @@ import fb.util.Strings;
 
 @Path("")
 public class DevStuff {	
+	
+	//private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 		
 	@GET
 	public static Response getRoot() {

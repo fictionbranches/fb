@@ -9,11 +9,17 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Scanner;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.gson.Gson;
 
 import fb.objects.FlatEpisode;
 
 public class Discord {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	
 	public static synchronized void notifyError(String message) {
 		try {
 			if (message.length() > 2000) message = message.substring(0,2000);
@@ -42,7 +48,7 @@ public class Discord {
 
 
 		} catch (Exception e) {
-			BadLogger.log(e);
+			LOGGER.error(e.getMessage(),e);
 		}
 	}
 	
@@ -103,7 +109,7 @@ public class Discord {
 
 
 		} catch (Exception e) {
-			BadLogger.log(e);
+			LOGGER.error(e.getMessage(), e);
 		}
 	}
 	

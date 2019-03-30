@@ -20,6 +20,8 @@ import java.util.Scanner;
 import javax.ws.rs.core.Cookie;
 
 import org.hibernate.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import fb.Accounts;
 import fb.Accounts.FBLoginException;
@@ -30,6 +32,8 @@ import fb.objects.FlatUser;
 import fb.objects.Theme;
 
 public class Strings {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	/**
 	 * use for any random numbers needed anywhere
@@ -208,7 +212,7 @@ public class Strings {
 	}
 	
 	private static void readSnippetsFile(String dir, String filename, HashMap<String,String> fileMap) {
-		BadLogger.log("Reading " + dir + "/" + filename);
+		LOGGER.info("Reading " + dir + "/" + filename);
 		/*try (Scanner scan = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream(dir + "/" + filename))) { 
 			StringBuilder sb = new StringBuilder(); 
 			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
@@ -233,16 +237,16 @@ public class Strings {
 				String line = scan.nextLine();
 				if (line.trim().length() == 0 || line.trim().startsWith("#")) continue;
 				if (!line.contains("~")) {
-					BadLogger.log("Misformatted strings.txt (uncommented nonempty line with no '~'): " + line);
+					LOGGER.error("Misformatted strings.txt (uncommented nonempty line with no '~'): " + line);
 					System.exit(1);
 				}
 				String[] arr = line.split("~");
 				if (arr.length != 2) {
-					BadLogger.log("Misformatted strings.txt (too many '~'s " + line + ")");
+					LOGGER.error("Misformatted strings.txt (too many '~'s " + line + ")");
 					System.exit(2);
 				}
 				if (stringsMap.put(arr[0], arr[1]) != null) {
-					BadLogger.log("strings.txt duplicate key: " + arr[0]);
+					LOGGER.error("strings.txt duplicate key: " + arr[0]);
 					System.exit(3);
 				}
 			}
@@ -300,7 +304,7 @@ public class Strings {
 		try (Scanner scan = new Scanner(file)) {
 			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
 		} catch (FileNotFoundException e) {
-			BadLogger.log(e);
+			LOGGER.warn("Not found: " + file, e);
 		}
 		return sb.toString();
 	}
@@ -334,8 +338,7 @@ public class Strings {
 						}
 					});
 				} catch (IOException e) {
-					BadLogger.log("Error deleting directory " + dirPath);
-					BadLogger.log(e);
+					LOGGER.error("Error deleting directory " + dirPath, e);
 				}
 			} else {
 				f.delete();

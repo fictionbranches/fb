@@ -31,6 +31,9 @@ import fb.util.Strings;
 
 @Path("fb")
 public class AddStuff {
+	
+	//private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	
 	/**
 	 * Returns the form for adding new episodes
 	 * 

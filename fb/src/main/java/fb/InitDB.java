@@ -4,18 +4,21 @@ import java.util.Date;
 import java.util.Scanner;
 
 import org.hibernate.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import fb.DB.DBException;
 import fb.db.DBEpisode;
 import fb.db.DBUser;
-import fb.util.BadLogger;
 
 /**
  * Run this class's main() (as a regular Java Application, not on tomcat) to
  * initialize the database
  */
 public class InitDB {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 
 	public static void main(String[] args) {
 		cleanStart();
@@ -82,8 +85,7 @@ public class InitDB {
 				DB.changeUserLevel(phoenixID, (byte)100);
 				System.out.println("Done");
 			} catch (DBException e) {
-				BadLogger.log(e);
-				BadLogger.log("*** THIS SHOULD NEVER HAPPEN ***");
+				LOGGER.error("*** THIS SHOULD NEVER HAPPEN ***", e);
 				DB.closeSessionFactory();
 				System.exit(24);
 			}
@@ -129,8 +131,7 @@ public class InitDB {
 				}
 				System.out.println("First episode added!");
 			} catch (DBException e) {
-				BadLogger.log(e);
-				BadLogger.log("*** THIS SHOULD NEVER HAPPEN ***");
+				LOGGER.error("*** THIS SHOULD NEVER HAPPEN ***", e);
 				DB.closeSessionFactory();
 				System.exit(24);
 			} finally {

@@ -8,6 +8,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.glassfish.grizzly.http.server.ErrorPageGenerator;
 import org.glassfish.grizzly.http.server.Request;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import fb.InitWebsite;
 import fb.util.BadLogger;
@@ -21,18 +23,20 @@ import fb.util.Strings;
  * Small changes can have weird effects. Be careful.
  */
 public class MyErrorPageGenerator implements ErrorPageGenerator {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 
 	@Override
 	public String generate(Request request, int status, String reasonPhrase, String description,
 			Throwable exception) {
-		BadLogger.log("************NEW ERROR PAGE*****************");
-		BadLogger.log(String.format("Error page URL\t%s", request.getRequestURL()));
-		BadLogger.log(String.format("Error page request\t%s", request));
-		BadLogger.log(String.format("Error page status \t%s", status));
-		BadLogger.log(String.format("Error page reason \t%s", reasonPhrase));
-		BadLogger.log(String.format("Error page descrip\t%s", description));
-		if (exception != null) BadLogger.log(String.format("Error page exceptn\t%s", exception.getMessage()));
-		else BadLogger.log(String.format("Error page exceptn\t%s", "null"));
+		LOGGER.warn("************NEW ERROR PAGE*****************");
+		LOGGER.warn(String.format("Error page URL\t%s", request.getRequestURL()));
+		LOGGER.warn(String.format("Error page request\t%s", request));
+		LOGGER.warn(String.format("Error page status \t%s", status));
+		LOGGER.warn(String.format("Error page reason \t%s", reasonPhrase));
+		LOGGER.warn(String.format("Error page descrip\t%s", description));
+		if (exception != null) LOGGER.warn(String.format("Error page exceptn\t%s", exception.getMessage()));
+		else LOGGER.warn(String.format("Error page exceptn\t%s", "null"));
 		
 		
 		if (exception != null) new Thread(()->notifyDiscord(request, status, reasonPhrase, description, exception)).start();
@@ -59,11 +63,11 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 	
 	private static synchronized void notifyDiscord(Request request, int status, String reasonPhrase, String description, Throwable exception) {
 		if (System.currentTimeMillis() - lastError.get() < (10000l /*1 minute*/)) {
-			BadLogger.log("Skipping Discord notification, less than 1 minute since last request");
+			LOGGER.warn("Skipping Discord notification, less than 1 minute since last request", exception);
 			return;
 		}
 		if (InitWebsite.DEV_MODE) {
-			BadLogger.log("Skipping Discord notification, dev mode");
+			LOGGER.warn("Skipping Discord notification, dev mode", exception);
 			return;
 		}
 		try {
@@ -95,8 +99,7 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 				}
 			}
 		} catch (Exception e) {
-			BadLogger.log("Failed to build Discord notification " + e + " " + e.getMessage());
-			BadLogger.log(e);
+			LOGGER.error("Failed to build Discord notification ", e);
 		}
 	}
 
