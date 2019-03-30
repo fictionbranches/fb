@@ -1304,7 +1304,7 @@ public class DB {
 	public static FlatEpisode[] getRoots() {
 		Session session = openSession();
 		try {
-			return getRoots(session).toArray(size->new FlatEpisode[size]);
+			return getRoots(session).map(FlatEpisode::new).toArray(size->new FlatEpisode[size]);
 		} finally {
 			closeSession(session);
 		}
