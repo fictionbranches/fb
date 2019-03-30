@@ -1,5 +1,6 @@
 package fb.db;
 
+import java.util.Date;
 import java.util.Objects;
 
 import javax.persistence.Entity;
@@ -23,6 +24,8 @@ public class DBEpisodeView {
 	
 	@ManyToOne
 	private DBUser user;
+	
+	private Date date;
 		
 	public long getId() {
 		return id;
@@ -46,6 +49,14 @@ public class DBEpisodeView {
 
 	public void setUser(DBUser user) {
 		this.user = user;
+	}
+	
+	public Date getDate() {
+		return this.date;
+	}
+
+	public void setDate(Date date) {
+		this.date = date;
 	}
 
 	public boolean equals(Object o) {

@@ -816,6 +816,7 @@ public class DB {
 							DBEpisodeView ev = new DBEpisodeView();
 							ev.setEpisode(ep);
 							ev.setUser(user);
+							ev.setDate(new Date());
 							session.save(ev);
 							session.getTransaction().commit();
 							session.beginTransaction();
@@ -827,8 +828,6 @@ public class DB {
 				}
 				
 			}
-			
-			
 			
 			String query = CHILD_QUERY + ep.getGeneratedId() + CHILD_QUERY_POST;
 			
@@ -906,6 +905,7 @@ public class DB {
 				DBUpvote upvote = new DBUpvote();
 				upvote.setEpisode(ep);
 				upvote.setUser(user);
+				upvote.setDate(new Date());
 				session.save(upvote);
 				session.getTransaction().commit();
 			} catch (Exception e) {
