@@ -10,7 +10,6 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.lucene.analysis.core.LowerCaseFilterFactory;
 import org.apache.lucene.analysis.standard.StandardFilterFactory;
@@ -83,7 +82,7 @@ public class DBEpisode {
 	private String body;
 	
 	public int episodeDepthFromNewMap() {
-		return DB.newMapToIdList(newMap).size();
+		return (int)DB.newMapToIdList(newMap).count();
 	}
 	
 	public long getGeneratedId() {

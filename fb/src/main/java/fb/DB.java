@@ -14,9 +14,9 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -94,7 +94,6 @@ public class DB {
 	private static ReentrantReadWriteLock sessionLock = new ReentrantReadWriteLock(); // used to ensure no sessions are open when sessionfactory is closed
 	private static final char EP_PREFIX = 'A';
 	private static final char EP_INFIX = 'B';
-	private static final int STREAM_SIZE = 1000;
 	static {
 		synchronized (epLock) {
 		synchronized (userLock) { synchronized (ecLock) { synchronized (puLock) { synchronized (dumpLock) {
@@ -361,15 +360,10 @@ public class DB {
 			
 			child.setNewMap(parent.getNewMap() + DB.EP_INFIX + childId);
 			
-			
-		
-			String updateCounts;{
-					StringBuilder sb = new StringBuilder("update DBEpisode ep set ep.childCount=(ep.childCount+1) where ");
-					for (Long pathId : DB.newMapToIdList(parent.getNewMap())) {
-						sb.append("ep.generatedId=" + pathId + " or ");
-					}
-					updateCounts = sb.substring(0, sb.length() - 4);
-				}
+			String updateCounts = "update DBEpisode ep set ep.childCount=(ep.childCount+1) where " + 
+					DB.newMapToIdList(parent.getNewMap())
+						.map(pathId -> "ep.generatedId=" + pathId)
+						.collect(Collectors.joining(" or "));
 			
 			boolean sendSiteNotification = false;
 			boolean sendMailNotification = false;
@@ -402,7 +396,7 @@ public class DB {
 				session.getTransaction().commit();
 				
 				if (Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
-					DBEpisode root = session.get(DBEpisode.class, DB.newMapToIdList(child.getNewMap()).get(0));				
+					DBEpisode root = session.get(DBEpisode.class, DB.newMapToIdList(child.getNewMap()).findFirst().get());				
 					final FlatEpisode flatEp = new FlatEpisode(child);
 					final FlatEpisode flatRoot = new FlatEpisode(root);
 					
@@ -471,12 +465,10 @@ public class DB {
 			
 			child.setNewMap(parent.getNewMap() + EP_INFIX + "" + childId);
 			
-			StringBuilder sb = new StringBuilder("update DBEpisode ep set ep.childCount=(ep.childCount+1) where ");
-
-			for (Long pathId : DB.newMapToIdList(parent.getNewMap())) {
-				sb.append("ep.generatedId=" + pathId + " or ");
-			}
-			String updateCounts = sb.substring(0, sb.length() - 4);
+			String updateCounts = "update DBEpisode ep set ep.childCount=(ep.childCount+1) where " + 
+				DB.newMapToIdList(parent.getNewMap())
+					.map(pathId -> "ep.generatedId=" + pathId)
+					.collect(Collectors.joining(" or "));
 			
 			try {
 				session.beginTransaction();
@@ -568,12 +560,18 @@ public class DB {
 					for (DBFlaggedEpisode flag : deleteFlags) session.delete(flag);
 					session.delete(ep);
 					
-					StringBuilder sb = new StringBuilder("update DBEpisode ep set ep.childCount=(ep.childCount-1) where "); 
-
+					/*StringBuilder sb = new StringBuilder("update DBEpisode ep set ep.childCount=(ep.childCount-1) where "); 
+					
 					for (long pathId : DB.newMapToIdList(parentMap)) {
 						sb.append("ep.generatedId=" + pathId + " or ");
 					}
-					String updateCounts = sb.substring(0, sb.length() - 4);
+					String updateCounts = sb.substring(0, sb.length() - 4);*/
+					
+					String updateCounts = "update DBEpisode ep set ep.childCount=(ep.childCount-1) where " + 
+						DB.newMapToIdList(parentMap)
+							.map(pathId -> "ep.generatedId=" + pathId)
+							.collect(Collectors.joining(" or "));
+					
 					session.createQuery(updateCounts).executeUpdate();
 					
 					session.getTransaction().commit();
@@ -760,9 +758,7 @@ public class DB {
 			
 			String q = "from DBEpisode ep where ep.author.id != '" + episode.getAuthor().getId() + "' and newMap like '" + episode.getNewMap() + "%'";
 			
-			List<DBEpisode> result = session.createQuery(q, DBEpisode.class).setMaxResults(1).list();
-			if (!result.isEmpty()) return 1;
-			return 0;
+			return session.createQuery(q, DBEpisode.class).uniqueResultOptional().isPresent()?1:0;
 		} finally {
 			closeSession(session);
 		}
@@ -805,8 +801,8 @@ public class DB {
 					username = username.toLowerCase().trim();
 					user = DB.getUserById(session, username);
 					if (user != null) {
-						canUpvote = session.createQuery("from DBUpvote vote where vote.episode.generatedId=" + ep.getGeneratedId() + " and vote.user.id='" + user.getId() + "'").setMaxResults(1).list().isEmpty();
-						if (session.createQuery("from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId() + " and ev.user.id='" + username + "'").setMaxResults(1).list().isEmpty()) {
+						canUpvote = session.createQuery("from DBUpvote vote where vote.episode.generatedId=" + ep.getGeneratedId() + " and vote.user.id='" + user.getId() + "'").uniqueResultOptional().isEmpty();
+						if (session.createQuery("from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId() + " and ev.user.id='" + username + "'").uniqueResultOptional().isEmpty()) {
 							try {
 							session.beginTransaction();
 							DBEpisodeView ev = new DBEpisodeView();
@@ -846,17 +842,22 @@ public class DB {
 				return new Episode(childGeneratedId,newMap,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName);
 			}).collect(Collectors.toCollection(ArrayList::new));
 			
-			ArrayList<String> pathIds = new ArrayList<>();
+			String pathQuery;
 			{
-				LinkedList<Long> list = new LinkedList<>(DB.newMapToIdList(ep.getNewMap()));
+				ArrayList<Long> list = new ArrayList<>(DB.newMapToIdList(ep.getNewMap()).collect(Collectors.toList()));
 				
-				while (pathIds.size() < 20 && !list.isEmpty()) {
-					pathIds.add("ep.generatedId="+list.removeLast());
-				}
+				Collections.reverse(list);
+				
+				pathQuery = "from DBEpisode ep where " + 
+					list.subList(0, Integer.min(20, list.size()))
+						.stream()
+						.map(pathId->"ep.generatedId="+pathId)
+						.collect(Collectors.joining(" or ")) + 
+					" order by ep.id desc";
 			}
-			
+						
 			List<FlatEpisode> pathbox = session
-					.createQuery("from DBEpisode ep where " + pathIds.stream().collect(Collectors.joining(" or "))+" order by ep.id desc",DBEpisode.class)
+					.createQuery(pathQuery,DBEpisode.class)
 					.stream().map(FlatEpisode::new)
 					.collect(Collectors.toList());
 			
@@ -1046,16 +1047,10 @@ public class DB {
 
 			query.select(root).where(cb.equal(root.get("legacyId"), oldId));
 
-			List<DBEpisode> result = session.createQuery(query).list();
+			Optional<DBEpisode> result = session.createQuery(query).uniqueResultOptional();
 
 			if (result.isEmpty()) throw new DBException("Not found: " + oldId);
-			else if (result.size() > 1) {
-				StringBuilder sb = new StringBuilder();
-				for (DBEpisode ep : result) sb.append(ep.getGeneratedId() + " ");
-				throw new RuntimeException("Multiple episodes have matching id: " + oldId + " " + sb);
-			} else {
-				return new FlatEpisode(result.get(0));
-			}
+			else return new FlatEpisode(result.get());
 		} finally {
 			closeSession(session);
 		}
@@ -1075,17 +1070,11 @@ public class DB {
 			Root<DBEpisode> root = query.from(DBEpisode.class);
 
 			query.select(root).where(cb.equal(root.get("oldMap"), EP_PREFIX + oldMap.replace('-', EP_INFIX)));
-
-			List<DBEpisode> result = session.createQuery(query).list();
-
+			
+			Optional<DBEpisode> result = session.createQuery(query).uniqueResultOptional();
+			
 			if (result.isEmpty()) throw new DBException("Not found: " + oldMap);
-			else if (result.size() > 1) {
-				StringBuilder sb = new StringBuilder();
-				for (DBEpisode ep : result) sb.append(ep.getGeneratedId() + " ");
-				throw new RuntimeException("Multiple episodes have matching id: " + oldMap + " " + sb);
-			} else {
-				return new FlatEpisode(result.get(0));
-			}
+			else return new FlatEpisode(result.get());
 		} finally {
 			closeSession(session);
 		}
@@ -1095,11 +1084,10 @@ public class DB {
 		Session session = openSession();
 		page-=1;
 		try {
-			if (generatedId != 0) {
+			if (generatedId != 0) { // make sure we're using a root episode
 				DBEpisode ep = session.get(DBEpisode.class, generatedId);
 				if (ep == null) throw new DBException("Not found: " + generatedId);
-				List<Long> newMapList = DB.newMapToIdList(ep.getNewMap());
-				if (newMapList.size() != 1) generatedId = newMapList.get(0);
+				generatedId = DB.newMapToIdList(ep.getNewMap()).findFirst().get();
 			}
 			
 			ArrayList<FlatEpisode> alist = session.createNativeQuery(
@@ -1132,13 +1120,12 @@ public class DB {
 			if (generatedId != 0l) {
 				DBEpisode ep = session.get(DBEpisode.class, generatedId);
 				if (ep == null) throw new DBException("Not found: " + generatedId);
-				List<Long> arr = DB.newMapToIdList(ep.getNewMap());
-				generatedId = arr.get(0);
+				generatedId = DB.newMapToIdList(ep.getNewMap()).findFirst().get();
 			}
 			
 			String sql = "SELECT COUNT(*) FROM fbepisodes";
 			if (generatedId != 0) sql += " WHERE newmap='" + EP_PREFIX+Long.toString(generatedId) + "' OR newmap LIKE '" + EP_PREFIX + Long.toString(generatedId) + EP_INFIX + "%" + "'";		
-			int totalCount = ((BigInteger)(session.createNativeQuery(sql).list().get(0))).intValue();
+			int totalCount = ((BigInteger)(session.createNativeQuery(sql).uniqueResult())).intValue();
 			
 			ArrayList<FlatEpisode> alist = session.createNativeQuery(
 					"SELECT * FROM fbepisodes " + 
@@ -1249,11 +1236,9 @@ public class DB {
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			
 			BadLogger.log("Processing path " + ep.getNewMap());
-			
-			List<Long> ids = DB.newMapToIdList(ep.getNewMap());
-			
+						
 			String query = "select * from fbepisodes where " + 
-				ids.stream().map(id->"generatedid="+id).collect(Collectors.joining(" or ")) + 
+				DB.newMapToIdList(ep.getNewMap()).map(id->"generatedid="+id).collect(Collectors.joining(" or ")) + 
 				" order by array_length(CAST(string_to_array(replace(replace(fbepisodes.newmap,'"+EP_INFIX+"','-'),'"+EP_PREFIX+"',''),'-') AS bigint[]),1) asc";
 			return session.createNativeQuery(query,DBEpisode.class).stream()
 				.map(FlatEpisode::new)
@@ -1284,7 +1269,7 @@ public class DB {
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			
-			List<Long> ids = DB.newMapToIdList(ep.getNewMap());
+			List<Long> ids = DB.newMapToIdList(ep.getNewMap()).collect(Collectors.toList());
 			if (ids.size() > 30) ids = ids.subList(ids.size()-30, ids.size());
 			
 			String query = "select * from fbepisodes where " + 
@@ -1293,54 +1278,37 @@ public class DB {
 			return session.createNativeQuery(query,DBEpisode.class).stream()
 				.map(FlatEpisode::new)
 				.collect(Collectors.toUnmodifiableList());
-			
-			/*CriteriaBuilder cb = session.getCriteriaBuilder();
-			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-			Root<DBEpisode> root = query.from(DBEpisode.class);
-			
-			
-			List<Long> ids = DB.newMapToIdList(ep.getNewMap());
-			if (ids.size() > 30) ids = ids.subList(ids.size()-30, ids.size());
-			Predicate[] preds = ids.stream().map(id->cb.equal(root.get("generatedId"), id)).toArray(length->new Predicate[length]);
-			
-			query.select(root).where(cb.or(preds)).orderBy(cb.asc(root.get("depth")));
-			
-			return session.createQuery(query).list().stream().map(FlatEpisode::new).collect(Collectors.toCollection(ArrayList::new));*/
 
 		} finally {
 			closeSession(session);
 		}
 	}
 	
-	public static List<Long> newMapToIdList(String newMap) {
+	public static Stream<Long> newMapToIdList(String newMap) {
 		String[] arr = newMap.substring(1,newMap.length()).split(""+EP_INFIX);
 		ArrayList<Long> list = new ArrayList<>();
 		for (String id : arr) {
 			list.add(Long.parseLong(id));
 		}
-		return list;
+		return list.stream(); // TODO
 	}
 	
 	public static FlatEpisode[] getRoots() {
 		Session session = openSession();
 		try {
-			List<DBEpisode> result = getRoots(session);
-			FlatEpisode[] list = new FlatEpisode[result.size()];
-			for (int i = 0; i < result.size(); ++i)
-				list[i] = new FlatEpisode(result.get(i));
-			return list;
+			return getRoots(session).toArray(size->new FlatEpisode[size]);
 		} finally {
 			closeSession(session);
 		}
 	}
-	private static List<DBEpisode> getRoots(Session session) {
+	private static Stream<DBEpisode> getRoots(Session session) {
 			CriteriaBuilder cb = session.getCriteriaBuilder();
 			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
 			Root<DBEpisode> root = query.from(DBEpisode.class);			
 						
 			query.select(root).where(cb.isNull(root.get("parent"))).orderBy(cb.asc(root.get("date")));
 			
-			return session.createQuery(query).list();
+			return session.createQuery(query).stream();
 	}
 	
 	/**
@@ -1586,20 +1554,30 @@ public class DB {
 			if (user == null) throw new DBException("User does not exist");
 			if (user.getEmail() == null) throw new DBException("You may not log in to a legacy account");
 			hashedPassword = user.getPassword();
+			return checkPasswordImpl(hashedPassword, password);
 		} finally {
 			closeSession(session);
 		}
-		boolean result;
-		try {
-			result = BCrypt.checkpw(password, hashedPassword);
-		} catch (Exception e) {
-			result = false;
-		}
-		return result;
 	}
 	
+	/**
+	 * Given a FlatUser and possible plaintext password, check if the possible password is valid for the user
+	 * @param user FlatUser instance with user.password equal to hashed password
+	 * @param password plaintext possible password
+	 * @return true if password matches
+	 */
 	public static boolean checkPassword(FlatUser user, String password) {
-		String hashedPassword = user.hashedPassword;
+		if (user == null) return false;
+		return checkPasswordImpl(user.hashedPassword, password);
+	}
+	
+	/**
+	 * Given a hashed password and possible plaintext password, check if the possible password is valid for the user
+	 * @param hashedPassword hashed password
+	 * @param password plaintext possible password
+	 * @return true if password matches
+	 */
+	private static boolean checkPasswordImpl(String hashedPassword, String password) {
 		boolean result;
 		try {
 			result = BCrypt.checkpw(password, hashedPassword);
@@ -2009,28 +1987,28 @@ public class DB {
 		
 	}
 	
-	private static List<DBEmailChange> getPruneEmailQueue(Session session, Date yesterday) {
+	private static Stream<DBEmailChange> getPruneEmailQueue(Session session, Date yesterday) {		
 		CriteriaBuilder cb = session.getCriteriaBuilder();
 		CriteriaQuery<DBEmailChange> query = cb.createQuery(DBEmailChange.class);
 		Root<DBEmailChange> root = query.from(DBEmailChange.class);
 		query.select(root).where(cb.lessThan(root.get("date"), yesterday));
-		return session.createQuery(query).list();
+		return session.createQuery(query).stream();
 	}
 	
-	private static List<DBPotentialUser> getPrunePuQueue(Session session, Date yesterday) {
+	private static Stream<DBPotentialUser> getPrunePuQueue(Session session, Date yesterday) {
 		CriteriaBuilder cb = session.getCriteriaBuilder();
 		CriteriaQuery<DBPotentialUser> query = cb.createQuery(DBPotentialUser.class);
 		Root<DBPotentialUser> root = query.from(DBPotentialUser.class);
 		query.select(root).where(cb.lessThan(root.get("date"), yesterday));
-		return session.createQuery(query).list();
+		return session.createQuery(query).stream();
 	}
 	
-	private static List<DBPasswordReset> getPrunePrQueue(Session session, Date yesterday) {
+	private static Stream<DBPasswordReset> getPrunePrQueue(Session session, Date yesterday) {
 		CriteriaBuilder cb = session.getCriteriaBuilder();
 		CriteriaQuery<DBPasswordReset> query = cb.createQuery(DBPasswordReset.class);
 		Root<DBPasswordReset> root = query.from(DBPasswordReset.class);
 		query.select(root).where(cb.lessThan(root.get("date"), yesterday));
-		return session.createQuery(query).list();
+		return session.createQuery(query).stream();
 	}
 	
 	public static void pruneQueues() {
@@ -2039,27 +2017,27 @@ public class DB {
 			Calendar cal = Calendar.getInstance();
 			cal.add(Calendar.HOUR_OF_DAY, -24);
 			Date yesterday = cal.getTime();
-			List<DBEmailChange> ecList = getPruneEmailQueue(session, yesterday);
-			List<DBPotentialUser> puList = getPrunePuQueue(session, yesterday);
-			List<DBPasswordReset> prList = getPrunePrQueue(session, yesterday);
+			Stream<DBEmailChange> ecList = getPruneEmailQueue(session, yesterday);
+			Stream<DBPotentialUser> puList = getPrunePuQueue(session, yesterday);
+			Stream<DBPasswordReset> prList = getPrunePrQueue(session, yesterday);
 			
 			try {
 				session.beginTransaction();
-				for (DBEmailChange ec : ecList) {
+				ecList.forEach(ec->{
 					DBUser user = ec.getUser();
 					user.setEmailChange(null);
 					ec.setUser(null);
 					session.delete(ec);
 					session.merge(user);
-				}
-				for (DBPasswordReset pr : prList) {
+				});
+				prList.forEach(pr->{
 					DBUser user = pr.getUser();
 					user.setPasswordReset(null);
 					pr.setUser(null);
 					session.delete(pr);
 					session.merge(user);
-				}
-				for (DBPotentialUser ec : puList) session.delete(ec);
+				});
+				puList.forEach(pu->session.delete(pu));
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
@@ -2445,7 +2423,7 @@ public class DB {
 	public static boolean isValidArchiveToken(String token) {
 		Session session = openSession();
 		try {
-			return !session.createQuery("from DBArchiveToken a where a.token='" + token + "'", DBArchiveToken.class).list().isEmpty();
+			return session.createQuery("from DBArchiveToken a where a.token='" + token + "'", DBArchiveToken.class).uniqueResultOptional().isPresent();
 		} finally {
 			closeSession(session);
 		}
@@ -2867,7 +2845,7 @@ public class DB {
 					"SELECT COUNT(*) FROM fbannouncements "
 					+ "WHERE fbannouncements.id NOT IN "
 					+ "(SELECT announcement_id FROM fbannouncementviews WHERE fbannouncementviews.viewer_id='"+username+"' AND fbannouncementviews.announcement_id=fbannouncements.id);"
-				).list().get(0))).intValue();
+				).uniqueResult())).intValue();
 						
 		} finally {
 			closeSession(session);
@@ -2956,7 +2934,7 @@ public class DB {
 							"SET newmap = replace(newmap,'"+oldNewMap+"','"+generatedId+"')\n" + 
 							"WHERE newmap='"+oldNewMap+"' OR newmap LIKE '"+oldNewMap+""+DB.EP_INFIX+"%';").executeUpdate();
 					
-					String where = DB.newMapToIdList(oldNewMap).stream().filter(gid->gid!=generatedId).map(gid->"generatedId=" + gid).collect(Collectors.joining(" OR "));
+					String where = DB.newMapToIdList(oldNewMap).filter(gid->gid!=generatedId).map(gid->"generatedId=" + gid).collect(Collectors.joining(" OR "));
 					session.createNativeQuery("UPDATE fbepisodes\n" + 
 							"SET childcount = childcount - "+branchSize+"\n" + 
 							"WHERE " + where + ";").executeUpdate();
@@ -2993,8 +2971,8 @@ public class DB {
 	}
  	
  	public static final Comparator<String> newMapComparator = (a,b)->{
- 		List<Long> aList = DB.newMapToIdList(a);
-		List<Long> bList = DB.newMapToIdList(b);
+ 		List<Long> aList = DB.newMapToIdList(a).collect(Collectors.toList());
+		List<Long> bList = DB.newMapToIdList(b).collect(Collectors.toList());
 		for (int i=0; i<aList.size() && i<bList.size(); ++i) {
 			Long x = aList.get(i);
 			Long y = bList.get(i);

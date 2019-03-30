@@ -3,7 +3,6 @@ package fb.objects;
 import java.util.Date;
 import java.util.List;
 
-import fb.DB;
 import fb.db.DBEpisode;
 import fb.db.DBUser;
 

@@ -2,7 +2,6 @@ package fb.objects;
 
 import java.util.Date;
 
-import fb.DB;
 import fb.db.DBEpisode;
 
 /**

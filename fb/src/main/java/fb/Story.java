@@ -343,7 +343,7 @@ public class Story {
 	private static String getRecentsTable(List<FlatEpisode> recents, int root) {
 		StringBuilder sb = new StringBuilder(Strings.getString("recents_table_head" + (root==0?"_story_head":"")));
 		for (FlatEpisode child : recents) if (child != null){
-			long rootId = DB.newMapToIdList(child.newMap).get(0);
+			long rootId = DB.newMapToIdList(child.newMap).findFirst().get();
 			String story;
 			FlatEpisode rootEp;
 			if (root==0){
@@ -709,7 +709,7 @@ public class Story {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table class=\"popular\"><thead><tr><th>Link/Title</th><th><a href=/fb/mosthits>Hits</a></th><th><a href=/fb/mostviews>Views</a></th><th><a href=/fb/mostupvotes>Upvotes</a></th><th>Story</th></tr></thead><tbody>\n");
 		for (Episode ep : arr) {
-			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).get(0));
+			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
 			String story;
 			if (rootEp == null) story = "";
 			else story = rootEp.link;

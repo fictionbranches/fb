@@ -242,7 +242,7 @@ public class Accounts {
 		sb.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Date</th><th>Story</th><th>Depth</th></tr>");
 		for (FlatEpisode ep : profileUser.episodes) {
 			String story;
-			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).get(0));
+			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
 			if (rootEp == null) story = "";
 			else story = rootEp.link;
 			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"fbtable\">" + Strings.escape(story) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>");
