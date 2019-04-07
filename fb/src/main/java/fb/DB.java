@@ -548,6 +548,7 @@ public class DB {
 					session.createQuery("delete DBFlaggedEpisode flag where flag.episode.generatedId=" + generatedId).executeUpdate();
 					session.createQuery("delete DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
+					session.createQuery("delete DBNotification nt where nt.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					
 					session.createNativeQuery(
 							"delete from fbflaggedcomments "
