@@ -58,7 +58,7 @@ public class GetStuff {
 	public static URI createURI(String url, Entry<String,String>... params) {
 		URI uri = URI.create(url);
 		if (params.length > 0) {
-			UriBuilder ub = UriBuilder.fromUri(uri);//.queryParam("q")
+			UriBuilder ub = UriBuilder.fromUri(uri);
 			for (Entry<String,String> param : params) ub = ub.queryParam(param.getKey(), param.getValue());
 			uri = ub.build();
 		}

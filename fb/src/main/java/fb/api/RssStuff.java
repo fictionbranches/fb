@@ -39,16 +39,16 @@ public class RssStuff {
 	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	@GET
-	@Path("feed")
+	@Path("rss")
 	@Produces("application/rss+xml")
 	public Response getFeed() {
 		String ret = feeds.get(0l);
-		if (ret == null || ret.length() == 0) return Response.ok(generateEmpty()).build();
+		if (ret == null || ret.length() == 0) return Response.ok(emptyFeed).build();
 		return Response.ok(feeds.get(0l)).build();
 	}
 	
 	@GET
-	@Path("feed/{id}")
+	@Path("rss/{id}")
 	@Produces("application/rss+xml")
 	public Response getFeedStory(@PathParam("id") String id) {
 		long story;
@@ -58,9 +58,28 @@ public class RssStuff {
 			return getFeed();
 		}
 		String ret = feeds.get(story);
-		if (ret == null || ret.length() == 0) return Response.ok(generateEmpty()).build();
+		if (ret == null || ret.length() == 0) return Response.ok(emptyFeed).build();
 		return Response.ok(feeds.get(story)).build();
 	}
+	
+	@GET
+	@Path("feed")
+	@Produces("application/rss+xml")
+	public Response getFeedLegacy() {
+		return getFeed();
+	}
+	
+	@GET
+	@Path("feed/{id}")
+	public Response getFeedStoryLegacy(@PathParam("id") String id) {
+		try {
+			FlatEpisode ep = DB.getEpByOldMap(id);
+			return getFeedStory(""+ep.generatedId);
+		} catch (DBException e) {
+			return Response.ok(emptyFeed).build();
+		}
+	}
+	
 	
 	private static HashMap<Long,String> feeds;
 	static {
@@ -131,7 +150,8 @@ public class RssStuff {
 		
 	}
 	
-	private static String generateEmpty() {
+	private static final String emptyFeed;
+	static {
 		final SyndFeed feed = new SyndFeedImpl();
 		feed.setFeedType("rss_2.0");
 		feed.setTitle("Fiction Branches");
@@ -139,8 +159,7 @@ public class RssStuff {
 		feed.setDescription("Fiction Branches is an online software engine which allows the production of multi-plotted stories.");
 		final ArrayList<SyndEntry> entries = new ArrayList<>();
 		feed.setEntries(entries);
-		return feedToString(feed);
-		
+		emptyFeed = feedToString(feed);
 	}
 	
 	private static String feedToString(SyndFeed feed) {
