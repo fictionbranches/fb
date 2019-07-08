@@ -14,6 +14,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +23,8 @@ import fb.Accounts.FBLoginException;
 import fb.DB;
 import fb.DB.DBException;
 import fb.InitWebsite;
+import fb.db.DBAuthorSubscription;
+import fb.db.DBUser;
 import fb.objects.FlatUser;
 import fb.util.GoogleRECAPTCHA;
 import fb.util.GoogleRECAPTCHA.GoogleCheckException;
@@ -185,6 +188,8 @@ public class AccountStuff {
 				.replace("$COMMENT_MAIL_CHECKED", user.commentMail?checked:"")
 				.replace("$CHILD_SITE_CHECKED", user.childSite?checked:"")
 				.replace("$CHILD_MAIL_CHECKED", user.childMail?checked:"")
+				.replace("$AUTHORSUB_SITE_CHECKED", user.childSite?checked:"")
+				.replace("$AUTHORSUB_MAIL_CHECKED", user.childMail?checked:"")
 				.replace("$ID", user.id)).build();
 	}
 	
@@ -476,7 +481,15 @@ public class AccountStuff {
 	@POST
 	@Path("notificationsettings")
 	@Produces(MediaType.TEXT_HTML)
-	public Response notificationsettings(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("comment_site") String comment_site, @FormParam("comment_mail") String comment_mail, @FormParam("child_site") String child_site, @FormParam("child_mail") String child_mail) {
+	public Response notificationsettings(
+			@CookieParam("fbtoken") Cookie fbtoken, 
+			@FormParam("comment_site") String comment_site, 
+			@FormParam("comment_mail") String comment_mail, 
+			@FormParam("child_site") String child_site, 
+			@FormParam("child_mail") String child_mail,
+			@FormParam("child_site") String authorsub_site, 
+			@FormParam("child_mail") String authorsub_mail
+			) {
 		
 		FlatUser user;
 		try {
@@ -486,17 +499,92 @@ public class AccountStuff {
 			boolean commentMail = false;
 			boolean childSite = false;
 			boolean childMail = false;
+			boolean authorSubSite = false;
+			boolean authorSubMail = false;
 			
 			if (comment_site != null && comment_site.length() > 0) commentSite = true;
 			if (comment_mail != null && comment_mail.length() > 0) commentMail = true;
 			if (child_site != null && child_site.length() > 0) childSite = true;
 			if (child_mail != null && child_mail.length() > 0) childMail = true;
+			if (authorsub_site != null && authorsub_site.length() > 0) authorSubSite = true;
+			if (authorsub_mail != null && authorsub_mail.length() > 0) authorSubMail = true;
 			
-			DB.updateUserNotificationSettings(user.id, commentSite, commentMail, childSite, childMail);
+			DB.updateUserNotificationSettings(user.id, commentSite, commentMail, childSite, childMail, authorSubSite, authorSubMail);
 		} catch (FBLoginException | DBException e) {
 			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
 		}
 		
 		return Response.seeOther(GetStuff.createURI("/fb/useraccount")).build();
+	}
+	
+	@GET
+	@Path("subauthor/{username}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response subauthor(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("username") String username) {
+		FlatUser fu;
+		try {
+			fu = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		}
+		
+		Session session = DB.openSession();
+		try {
+			
+			DBUser subscriber = DB.getUserById(session, fu.id);
+			DBUser author = DB.getUserById(session, username);
+			if (author == null) return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "Not found: " + username)).build();
+			if (author.getId().equals(subscriber.getId())) return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You may not subscribe to yourself")).build();
+
+			if (session.createQuery("from DBAuthorSubscription s where s.author.id='"+author.getId()+"' and s.subscriber.id='"+subscriber.getId()+"'").list().isEmpty()) {
+				try {
+					DBAuthorSubscription as = new DBAuthorSubscription();
+					as.setAuthor(author);
+					as.setSubscriber(subscriber);
+					session.beginTransaction();
+					session.save(as);
+					session.getTransaction().commit();
+				} catch (Exception e) {
+					return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "Database error")).build();
+				}
+			}
+		} finally {
+			DB.closeSession(session);
+		}
+		return Response.seeOther(GetStuff.createURI("/fb/user/" + username)).build();
+	}
+	
+	@GET
+	@Path("unsubauthor/{username}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response unsubauthor(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("username") String username) {
+		FlatUser fu;
+		try {
+			fu = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		}
+		
+		Session session = DB.openSession();
+		try {
+			
+			DBUser subscriber = DB.getUserById(session, fu.id);
+			DBUser author = DB.getUserById(session, username);
+			if (author == null) return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "Not found: " + username)).build();
+			
+			DBAuthorSubscription as = session.createQuery("from DBAuthorSubscription s where s.author.id='"+author.getId()+"' and s.subscriber.id='"+subscriber.getId()+"'", DBAuthorSubscription.class).uniqueResult();
+			if (as != null) {
+				try {
+					session.beginTransaction();
+					session.delete(as);
+					session.getTransaction().commit();
+				} catch (Exception e) {
+					return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "Database error")).build();
+				}
+			}
+		} finally {
+			DB.closeSession(session);
+		}
+		return Response.seeOther(GetStuff.createURI("/fb/user/" + username)).build();
 	}
 }

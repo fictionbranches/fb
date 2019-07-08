@@ -22,6 +22,8 @@ public class FlatUser {
 	public final boolean commentMail;
 	public final boolean childSite;
 	public final boolean childMail;
+	public final boolean authorSubSite;
+	public final boolean authorSubMail;
 	
 	/**
 	 * Construct from DBUser database object
@@ -41,5 +43,7 @@ public class FlatUser {
 		this.commentMail = user.isCommentMail();
 		this.childSite = user.isChildSite();
 		this.childMail = user.isChildMail();
+		this.authorSubSite = user.isAuthorSubSite();
+		this.authorSubMail = user.isAuthorSubMail();
 	}
 }

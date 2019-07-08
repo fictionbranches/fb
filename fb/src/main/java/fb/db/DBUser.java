@@ -68,6 +68,8 @@ public class DBUser {
 	private boolean commentMail;
 	private boolean childSite;
 	private boolean childMail;
+	private boolean authorSubSite;
+	private boolean authorSubMail;
 
 	public String getId() {
 		return id;
@@ -187,6 +189,22 @@ public class DBUser {
 
 	public void setChildMail(boolean childMail) {
 		this.childMail = childMail;
+	}
+
+	public boolean isAuthorSubSite() {
+		return authorSubSite;
+	}
+
+	public void setAuthorSubSite(boolean authorSubSite) {
+		this.authorSubSite = authorSubSite;
+	}
+
+	public boolean isAuthorSubMail() {
+		return authorSubMail;
+	}
+
+	public void setAuthorSubMail(boolean authorSubMail) {
+		this.authorSubMail = authorSubMail;
 	}
 
 	public boolean equals(Object o) {

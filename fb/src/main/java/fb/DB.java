@@ -25,7 +25,6 @@ import java.util.stream.Stream;
 
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import javax.ws.rs.core.Cookie;
@@ -49,6 +48,7 @@ import org.springframework.security.crypto.bcrypt.BCrypt;
 import fb.db.DBAnnouncement;
 import fb.db.DBAnnouncementView;
 import fb.db.DBArchiveToken;
+import fb.db.DBAuthorSubscription;
 import fb.db.DBComment;
 import fb.db.DBEmailChange;
 import fb.db.DBEpisode;
@@ -77,6 +77,7 @@ import fb.objects.Notification;
 import fb.objects.Theme;
 import fb.objects.User;
 import fb.util.Discord;
+import fb.util.Email;
 import fb.util.Strings;
 
 public class DB {
@@ -165,6 +166,7 @@ public class DB {
 		configuration.addAnnotatedClass(DBAnnouncementView.class);
 		configuration.addAnnotatedClass(DBNotification.class);
 		configuration.addAnnotatedClass(DBTheme.class);
+		configuration.addAnnotatedClass(DBAuthorSubscription.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -286,7 +288,7 @@ public class DB {
 	 * @param id
 	 * @return
 	 */
-	static DBUser getUserById(Session session, String id) {
+	public static DBUser getUserById(Session session, String id) {
 		if (id==null) return null;
 		return session.get(DBUser.class, id.toLowerCase());
 	}
@@ -397,7 +399,7 @@ public class DB {
 					session.save(note);
 				}
 				if (sendMailNotification) new Thread(()->
-					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>")
+					Email.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>")
 				).start();
 				
 				session.getTransaction().commit();
@@ -415,11 +417,60 @@ public class DB {
 				throw new DBException("Database error", e);
 			}
 			LOGGER.info(String.format("New: <%s> %s %s", author, title, childId));
+			new Thread(()->newEpisodeNotifier(child.getGeneratedId())).start();
 			return childId;
 		} finally {
 			closeSession(session);
 		}
 		}
+	}
+	
+	/**
+	 * Runs after an episode has been added, notifies users who have subscribed to this author or branch
+	 * @param ep
+	 */
+	private static void newEpisodeNotifier(long generatedId) {
+		try {Thread.sleep(5000);}catch(Exception e) {}
+		final Date date = new Date();
+		final Session session = DB.openSession();
+		try {
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			List<DBUser> subs = session.createQuery("from DBAuthorSubscription s where s.author.id='"+ep.getAuthor().getId()+"'", DBAuthorSubscription.class)
+					.stream()
+					.map(sub->sub.getSubscriber())
+					.collect(Collectors.toList());
+			Stream<DBUser> siteSubs = subs.stream().filter(sub->sub.isAuthorSubSite());
+			
+			try {
+				session.beginTransaction();
+				siteSubs.forEach(sub -> {
+					DBNotification not = new DBNotification();
+					not.setDate(date);
+					not.setRead(false);
+					not.setUser(sub);
+					not.setType(DBNotification.AUTHOR_SUBSCRIPTION);
+					not.setEpisode(ep);
+					session.save(not);
+				});
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+			}
+			
+			final FlatEpisode flatEp = new FlatEpisode(ep);
+			final List<FlatUser> mailSubList = subs.stream()
+					.filter(sub->sub.isAuthorSubMail())
+					.map(FlatUser::new)
+					.collect(Collectors.toList());
+			new Thread(()->newEpisodeAuthorSubscriptionEmailNotifier(mailSubList, flatEp)).start();
+			
+		} finally {
+			DB.closeSession(session);
+		}
+	}
+	
+	private static void newEpisodeAuthorSubscriptionEmailNotifier(List<FlatUser> users, FlatEpisode episode) {
+		//Accounts.sendM
 	}
 	
 	public static long addArchiveEp(long parentId, String link, String title, String body, String authorName, Date date) throws DBException {
@@ -1485,31 +1536,47 @@ public class DB {
 	}
 	
 	private static final int PAGE_SIZE = 100;
-	public static EpisodeResultList getUserProfile(String userId, int page) throws DBException {
+	/**
+	 * 
+	 * @param userId username of user whose profile is being looked up
+	 * @param page which page of episodes to load (1-indexed)
+	 * @param requestor what user is requesting this page
+	 * @return
+	 * @throws DBException
+	 */
+	public static UserProfileResult getUserProfile(String userId, int page, FlatUser requestor) throws DBException {
 		page-=1;
 		userId = userId.toLowerCase();
 		Session session = openSession();
 		try {
 			DBUser user = session.get(DBUser.class, userId);
 			if (user == null) throw new DBException("User ID " + userId + " does not exist");
-			CriteriaBuilder cb = session.getCriteriaBuilder();
-			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-			Root<DBEpisode> root = query.from(DBEpisode.class);
 			
-			Join<DBEpisode,DBUser> join = root.join("author");
-			Predicate pred = cb.equal(join.get("id"), userId);
-
-			query.select(root).where(pred).orderBy(cb.desc(root.get("date")));
-			
-			List<FlatEpisode> list = session.createQuery(query)
+			String query = "from DBEpisode ep where ep.author.id='"+user.getId()+"' order by date desc";
+			List<FlatEpisode> list = session.createQuery(query, DBEpisode.class)
 					.setFirstResult(PAGE_SIZE*page)
 					.setMaxResults(PAGE_SIZE+1).stream()
 					.map(FlatEpisode::new)
 					.collect(Collectors.toCollection(ArrayList::new));
 			boolean hasNext = list.size() > PAGE_SIZE;
-			return new EpisodeResultList(new FlatUser(user), hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
+			boolean isSubscribed = false;
+			if (requestor != null) {
+				String q2 = "from DBAuthorSubscription ep where ep.author.id='"+user.getId()+"' and ep.subscriber.id='"+requestor.id+"'";
+				isSubscribed = session.createQuery(q2, DBAuthorSubscription.class).uniqueResultOptional().isPresent();
+			}
+			EpisodeResultList erl = new EpisodeResultList(new FlatUser(user), hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
+			return new UserProfileResult(erl, isSubscribed);
 		} finally {
 			closeSession(session);
+		}
+	}
+	
+	public static class UserProfileResult {
+		public final EpisodeResultList episodeResultList;
+		public final boolean isSubscribed;
+		public UserProfileResult(EpisodeResultList erl, boolean isSubscribed) {
+			this.isSubscribed = isSubscribed;
+			this.episodeResultList = erl;
 		}
 	}
 	
@@ -1527,6 +1594,7 @@ public class DB {
 			this.episodes = episodes;
 			this.morePages = morePages;
 			this.numPages = numPages;
+			
 		}
 	}
 	
@@ -1659,7 +1727,7 @@ public class DB {
 					final long cid = comment.getId();
 					final long gid = generatedId;
 					new Thread(()-> // send the email
-						Accounts.sendEmail(email, "Someone commented on your episode", 
+						Email.sendEmail(email, "Someone commented on your episode", 
 								"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + authorid + "\">" + Strings.escape(authorauthor) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + gid + "#comment" + cid + "\">comment</a> on " + Strings.escape(epTitle))
 					).start();
 				}
@@ -2797,7 +2865,11 @@ public class DB {
 		}
 	}
 	
-	public static void updateUserNotificationSettings(String username, boolean commentSite, boolean commentMail, boolean childSite, boolean childMail) throws DBException {
+	public static void updateUserNotificationSettings(String username, 
+			boolean commentSite, boolean commentMail, 
+			boolean childSite, boolean childMail,
+			boolean authorSubSite, boolean authorSubMail
+			) throws DBException {
 		Session session = openSession();
 		try {
 			DBUser user = DB.getUserById(session, username);
@@ -2822,6 +2894,16 @@ public class DB {
 			
 			if (user.isChildMail() != childMail) {
 				user.setChildMail(childMail);
+				change = true;
+			}
+			
+			if (user.isAuthorSubSite() != authorSubSite) {
+				user.setAuthorSubSite(authorSubSite);
+				change = true;
+			}
+			
+			if (user.isAuthorSubMail() != authorSubMail) {
+				user.setAuthorSubMail(authorSubMail);
 				change = true;
 			}
 			

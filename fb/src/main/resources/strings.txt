@@ -16,6 +16,7 @@ story_add_ep_logged_in~<a href=../add/$ID>Add a new episode</a>
 story_modify_owner~<a href=/fb/modify/$ID>Modify your episode</a><br/><a href=/fb/delete/$ID>Delete your episode</a>
 story_modify_moderator~<a href=/fb/modify/$ID>Modify as moderator</a><br/><a href=/fb/delete/$ID>Delete episode as moderator</a>
 story_modify_logged_in~<a href=/fb/flag/$ID>Flag this episode</a>
+story_manage_subscriptions~<p><a href=/fb/subscriptions/$ID>Manage subscriptions</a></p>
 
 story_logged_in_extras~<br/><a href=/fb/path/$ID>Path to here</a><br/><a href=/fb/outline/$ID>Outline from here</a><br/><a href=/fb/complete/$ID>View story so far</a>
 

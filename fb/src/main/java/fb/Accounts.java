@@ -11,18 +11,10 @@ import java.io.StringReader;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Properties;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import javax.mail.Authenticator;
-import javax.mail.Message;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 import javax.ws.rs.core.Cookie;
 
 import org.apache.commons.validator.routines.EmailValidator;
@@ -38,6 +30,7 @@ import fb.DB.AuthorSearchResult;
 import fb.DB.DBException;
 import fb.DB.EpisodeResultList;
 import fb.DB.PasswordResetException;
+import fb.DB.UserProfileResult;
 import fb.db.DBNotification;
 import fb.objects.Comment;
 import fb.objects.FlaggedComment;
@@ -48,6 +41,7 @@ import fb.objects.ModEpisode;
 import fb.objects.Notification;
 import fb.objects.User;
 import fb.util.Dates;
+import fb.util.Email;
 import fb.util.Strings;
 
 public class Accounts {
@@ -219,28 +213,30 @@ public class Accounts {
 	
 	/**
 	 * 
-	 * @param id user id
+	 * @param username user id
 	 * @param fbtoken
 	 * @return HTML user page for id
 	 */
-	public static String getUserPage(String id, Cookie fbtoken, int page) {
+	public static String getUserPage(String username, Cookie fbtoken, int page) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(fbtoken);
 		} catch (FBLoginException e) {
 			user = null;
 		}
-		if (id == null || id.length() == 0) return Strings.getFile("generic.html", user).replace("$EXTRA", "User ID " + id + " does not exist");
-		id = id.toLowerCase();
-		EpisodeResultList profileUser;
+		if (username == null || username.length() == 0) return Strings.getFile("generic.html", user).replace("$EXTRA", "User ID " + username + " does not exist");
+		username = username.toLowerCase();
+		UserProfileResult result;
+		EpisodeResultList erl;
 		try {
-			profileUser = DB.getUserProfile(id, page);
+			result = DB.getUserProfile(username, page, user);
+			erl = result.episodeResultList;
 		} catch (DBException e) {
-			return Strings.getFile("generic.html", user).replace("$EXTRA", "User ID " + id + " does not exist");
+			return Strings.getFile("generic.html", user).replace("$EXTRA", "User ID " + username + " does not exist");
 		}
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Date</th><th>Story</th><th>Depth</th></tr>");
-		for (FlatEpisode ep : profileUser.episodes) {
+		for (FlatEpisode ep : erl.episodes) {
 			String story;
 			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
 			if (rootEp == null) story = "";
@@ -248,21 +244,29 @@ public class Accounts {
 			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"fbtable\">" + Strings.escape(story) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>");
 		}
 		sb.append("</table>");
-		String avatar = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + Strings.escape(profileUser.user.avatar) + "\" /> ");
-		String bio = profileUser.user.bio==null?"":Story.formatBody(profileUser.user.bio);
+		String avatar = (erl.user.avatar==null||erl.user.avatar.trim().length()==0)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + Strings.escape(erl.user.avatar) + "\" /> ");
+		String bio = erl.user.bio==null?"":Story.formatBody(erl.user.bio);
 		String pageCount = "";
 		
 		String moderator;
-		if (profileUser.user.level > 1) {
-			if (profileUser.user.level >= 100) moderator = "<p>Fiction Branches admin</p>";
+		if (erl.user.level > 1) {
+			if (erl.user.level >= 100) moderator = "<p>Fiction Branches admin</p>";
 			else moderator = "<p>Fiction Branches moderator</p>";
 		} else moderator = "";
 		
-		String date = (profileUser.user.date==null)?"the beforefore times":Dates.outputDateFormat(profileUser.user.date);
+		String date = (erl.user.date==null)?"the beforefore times":Dates.outputDateFormat(erl.user.date);
 		
-		if (page > 1) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page-1) + "\">Previous</a> ";
-		if (profileUser.morePages) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page+1) + "\">Next</a>";
-		return Strings.getFile("profilepage.html", user).replace("$MODERATORSTATUS", moderator).replace("$DATE", date).replace("$PAGECOUNT", pageCount).replace("$AUTHOR", profileUser.user.author).replace("$AVATARURL", avatar).replace("$BODY", bio).replace("$EPISODES", sb.toString());
+		if (user != null && !user.id.equals(erl.user.id)) {
+			if (result.isSubscribed) {
+				moderator = "<p><a href=/fb/unsubauthor/" + erl.user.id + ">Unsubscribe from this author</a></p>" + moderator;
+			} else {
+				moderator = "<p><a href=/fb/subauthor/" + erl.user.id + ">Subscribe to this author</a></p>" + moderator;
+			}
+		}
+		
+		if (page > 1) pageCount += "<a href=\"/fb/user/" + erl.user.id + "/" + (page-1) + "\">Previous</a> ";
+		if (erl.morePages) pageCount += "<a href=\"/fb/user/" + erl.user.id + "/" + (page+1) + "\">Next</a>";
+		return Strings.getFile("profilepage.html", user).replace("$MODERATORSTATUS", moderator).replace("$DATE", date).replace("$PAGECOUNT", pageCount).replace("$AUTHOR", erl.user.author).replace("$AVATARURL", avatar).replace("$BODY", bio).replace("$EPISODES", sb.toString());
 	}
 	
 	public static String getMostEpisodes(Cookie token, DB.PopularUserTime time) {
@@ -517,7 +521,7 @@ public class Accounts {
 			return Strings.getFile("generic.html",null).replace("$EXTRA", "Since you are in dev mode, your account has been created without email verification required.");
  
 		}
-		if (!sendEmail(email, "Confirm your Fiction Branches account", 
+		if (!Email.sendEmail(email, "Confirm your Fiction Branches account", 
 				"<html><body>Please click the following link (or copy/paste it into your browser) to verify your account: <a href=https://" + domain + "/fb/confirmaccount/" + createToken + ">https://" + domain + "/fb/confirmaccount/" + createToken + "</a> (This link is only good for 24 hours.)</body></html>")) {
 			return Strings.getFile("generic.html",null).replace("$EXTRA", "Unable to send verification email, talk to Phoenix about it");
 		}
@@ -694,7 +698,7 @@ public class Accounts {
  
 		}
 
-		if (!sendEmail(email, "Confirm your new Fiction Branches account email", 
+		if (!Email.sendEmail(email, "Confirm your new Fiction Branches account email", 
 				"<html><body>Please click the following link (or copy/paste it into your browser) to verify your new email address: <a href=https://" + domain + "/fb/confirmemailchange/" + changeToken + ">https://" + domain + "/fb/confirmemailchange/" + changeToken + "</a> (This link is only good for 24 hours.)\nAfter taking this action, you will have to use your new email address to log in.</body></html>")) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "Unable to send verification email, please come to the Discord and tell Phoenix about this.");
 		}
@@ -979,7 +983,7 @@ public class Accounts {
 		String token = pr[0];
 		String email = pr[1];
 		
-		if (!sendEmail(email, "Fiction Branches password reset", 
+		if (!Email.sendEmail(email, "Fiction Branches password reset", 
 				"<html><body>Please click the following link (or copy/paste it into your browser) to verify your new email address: <a href=https://" + domain + "/fb/confirmpasswordreset/" + token + ">https://" + domain + "/fb/confirmpasswordreset/" + token + "</a> (This link is only good for 24 hours.)</body></html>")) {
 			return Strings.getFile("generic.html", null).replace("$EXTRA", "Unable to send verification email, please come to the Discord and tell Phoenix about this.");
 		}
@@ -1095,6 +1099,15 @@ public class Accounts {
 			case DBNotification.NEW_COMMENT_ON_OWN_EPISODE:
 				sb.append("<a href=\"/fb/user/" + a.comment.user.id + "\">" + Strings.escape(a.comment.user.author) + "</a> left a <a href=\"/fb/story/" + a.comment.episode.generatedId + "#comment" + a.comment.id + "\">comment</a> on " + Strings.escape(a.comment.episode.title));
 				break;
+			case DBNotification.AUTHOR_SUBSCRIPTION:
+				sb.append("<p><a href=\"/fb/user/" 
+						+ a.episode.authorId 
+						+ "\">" 
+						+ Strings.escape(a.episode.authorName) 
+						+ "</a> wrote a <a href=\"/fb/story/" 
+						+ a.episode.generatedId 
+						+ "\">new episode</a>. You are subscribed to this author.</p>\n");
+				break;
 			}
 			sb.append("<p>(" + Dates.outputDateFormat(a.date) + ")</p>\n");
 			sb.append("<hr/>\n");
@@ -1124,43 +1137,9 @@ public class Accounts {
 	}
  	
 	
-	/**
-	 * Send an email
-	 * @param toAddress
-	 * @param subject
-	 * @param body
-	 * @return whether it sent successfully or not
-	 */
-	public static boolean sendEmail(String toAddress, String subject, String body) {
-		Properties props = new Properties();
-		props.put("mail.smtp.host", Strings.getSMTP_SERVER());
-		props.put("mail.smtp.port", "587");
-		props.put("mail.smtp.auth", "true");
-		props.put("mail.smtp.starttls.enable", "true");
-		Authenticator auth = new Authenticator() {
-			@Override
-			protected PasswordAuthentication getPasswordAuthentication() {
-				return new PasswordAuthentication(Strings.getSMTP_EMAIL(), Strings.getSMTP_PASSWORD());
-			}
-		};
-		Session session = Session.getInstance(props, auth);
-		try {
-			MimeMessage msg = new MimeMessage(session);
-			msg.addHeader("Content-type", "text/HTML; charset=UTF-8");
-			msg.addHeader("format", "flowed");
-			msg.addHeader("Content-Transfer-Encoding", "8bit");
-			msg.setFrom(new InternetAddress(Strings.getSMTP_EMAIL(), "Fiction Branches"));
-			msg.setReplyTo(InternetAddress.parse(Strings.getSMTP_EMAIL(), false));
-			msg.setSubject(subject, "UTF-8");
-			msg.setText(body, "UTF-8", "html");
-			msg.setSentDate(new Date());
-			msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toAddress, false));
-			Transport.send(msg);
-		} catch (Exception e) {
-			return false;
-		}
-		return true;
-	}
+
+	
+
 	
 	private static HashSet<Character> allowedUsernameChars;
 	static {

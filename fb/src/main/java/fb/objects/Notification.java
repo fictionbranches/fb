@@ -32,6 +32,7 @@ public class Notification {
 			this.comment = null;
 			break;
 		case DBNotification.NEW_CHILD_EPISODE: 
+		case DBNotification.AUTHOR_SUBSCRIPTION:
 			this.episode = note.getEpisode()==null?null:new FlatEpisode(note.getEpisode());
 			this.parentEpisode = note.getEpisode()==null?null:new FlatEpisode(note.getEpisode().getParent());
 			this.comment = null;

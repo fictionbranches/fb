@@ -41,6 +41,15 @@ import javax.persistence.Transient;
  *   type
  *   
  *   body
+ *   
+ * author_subscription:
+ *   id
+ *   date
+ *   user
+ *   read
+ *   type
+ *   
+ *   episode
  */
 
 @Entity
@@ -72,6 +81,19 @@ public class DBNotification {
 	 */
 	@Transient
 	public static final String NEW_CHILD_EPISODE="new_child_episode";
+	
+	/**
+	 * author_subscription:
+	 *   id
+	 *   date
+	 *   user
+	 *   read
+	 *   type
+	 *   
+	 *   episode
+	 */
+	@Transient
+	public static final String AUTHOR_SUBSCRIPTION="author_subscription";
 	
 	/**
 	 * new_comment_on_own_episode:

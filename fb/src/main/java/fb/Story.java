@@ -76,9 +76,11 @@ public class Story {
 		if (user == null) {
 			addEp = Strings.getString("story_add_ep_not_logged_in");
 		} else {
-			if (ep.authorId.equals(user.id)) modify = Strings.getString("story_modify_owner").replace("$ID", ""+generatedId);
-			else if (user.level >= ((byte)10)) modify = Strings.getString("story_modify_moderator").replace("$ID", ""+generatedId);
-			else modify = Strings.getString("story_modify_logged_in").replace("$ID", ""+generatedId);
+			modify += Strings.getString("story_manage_subscriptions").replace("$ID",""+generatedId) + System.lineSeparator();
+			
+			if (ep.authorId.equals(user.id)) modify += Strings.getString("story_modify_owner").replace("$ID", ""+generatedId);
+			else if (user.level >= ((byte)10)) modify += Strings.getString("story_modify_moderator").replace("$ID", ""+generatedId);
+			else modify += Strings.getString("story_modify_logged_in").replace("$ID", ""+generatedId);
 			
 			addEp = 
 					Strings.getString("story_add_ep_logged_in").replace("$ID", ""+generatedId) + "&nbsp;&nbsp;&nbsp;" + 
@@ -1089,7 +1091,7 @@ public class Story {
 
 	public static final Set<String> replacers = Collections
 			.unmodifiableSet(new HashSet<>(Stream.of(
-					"$ACCOUNT", "$ADDEP", "$AUTHOR", "$AUTHORID", "$AUTHORNAME", "$AVATARURL", "$BODY", "$CHILD", 
+					"$ACCOUNT", "$ADDEP", "$AUTHOR", "$AUTHORID", "$AUTHORNAME", "$AUTHORSUB_MAIL_CHECKED", "$AUTHORSUB_SITE_CHECKED", "$AVATARURL", "$BODY", "$CHILD", 
 					"$CHILDCOUNT", "$CHILDREN", "$COMMENT", "$COMMENTS", "$COMPLETEDATE", "$DATE", "$DONATEBUTTON", 
 					"$EDITDATE", "$EDITORID", "$EDITORNAME", "$EPISODES", "$EXTRA", "$HITS", "$ID", "$LINK", 
 					"$MODERATORSTATUS", "$MODIFY", "$NUMPAGES", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
