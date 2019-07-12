@@ -1,5 +1,8 @@
 package fb.api;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -486,9 +489,9 @@ public class AccountStuff {
 			@FormParam("comment_site") String comment_site, 
 			@FormParam("comment_mail") String comment_mail, 
 			@FormParam("child_site") String child_site, 
-			@FormParam("child_mail") String child_mail,
+			@FormParam("child_mail") String child_mail/*,
 			@FormParam("child_site") String authorsub_site, 
-			@FormParam("child_mail") String authorsub_mail
+			@FormParam("child_mail") String authorsub_mail*/
 			) {
 		
 		FlatUser user;
@@ -499,17 +502,17 @@ public class AccountStuff {
 			boolean commentMail = false;
 			boolean childSite = false;
 			boolean childMail = false;
-			boolean authorSubSite = false;
-			boolean authorSubMail = false;
+			/*boolean authorSubSite = false;
+			boolean authorSubMail = false;*/
 			
 			if (comment_site != null && comment_site.length() > 0) commentSite = true;
 			if (comment_mail != null && comment_mail.length() > 0) commentMail = true;
 			if (child_site != null && child_site.length() > 0) childSite = true;
 			if (child_mail != null && child_mail.length() > 0) childMail = true;
-			if (authorsub_site != null && authorsub_site.length() > 0) authorSubSite = true;
-			if (authorsub_mail != null && authorsub_mail.length() > 0) authorSubMail = true;
+			/*if (authorsub_site != null && authorsub_site.length() > 0) authorSubSite = true;
+			if (authorsub_mail != null && authorsub_mail.length() > 0) authorSubMail = true;*/
 			
-			DB.updateUserNotificationSettings(user.id, commentSite, commentMail, childSite, childMail, authorSubSite, authorSubMail);
+			DB.updateUserNotificationSettings(user.id, commentSite, commentMail, childSite, childMail/*, authorSubSite, authorSubMail*/);
 		} catch (FBLoginException | DBException e) {
 			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
 		}
@@ -558,19 +561,39 @@ public class AccountStuff {
 	@Path("unsubauthor/{username}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response unsubauthor(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("username") String username) {
-		FlatUser fu;
 		try {
-			fu = Accounts.getFlatUser(fbtoken);
+			unsubauthorImpl(fbtoken, username);
 		} catch (FBLoginException e) {
 			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		} catch (DBException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "Database error")).build();
+		}
+		return Response.seeOther(GetStuff.createURI("/fb/user/" + username)).build();
+	}
+	
+	@GET
+	@Path("unsubauthor2/{username}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response unsubauthor2(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("username") String username) {
+		try {
+			unsubauthorImpl(fbtoken, username);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		} catch (DBException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "Database error")).build();
 		}
 		
+		return Response.seeOther(GetStuff.createURI("/fb/manageauthorsubs")).build();
+	}
+	
+	private void unsubauthorImpl(Cookie fbtoken, String username) throws FBLoginException, DBException {
+		FlatUser fu = Accounts.getFlatUser(fbtoken); // throws FBLoginException
 		Session session = DB.openSession();
 		try {
 			
 			DBUser subscriber = DB.getUserById(session, fu.id);
 			DBUser author = DB.getUserById(session, username);
-			if (author == null) return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "Not found: " + username)).build();
+			if (author == null) throw new FBLoginException("You must be logged in to do that");
 			
 			DBAuthorSubscription as = session.createQuery("from DBAuthorSubscription s where s.author.id='"+author.getId()+"' and s.subscriber.id='"+subscriber.getId()+"'", DBAuthorSubscription.class).uniqueResult();
 			if (as != null) {
@@ -579,12 +602,44 @@ public class AccountStuff {
 					session.delete(as);
 					session.getTransaction().commit();
 				} catch (Exception e) {
-					return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "Database error")).build();
+					throw new DBException("Database error");
 				}
 			}
 		} finally {
 			DB.closeSession(session);
 		}
-		return Response.seeOther(GetStuff.createURI("/fb/user/" + username)).build();
+	}
+	
+	@GET
+	@Path("manageauthorsubs")
+	@Produces(MediaType.TEXT_HTML)
+	public Response manageauthorsubs(@CookieParam("fbtoken") Cookie fbtoken){
+		FlatUser fu;
+		try {
+			fu = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		}
+		
+		String html;
+		
+		Session session = DB.openSession();
+		try {
+			
+			List<DBAuthorSubscription> list = session.createQuery("from DBAuthorSubscription s where s.subscriber.id='"+fu.id+"'", DBAuthorSubscription.class).list();
+			StringBuilder sb = new StringBuilder("<h1>Manage author subscriptions</h1>\n");
+			if (list.isEmpty()) sb.append("(nothing here)");
+			else {
+				final String f = "<p><a href=/fb/unsubauthor2/%s>Unsubscribe</a> from <a href=/fb/user/%s>%s</a></p>%n";
+				sb.append(list.stream().map(as->
+					String.format(f, as.getAuthor().getId(), as.getAuthor().getId(), Strings.escape(as.getAuthor().getAuthor()))
+				).collect(Collectors.joining()));
+			}
+			html = sb.toString();
+			
+		} finally {
+			DB.closeSession(session);
+		}
+		return Response.ok(Strings.getFile("generic.html", fu).replace("$EXTRA",html)).build();
 	}
 }

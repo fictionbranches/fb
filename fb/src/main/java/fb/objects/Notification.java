@@ -17,7 +17,6 @@ public class Notification {
 	public final String body;
 	
 	public Notification(DBNotification note) {
-		//this(note.getId(), note.getDate(), note.getBody(), note.getUser().getId(), note.isRead());
 		this.id = note.getId();
 		this.date = note.getDate();
 		this.user = new FlatUser(note.getUser());

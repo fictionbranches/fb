@@ -439,7 +439,7 @@ public class DB {
 					.stream()
 					.map(sub->sub.getSubscriber())
 					.collect(Collectors.toList());
-			Stream<DBUser> siteSubs = subs.stream().filter(sub->sub.isAuthorSubSite());
+			Stream<DBUser> siteSubs = subs.stream();//.filter(sub->sub.isAuthorSubSite()); // not needed unless mass mail gets fixed
 			
 			try {
 				session.beginTransaction();
@@ -457,21 +457,21 @@ public class DB {
 				session.getTransaction().rollback();
 			}
 			
-			final FlatEpisode flatEp = new FlatEpisode(ep);
+			/*final FlatEpisode flatEp = new FlatEpisode(ep);
 			final List<FlatUser> mailSubList = subs.stream()
 					.filter(sub->sub.isAuthorSubMail())
 					.map(FlatUser::new)
 					.collect(Collectors.toList());
-			new Thread(()->newEpisodeAuthorSubscriptionEmailNotifier(mailSubList, flatEp)).start();
+			new Thread(()->newEpisodeAuthorSubscriptionEmailNotifier(mailSubList, flatEp)).start();*/ // uncomment if mass mail gets fixed
 			
 		} finally {
 			DB.closeSession(session);
 		}
 	}
 	
-	private static void newEpisodeAuthorSubscriptionEmailNotifier(List<FlatUser> users, FlatEpisode episode) {
+	/*private static void newEpisodeAuthorSubscriptionEmailNotifier(List<FlatUser> users, FlatEpisode episode) {
 		//Accounts.sendM
-	}
+	}*/
 	
 	public static long addArchiveEp(long parentId, String link, String title, String body, String authorName, Date date) throws DBException {
 		synchronized (epLock) {
@@ -2867,8 +2867,8 @@ public class DB {
 	
 	public static void updateUserNotificationSettings(String username, 
 			boolean commentSite, boolean commentMail, 
-			boolean childSite, boolean childMail,
-			boolean authorSubSite, boolean authorSubMail
+			boolean childSite, boolean childMail//,
+			//boolean authorSubSite, boolean authorSubMail // not needed mass mail
 			) throws DBException {
 		Session session = openSession();
 		try {
@@ -2897,7 +2897,7 @@ public class DB {
 				change = true;
 			}
 			
-			if (user.isAuthorSubSite() != authorSubSite) {
+			/*if (user.isAuthorSubSite() != authorSubSite) {
 				user.setAuthorSubSite(authorSubSite);
 				change = true;
 			}
@@ -2905,7 +2905,7 @@ public class DB {
 			if (user.isAuthorSubMail() != authorSubMail) {
 				user.setAuthorSubMail(authorSubMail);
 				change = true;
-			}
+			}*/ // not needed unless mass mail gets fixed
 			
 			if (change) try {
 				session.beginTransaction();

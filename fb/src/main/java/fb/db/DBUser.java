@@ -68,8 +68,8 @@ public class DBUser {
 	private boolean commentMail;
 	private boolean childSite;
 	private boolean childMail;
-	private boolean authorSubSite;
-	private boolean authorSubMail;
+	/*private boolean authorSubSite;
+	private boolean authorSubMail;*/ // not needed unless mass-mail gets fixed
 
 	public String getId() {
 		return id;
@@ -191,7 +191,7 @@ public class DBUser {
 		this.childMail = childMail;
 	}
 
-	public boolean isAuthorSubSite() {
+	/*public boolean isAuthorSubSite() {
 		return authorSubSite;
 	}
 
@@ -205,7 +205,7 @@ public class DBUser {
 
 	public void setAuthorSubMail(boolean authorSubMail) {
 		this.authorSubMail = authorSubMail;
-	}
+	}*/
 
 	public boolean equals(Object o) {
 		if (!(o instanceof DBUser)) return false;
