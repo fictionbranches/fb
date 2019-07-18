@@ -801,9 +801,9 @@ public class DB {
 	public static final String MOD_KEYWORD = "MOD";
 	
 	/**
-	 * If specified episode already has a mod request submitted, return -2.
-	 * Else if a child episodes is not owned by owner of the specified episode (or if no children exist), return child's id.
-	 * Else return -1
+	 * If specified episode already has a mod request submitted, return 2.
+	 * Else if a child episode exists which is not owned by owner of the specified episode, return 1.
+	 * Else return 0
 	 * @param id id of episode
 	 * @return 0 if episode can be modified, 1 if child episodes not owned by owner exist, 2 if mod already exists
 	 * @throws DBException if episode does not exist
@@ -818,7 +818,7 @@ public class DB {
 			
 			String q = "from DBEpisode ep where ep.author.id != '" + episode.getAuthor().getId() + "' and newMap like '" + episode.getNewMap() + "%'";
 			
-			return session.createQuery(q, DBEpisode.class).uniqueResultOptional().isPresent()?1:0;
+			return session.createQuery(q, DBEpisode.class).stream().findAny().isPresent()?1:0;
 		} finally {
 			closeSession(session);
 		}
@@ -2039,8 +2039,19 @@ public class DB {
 		}
 	}
 	
-	
-	public static void clearMod(long id, boolean accepted) throws DBException {
+	/**
+	 * new_child_episode:
+	 *   id
+	 *   date
+	 *   user
+	 *   read
+	 *   type
+	 *   
+	 *   episode
+	 *   sender
+	 *   approved
+	 */
+	public static void clearMod(long id, boolean accepted, String modUsername) throws DBException {
 		Session session = openSession();
 		try {
 			DBModEpisode mod = session.get(DBModEpisode.class, id);
@@ -2050,8 +2061,19 @@ public class DB {
 			try {
 				session.beginTransaction();
 				if (accepted) DB.modifyEp(session, ep.getGeneratedId(), mod.getLink(), mod.getTitle(), mod.getBody(), ep.getAuthor().getId());
+				
+				DBNotification note = new DBNotification();
+				note.setDate(new Date());
+				note.setUser(ep.getAuthor());
+				note.setRead(false);
+				note.setType(DBNotification.MODIFICATION_RESPONSE);
+				note.setEpisode(ep);
+				note.setSender(DB.getUserById(session, modUsername));
+				note.setApproved(accepted);
+				
 				session.delete(mod);
 				session.merge(ep);
+				session.save(note);
 			session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();

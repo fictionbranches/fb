@@ -107,6 +107,21 @@ public class DBNotification {
 	 */
 	@Transient
 	public static final String NEW_COMMENT_ON_OWN_EPISODE="new_comment_on_own_episode";
+	
+	/**
+	 * new_child_episode:
+	 *   id
+	 *   date
+	 *   user
+	 *   read
+	 *   type
+	 *   
+	 *   episode
+	 *   sender
+	 *   approved
+	 */
+	@Transient
+	public static final String MODIFICATION_RESPONSE="modification_response";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
@@ -138,6 +153,11 @@ public class DBNotification {
 	 */
 	@ManyToOne
 	private DBComment comment;
+	
+	@ManyToOne
+	private DBUser sender;
+	
+	private Boolean approved;
 
 	public long getId() {
 		return id;
@@ -161,6 +181,14 @@ public class DBNotification {
 
 	public void setUser(DBUser user) {
 		this.user = user;
+	}
+	
+	public DBUser getSender() {
+		return sender;
+	}
+
+	public void setSender(DBUser sender) {
+		this.sender = sender;
 	}
 
 	public boolean isRead() {
@@ -202,6 +230,14 @@ public class DBNotification {
 
 	public void setComment(DBComment comment) {
 		this.comment = comment;
+	}
+
+	public Boolean getApproved() {
+		return approved;
+	}
+
+	public void setApproved(Boolean approved) {
+		this.approved = approved;
 	}
 
 	

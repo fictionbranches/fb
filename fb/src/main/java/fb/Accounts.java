@@ -943,7 +943,7 @@ public class Accounts {
 		}
 		if (user.level<10) throw new FBLoginException(Strings.getFile("generic.html", user).replace("$EXTRA","You must be a mod to do that"));
 		try {
-			DB.clearMod(id, accepted);
+			DB.clearMod(id, accepted, user.id);
 		} catch (DBException e) {
 			throw new FBLoginException(Strings.getFile("generic.html", user).replace("$EXTRA",e.getMessage()));
 		}
@@ -1107,6 +1107,9 @@ public class Accounts {
 						+ "</a> wrote a <a href=\"/fb/story/" 
 						+ a.episode.generatedId 
 						+ "\">new episode</a>. You are subscribed to this author.</p>\n");
+				break;
+			case DBNotification.MODIFICATION_RESPONSE:
+				sb.append("<a href=\"/fb/user/" + a.sender.id + "\">" + Strings.escape(a.sender.author) + "</a> "+(a.approved?"approved":"rejected")+" your request to modify <a href=\"/fb/story/" + a.episode.generatedId + " \">"+Strings.escape(a.episode.link)+"</a>");
 				break;
 			}
 			sb.append("<p>(" + Dates.outputDateFormat(a.date) + ")</p>\n");

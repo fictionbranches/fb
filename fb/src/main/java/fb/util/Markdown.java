@@ -16,10 +16,13 @@ public class Markdown {
 	
 	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
+	private static final Object lock = new Object();
+	public static final Markdown m = new Markdown();
+	
 	public static String formatBody(String body) {
-		synchronized (engine) {
+		synchronized (lock) {
 			try {
-				return (String) ((Invocable) engine).invokeFunction("markdownToHTML", escape(body));
+				return (String) ((Invocable) m.engine).invokeFunction("markdownToHTML", escape(body));
 			} catch (NoSuchMethodException | ScriptException e) {
 				System.err.println(e + " " + e.getMessage());
 				return body;
@@ -27,23 +30,25 @@ public class Markdown {
 		}
 	}
 	
-	private final static ScriptEngine engine;
-	static { 
-		long start = System.nanoTime();
-		engine  = new ScriptEngineManager().getEngineByName("javascript");
-		if (engine == null) {
-			LOGGER.error("No javascript engine");
-			System.exit(99);
-			throw new RuntimeException("No javascript engine");
+	private final ScriptEngine engine;
+	{
+		synchronized (lock) {
+			long start = System.nanoTime();
+			engine = new ScriptEngineManager().getEngineByName("javascript");
+			if (engine == null) {
+				LOGGER.error("No javascript engine");
+				System.exit(99);
+				throw new RuntimeException("No javascript engine");
+			}
+			try {
+				LOGGER.info("Got js engine in " + (((double) (System.nanoTime() - start)) / 1000000000.0));
+				engine.eval(getJsReaderFromJar("static_html/static/markdown-it.js"));
+				engine.eval(getJsReaderFromJar("static_html/static/markdown.js"));
+				LOGGER.info("js engine init in " + (((double) (System.nanoTime() - start)) / 1000000000.0));
+			} catch (ScriptException e) {
+				throw new RuntimeException(e);
+			}
 		}
-		try {
-			LOGGER.info("Got js engine in " + (((double)(System.nanoTime()-start))/1000000000.0));
-			engine.eval(getJsReaderFromJar("static_html/static/markdown-it.js"));
-			engine.eval(getJsReaderFromJar("static_html/static/markdown.js"));
-			LOGGER.info("js engine init in " + (((double)(System.nanoTime()-start))/1000000000.0));
-		} catch (ScriptException e) {
-			throw new RuntimeException(e);
-		} 
 	}
 	
 	/**
