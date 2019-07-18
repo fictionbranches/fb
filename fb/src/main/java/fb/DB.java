@@ -1971,8 +1971,19 @@ public class DB {
 		}
 	}
 	
-	
-	public static void clearMod(long id, boolean accepted) throws DBException {
+	/**
+	 * new_child_episode:
+	 *   id
+	 *   date
+	 *   user
+	 *   read
+	 *   type
+	 *   
+	 *   episode
+	 *   sender
+	 *   approved
+	 */
+	public static void clearMod(long id, boolean accepted, String modUsername) throws DBException {
 		Session session = openSession();
 		try {
 			DBModEpisode mod = session.get(DBModEpisode.class, id);
@@ -1982,8 +1993,19 @@ public class DB {
 			try {
 				session.beginTransaction();
 				if (accepted) DB.modifyEp(session, ep.getGeneratedId(), mod.getLink(), mod.getTitle(), mod.getBody(), ep.getAuthor().getId());
+				
+				DBNotification note = new DBNotification();
+				note.setDate(new Date());
+				note.setUser(ep.getAuthor());
+				note.setRead(false);
+				note.setType(DBNotification.MODIFICATION_RESPONSE);
+				note.setEpisode(ep);
+				note.setSender(DB.getUserById(session, modUsername));
+				note.setApproved(accepted);
+				
 				session.delete(mod);
 				session.merge(ep);
+				session.save(note);
 			session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
