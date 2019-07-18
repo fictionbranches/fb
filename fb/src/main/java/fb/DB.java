@@ -750,9 +750,9 @@ public class DB {
 	public static final String MOD_KEYWORD = "MOD";
 	
 	/**
-	 * If specified episode already has a mod request submitted, return -2.
-	 * Else if a child episodes is not owned by owner of the specified episode (or if no children exist), return child's id.
-	 * Else return -1
+	 * If specified episode already has a mod request submitted, return 2.
+	 * Else if a child episode exists which is not owned by owner of the specified episode, return 1.
+	 * Else return 0
 	 * @param id id of episode
 	 * @return 0 if episode can be modified, 1 if child episodes not owned by owner exist, 2 if mod already exists
 	 * @throws DBException if episode does not exist
@@ -767,7 +767,7 @@ public class DB {
 			
 			String q = "from DBEpisode ep where ep.author.id != '" + episode.getAuthor().getId() + "' and newMap like '" + episode.getNewMap() + "%'";
 			
-			return session.createQuery(q, DBEpisode.class).uniqueResultOptional().isPresent()?1:0;
+			return session.createQuery(q, DBEpisode.class).stream().findAny().isPresent()?1:0;
 		} finally {
 			closeSession(session);
 		}
