@@ -143,7 +143,7 @@ public class InitWebsite {
 
 			// Enable custom error pages
 			server.getServerConfiguration().setDefaultErrorPageGenerator(new MyErrorPageGenerator());
-			try {jsEngineStarter.join();}catch(Exception e) {}
+			//try {jsEngineStarter.join();}catch(Exception e) {}
 		}
 
 		try {
