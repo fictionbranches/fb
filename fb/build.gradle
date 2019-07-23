@@ -97,4 +97,8 @@ dependencies {
 	compile group: 'com.rometools', name: 'rome', version: '1.12.0'
 	
 	compile group: 'com.github.wumpz', name: 'diffutils', version: '3.0'
+	
+	//compile group: 'com.squareup.okhttp3', name: 'okhttp', version: '4.0.1'
+	compile group: 'net.gjerull.etherpad', name: 'etherpad_lite_client', version: '1.2.13'
+	
 }

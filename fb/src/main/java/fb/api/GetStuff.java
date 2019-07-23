@@ -54,6 +54,11 @@ public class GetStuff {
 		return "iamalive";
 	}
 	
+	public static URI createURI(String domain, String path) {
+		if (path.length() > 0 && !path.startsWith("/")) path = "/"+path;
+		return URI.create("https://" + domain + path);
+	}
+	
 	@SafeVarargs
 	public static URI createURI(String url, Entry<String,String>... params) {
 		URI uri = URI.create(url);

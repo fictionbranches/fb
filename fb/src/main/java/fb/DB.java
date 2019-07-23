@@ -53,6 +53,7 @@ import fb.db.DBComment;
 import fb.db.DBEmailChange;
 import fb.db.DBEpisode;
 import fb.db.DBEpisodeView;
+import fb.db.DBEtherpad;
 import fb.db.DBFlaggedComment;
 import fb.db.DBFlaggedEpisode;
 import fb.db.DBModEpisode;
@@ -78,6 +79,9 @@ import fb.objects.Theme;
 import fb.objects.User;
 import fb.util.Discord;
 import fb.util.Email;
+import fb.util.Etherpad;
+import fb.util.Etherpad.EtherpadException;
+import fb.util.StringUtils;
 import fb.util.Strings;
 
 public class DB {
@@ -167,6 +171,7 @@ public class DB {
 		configuration.addAnnotatedClass(DBNotification.class);
 		configuration.addAnnotatedClass(DBTheme.class);
 		configuration.addAnnotatedClass(DBAuthorSubscription.class);
+		configuration.addAnnotatedClass(DBEtherpad.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -399,7 +404,7 @@ public class DB {
 					session.save(note);
 				}
 				if (sendMailNotification) new Thread(()->
-					Email.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>")
+					Email.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + StringUtils.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + StringUtils.escape(parent.getTitle()) + "</a>")
 				).start();
 				
 				session.getTransaction().commit();
@@ -1728,7 +1733,7 @@ public class DB {
 					final long gid = generatedId;
 					new Thread(()-> // send the email
 						Email.sendEmail(email, "Someone commented on your episode", 
-								"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + authorid + "\">" + Strings.escape(authorauthor) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + gid + "#comment" + cid + "\">comment</a> on " + Strings.escape(epTitle))
+								"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + authorid + "\">" + StringUtils.escape(authorauthor) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + gid + "#comment" + cid + "\">comment</a> on " + StringUtils.escape(epTitle))
 					).start();
 				}
 				
@@ -3062,6 +3067,108 @@ public class DB {
 		} finally {
 			closeSession(session);
 			Story.updateRootEpisodesCache();
+		}
+	}
+	
+	public static String padTitleFromId(long padID) throws DBException {
+		Session session = openSession();
+		try {
+			
+			DBEtherpad pad = session.get(DBEtherpad.class, padID);
+			if (pad == null) throw new DBException("Not found: " + padID);
+			return pad.getName();
+			 
+		} finally {
+			closeSession(session);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param username
+	 * @return list of {padID, padName}
+	 * @throws DBException
+	 */
+	public static List<String[]> listPads(String username) throws DBException {
+		Session session = openSession();
+		try {
+			DBUser user = DB.getUserById(session, username);
+			if (user == null) throw new DBException("Not found: " + username);
+			
+			return session.createQuery("from DBEtherpad pad where pad.owner.id='" + user.getId() + "'", DBEtherpad.class)
+					.stream()
+					.map(pad->new String[] {String.valueOf(pad.getId()),pad.getName()})
+					.collect(Collectors.toList());
+		} finally {
+			closeSession(session);
+		}
+	}
+	
+	/**
+	 * Creates a new etherpad owned by the given user
+	 * @param username
+	 * @return {padID, sessionID}
+	 * @throws DBException
+	 * @throws EtherpadException
+	 */
+	public static String[] createPad(String username, String padName) throws DBException, EtherpadException {
+		Session session = openSession();
+		try {
+			
+			DBUser user = DB.getUserById(session, username);
+			if (user == null) throw new DBException("Not found: " + username);
+			
+			boolean updateUser = false;
+			if (user.getEtherpadID() == null) {
+				String etherpadID = Etherpad.createAuthor(user.getId(), user.getAuthor());
+				user.setEtherpadID(etherpadID);
+				updateUser = true;
+			}
+			
+			DBEtherpad pad = new DBEtherpad();
+			pad.setDate(new Date());
+			pad.setOwner(user);
+			pad.setName(padName);
+			try {
+				session.beginTransaction();
+				session.save(pad);
+				if (updateUser) session.merge(user);
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+				throw new DBException("Database error");
+			}
+			String padID = Long.toString(pad.getId());
+			String groupID;
+			try {
+				groupID = Etherpad.createPad(padID);
+				pad.setGroupID(groupID);
+				try {
+					session.beginTransaction();
+					session.merge(pad);
+					session.getTransaction().commit();
+				} catch (Exception e) {
+					session.getTransaction().rollback();
+					throw new DBException("Database error");
+				}	
+			} catch (EtherpadException e) {
+				try {
+					session.beginTransaction();
+					session.delete(pad);
+					session.getTransaction().commit();
+				} catch (Exception e2) {
+					session.getTransaction().rollback();
+					throw new DBException("Database error");
+				}
+				throw e;
+			}
+			
+			String sessionID = Etherpad.createSession(groupID, user.getEtherpadID());
+			
+			return new String[] {padID, sessionID};
+			
+		} finally {
+			closeSession(session);
 		}
 	}
 	

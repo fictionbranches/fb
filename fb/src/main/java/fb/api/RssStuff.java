@@ -1,5 +1,5 @@
 package fb.api;
-import static fb.util.Strings.escape;
+import static fb.util.StringUtils.escape;
 
 import java.io.IOException;
 import java.io.StringWriter;

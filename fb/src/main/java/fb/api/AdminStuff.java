@@ -26,6 +26,7 @@ import fb.Story.EpisodeException;
 import fb.db.DBSiteSetting;
 import fb.objects.FlatUser;
 import fb.util.Dates;
+import fb.util.StringUtils;
 import fb.util.Strings;
 
 @Path("fb")
@@ -50,7 +51,7 @@ public class AdminStuff {
 		Session session = DB.openSession();
 		try {
 			DBSiteSetting button = session.get(DBSiteSetting.class, "donate_button");
-			if (button != null) oldDonateButton = Strings.escape(button.getValue());
+			if (button != null) oldDonateButton = StringUtils.escape(button.getValue());
 		} finally {
 			DB.closeSession(session);
 		}

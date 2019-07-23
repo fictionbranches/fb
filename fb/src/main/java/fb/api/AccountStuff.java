@@ -1,6 +1,9 @@
 package fb.api;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.CookieParam;
@@ -29,8 +32,11 @@ import fb.InitWebsite;
 import fb.db.DBAuthorSubscription;
 import fb.db.DBUser;
 import fb.objects.FlatUser;
+import fb.util.Etherpad;
+import fb.util.Etherpad.EtherpadException;
 import fb.util.GoogleRECAPTCHA;
 import fb.util.GoogleRECAPTCHA.GoogleCheckException;
+import fb.util.StringUtils;
 import fb.util.Strings;
 
 @Path("fb")
@@ -632,7 +638,7 @@ public class AccountStuff {
 			else {
 				final String f = "<p><a href=/fb/unsubauthor2/%s>Unsubscribe</a> from <a href=/fb/user/%s>%s</a></p>%n";
 				sb.append(list.stream().map(as->
-					String.format(f, as.getAuthor().getId(), as.getAuthor().getId(), Strings.escape(as.getAuthor().getAuthor()))
+					String.format(f, as.getAuthor().getId(), as.getAuthor().getId(), StringUtils.escape(as.getAuthor().getAuthor()))
 				).collect(Collectors.joining()));
 			}
 			html = sb.toString();
@@ -641,5 +647,97 @@ public class AccountStuff {
 			DB.closeSession(session);
 		}
 		return Response.ok(Strings.getFile("generic.html", fu).replace("$EXTRA",html)).build();
+	}
+	
+	@GET
+	@Path("etherpad")
+	@Produces(MediaType.TEXT_HTML)
+	public Response etherpad(@CookieParam("fbtoken") Cookie fbtoken) {
+		FlatUser fu;
+		try {
+			fu = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		}
+		StringBuilder sb = new StringBuilder("<h1>Etherpad management</h1>\n");
+		sb.append("<p><form action= \"/fb/createpad\" method=\"post\">\n" + 
+				"Create new pad: <input type= \"text\" name= \"name\" size=\"100\" placeholder=\"pad name\"/> \n" + 
+				"<input type= \"submit\" value= \"Create\"/></form>\n");
+		List<String[]> pads;
+		try {
+			pads = DB.listPads(fu.id);
+		} catch (DBException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		}
+		if (!pads.isEmpty()) {
+			sb.append("<h2>Pads you own</h2>\n<p>\n");
+			for (String[] pad : pads) {
+				sb.append("<a href=/fb/etherpad/" + pad[0] + ">" + StringUtils.escape(pad[1]) + "</a><br/>\n");
+			}
+			sb.append("\n</p>\n");
+		}
+		return Response.ok(Strings.getFile("generic.html", fu).replace("$EXTRA", sb.toString())).build();
+	}
+	
+	@POST
+	@Path("createpad")
+	@Produces(MediaType.TEXT_HTML)
+	public Response createpad(@Context UriInfo uriInfo, @CookieParam("fbtoken") Cookie fbtoken, @FormParam("name") String padName) {
+		FlatUser fu;
+		try {
+			fu = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		}
+		if (padName == null || padName.length() == 0) return Response.ok(Strings.getFile("generic.html",fu).replace("$EXTRA", "Pad name cannot be empty")).build();
+		String result[];
+		try {
+			result = DB.createPad(fu.id, padName);
+		} catch (DBException | EtherpadException e) {
+			return Response.ok(Strings.getFile("generic.html",fu).replace("$EXTRA", e.getMessage())).build();
+		} 
+		String padID = result[0];
+		String sessionID = result[1];
+		return Response.seeOther(GetStuff.createURI(Etherpad.DOMAIN, "/fb/etherpadcookie/"+padID+"/"+sessionID)).build();
+	}
+	
+	@GET
+	@Path("etherpad/{padID}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response etherpad(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("padID") String padIDString) {
+		FlatUser fu;
+		try {
+			fu = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		}
+		
+		long padID; 
+		try {
+			padID = Long.parseLong(padIDString);
+		} catch (NumberFormatException e) {
+			return Response.ok(Strings.getFile("generic.html",fu).replace("$EXTRA", "Not found: " + StringUtils.escape(padIDString))).build();
+		}
+		
+		String padName;
+		try {
+			padName = DB.padTitleFromId(padID);
+		} catch (DBException e) {
+			return Response.ok(Strings.getFile("generic.html",fu).replace("$EXTRA", e.getMessage())).build();
+		}
+		
+		String s = "<h1>"+StringUtils.escape(padName)+"</h1>\n<iframe src='https://"+Etherpad.DOMAIN+"/p/"+padID+"' width=600 height=400></iframe>";
+		return Response.ok(Strings.getFile("generic.html",fu).replace("$EXTRA", s)).build();
+		
+	}
+	
+	@GET
+	@Path("etherpadcookie/{padID}/{sessionID}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response fbetherpadcookie(@PathParam("padID") String padID, @PathParam("sessionID") String sessionID, @CookieParam("sessionID") Cookie sessionIDs) {
+		HashSet<String> ids = new HashSet<>(Arrays.asList(sessionIDs.getValue().split(Pattern.quote(","))));
+		ids.add(sessionID);
+		String cookie = ids.stream().collect(Collectors.joining(","));
+		return Response.seeOther(GetStuff.createURI(Strings.getDOMAIN(),"/fb/etherpad/" + padID)).cookie(GetStuff.newCookie("sessionID", cookie, Etherpad.DOMAIN)).build();
 	}
 }

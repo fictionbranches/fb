@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -28,7 +29,7 @@ public class Discord {
 			jsonMap.put("content", message);
 
 			String postData = new Gson().toJson(jsonMap);
-			byte[] postDataBytes = postData.getBytes("UTF-8");
+			byte[] postDataBytes = postData.getBytes(StandardCharsets.UTF_8);
 
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 

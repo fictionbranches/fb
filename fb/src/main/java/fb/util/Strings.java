@@ -1,7 +1,6 @@
 package fb.util;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.FileVisitResult;
@@ -219,15 +218,7 @@ public class Strings {
 			fileMap.put(filename, sb.toString());
 		}*/
 		
-		fileMap.put(filename, readRawFileFromJar(dir + "/" + filename)); 
-	}
-	
-	public static String readRawFileFromJar(String filepath) {
-		try (Scanner scan = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath))) { 
-			StringBuilder sb = new StringBuilder(); 
-			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
-			return sb.toString();
-		}
+		fileMap.put(filename, StringUtils.readRawFileFromJar(dir + "/" + filename)); 
 	}
 	
 	private static Map<String,String> readInStringsMap() {
@@ -252,10 +243,6 @@ public class Strings {
 			}
 		}
 		return Collections.unmodifiableMap(stringsMap);
-	}
-	
-	public static String escape(String string) {
-		return Markdown.escape(string);
 	}
 	
 	public static String getString(String name) {
@@ -293,20 +280,6 @@ public class Strings {
 	public static String themeToCss(Theme theme) {
 		if (theme == null) return "";
 		return "<style>" + theme.css + "</style>";
-	}
-	
-	public static String readTextFile(String path) {
-		return readTextFile(new File(path));
-	}
-	
-	public static String readTextFile(File file) {
-		StringBuilder sb = new StringBuilder();
-		try (Scanner scan = new Scanner(file)) {
-			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
-		} catch (FileNotFoundException e) {
-			LOGGER.warn("Not found: " + file, e);
-		}
-		return sb.toString();
 	}
 	
 	public static String getSelectThemes() {

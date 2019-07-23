@@ -4,12 +4,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
-import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -61,31 +60,13 @@ public class GoogleRECAPTCHA {
 	}
 	
 	/**
-	 * Wraps URLEncoder.encode(String, "UTF-8") to avoid the UnsupportedEncodingException
-	 * UTF-8 will never cause UnsupportedEncodingException
-	 * @param s
-	 * @return
-	 */
-	private static String encodeURLComponent(String s) {
-		try {
-			return URLEncoder.encode(s, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			throw new AssertionError("UTF-8 is not supported");
-		}
-	}
-	
-	/**
 	 * Wraps String.getBytes("UTF-8") to avoid the UnsupportedEncodingException
 	 * UTF-8 will never cause UnsupportedEncodingException
 	 * @param s
 	 * @return
 	 */
 	private static byte[] getBytes(String s) {
-		try {
-			return s.getBytes("UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			throw new AssertionError("UTF-8 is not supported");
-		}
+		return s.getBytes(StandardCharsets.UTF_8);
 	}
 	
 	/**
@@ -104,7 +85,7 @@ public class GoogleRECAPTCHA {
 		params.put("secret", Strings.getRECAPTCHA_SECRET());
 		params.put("response", google);
 		byte[] postDataBytes = getBytes(params.entrySet().stream()
-				.map(param->encodeURLComponent(param.getKey()) + '=' + encodeURLComponent(String.valueOf(param.getValue())))
+				.map(param->StringUtils.encodeURIComponent(param.getKey()) + '=' + StringUtils.encodeURIComponent(String.valueOf(param.getValue())))
 				.collect(Collectors.joining("&")));
 		HttpURLConnection conn;
 		try {
@@ -130,10 +111,7 @@ public class GoogleRECAPTCHA {
 		}
 		Reader in;
 		try {
-			in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-		} catch (UnsupportedEncodingException e) {
-			LOGGER.error("UnsupportedEncodingException2? Really? wtf ", e);
-			throw new GoogleCheckException("Tell Phoenix you got recaptcha UnsupportedEncodingException2");
+			in = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
 		} catch (IOException e) {
 			LOGGER.error("IOException3? Really? wtf ", e);
 			throw new GoogleCheckException("Tell Phoenix you got recaptcha IOException3");

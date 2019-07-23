@@ -64,13 +64,13 @@ public class DBUser {
 	@OneToOne(mappedBy = "user")
 	private DBPasswordReset passwordReset;
 	
+	private String etherpadID;
+	
 	private boolean commentSite;
 	private boolean commentMail;
 	private boolean childSite;
 	private boolean childMail;
-	/*private boolean authorSubSite;
-	private boolean authorSubMail;*/ // not needed unless mass-mail gets fixed
-
+	
 	public String getId() {
 		return id;
 	}
@@ -191,21 +191,13 @@ public class DBUser {
 		this.childMail = childMail;
 	}
 
-	/*public boolean isAuthorSubSite() {
-		return authorSubSite;
+	public String getEtherpadID() {
+		return etherpadID;
 	}
 
-	public void setAuthorSubSite(boolean authorSubSite) {
-		this.authorSubSite = authorSubSite;
+	public void setEtherpadID(String etherpadID) {
+		this.etherpadID = etherpadID;
 	}
-
-	public boolean isAuthorSubMail() {
-		return authorSubMail;
-	}
-
-	public void setAuthorSubMail(boolean authorSubMail) {
-		this.authorSubMail = authorSubMail;
-	}*/
 
 	public boolean equals(Object o) {
 		if (!(o instanceof DBUser)) return false;
