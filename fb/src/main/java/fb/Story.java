@@ -193,6 +193,9 @@ public class Story {
 				.replace("$EDITORNAME", escape(ep.editorName))
 				.replace("$EDITDATE", escape(Dates.outputDateFormat(ep.editDate)));
 
+		String branchNameHTML = "";
+		if (ep.branchName != null && ep.branchName.length() > 0) branchNameHTML = "<h2>" + escape(ep.branchName) + "</h2>";
+		
 		return Strings.getFile("story.html", user)
 				.replace("$TITLE", escape(ep.title))
 				.replace("$BODY", parseMarkdown?formatBody(ep.body):escape(ep.body))
@@ -212,7 +215,8 @@ public class Story {
 				.replace("$UPVOTES", Long.toString(ep.upvotes))
 				.replace("$COMMENTS", commentHTML.toString())
 				.replace("$PATHTOHERE", pathbox.toString())
-				.replace("$CHILDREN", childHTML.toString());
+				.replace("$CHILDREN", childHTML.toString())
+				.replace("$BRANCHNAME", branchNameHTML);
 	}
 	
 	public static String getWelcome(Cookie token) {

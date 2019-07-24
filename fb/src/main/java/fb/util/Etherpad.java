@@ -19,7 +19,7 @@ public class Etherpad {
 	
 	
 	public static void main(String[] args) throws Exception {
-		System.out.println(createPad("thisisatestpad"));
+
 	}
 	
 	/**
@@ -30,8 +30,12 @@ public class Etherpad {
 	 * @throws EtherpadException
 	 */
 	public static String createAuthor(String username, String authorName) throws EtherpadException {
-		System.out.println("Creating author for " + username);
-		return getFrom(client.createAuthorIfNotExistsFor(username, authorName), "authorID");
+		try {
+			System.out.println("Creating author for " + username);
+			return getFrom(client.createAuthorIfNotExistsFor(username, authorName), "authorID");
+		} catch (Exception e) {
+			throw EtherpadException.badResponse();
+		}
 	}
 	
 	/**
@@ -42,10 +46,14 @@ public class Etherpad {
 	 * @throws EtherpadException
 	 */
 	public static String createSession(String groupID, String authorID) throws EtherpadException {
-		long weekFromNow = System.currentTimeMillis()/1000 + 604800;
-		String sessionID = getFrom(client.createSession(groupID, authorID, weekFromNow), "sessionID");
-		System.out.println("Creating session for " + groupID + " " + authorID + " " + sessionID);
-		return sessionID;
+		try {
+			long weekFromNow = System.currentTimeMillis() / 1000 + 604800;
+			String sessionID = getFrom(client.createSession(groupID, authorID, weekFromNow), "sessionID");
+			System.out.println("Creating session for " + groupID + " " + authorID + " " + sessionID);
+			return sessionID;
+		} catch (Exception e) {
+			throw EtherpadException.badResponse();
+		}
 	}
 	
 	/**
@@ -55,14 +63,15 @@ public class Etherpad {
 	 * @throws EtherpadException
 	 */
 	public static String createPad(String padID) throws EtherpadException {
-		String groupID = getFrom(client.createGroupIfNotExistsFor(padID), "groupID");
-		System.out.println("Creating pad " + padID + " with groupID " + groupID);
 		try {
+			String groupID = getFrom(client.createGroupIfNotExistsFor(padID), "groupID");
+			System.out.println("Creating pad " + padID + " with groupID " + groupID);
 			client.createGroupPad(groupID, padID);
+			return groupID;
 		} catch (Exception e) {
 			throw EtherpadException.badResponse();
 		}
-		return groupID;
+		
 	}
 	
 	/**

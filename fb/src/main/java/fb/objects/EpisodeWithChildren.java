@@ -35,12 +35,13 @@ public class EpisodeWithChildren {
 	public final Long parentId;
 	public final List<Comment> comments;
 	public final List<FlatEpisode> pathbox;
+	public final String branchName;
 	
 	/**
 	 * Construct a complete Episode from a DBEpisode database object
 	 * @param ep
 	 */
-	public EpisodeWithChildren(DBEpisode ep, long views, long upvotes, DBUser viewer, boolean viewerCanUpvote, List<Episode> children, List<Comment> comments, List<FlatEpisode> pathbox) {
+	public EpisodeWithChildren(DBEpisode ep, long views, long upvotes, DBUser viewer, boolean viewerCanUpvote, List<Episode> children, List<Comment> comments, List<FlatEpisode> pathbox, String branchName) {
 		this.generatedId = ep.getGeneratedId();
 		this.newMap = ep.getNewMap();
 		this.oldMap = ep.getOldMap();
@@ -67,5 +68,7 @@ public class EpisodeWithChildren {
 		this.pathbox = pathbox;
 		
 		this.depth = ep.episodeDepthFromNewMap();
+		
+		this.branchName = branchName;
 	}
 }

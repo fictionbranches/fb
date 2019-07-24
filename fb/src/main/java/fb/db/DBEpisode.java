@@ -60,6 +60,8 @@ public class DBEpisode {
 	private int childCount;
 	
 	private long viewCount;
+	
+	private String branchName;
 		
 	@ManyToOne
 	private DBUser author;
@@ -192,6 +194,14 @@ public class DBEpisode {
 
 	public void setMod(DBModEpisode mod) {
 		this.mod = mod;
+	}
+
+	public String getBranchName() {
+		return branchName;
+	}
+
+	public void setBranchName(String branchName) {
+		this.branchName = branchName;
 	}
 
 	public String toString() {

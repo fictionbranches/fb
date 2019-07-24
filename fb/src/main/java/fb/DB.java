@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -843,6 +844,20 @@ public class DB {
 			DBUser user = null;
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("Not found: " + generatedId);
+
+			String branchName = ep.getBranchName();
+			if (branchName == null) {
+				LOGGER.info("Find branchName of " + ep.getGeneratedId() + " " + ep.getLink());
+				long start = System.nanoTime();
+				String where = DB.newMapToIdList(ep.getNewMap())
+						.map(id->"ep.generatedId="+id)
+						.collect(Collectors.joining(" or "));
+				String q = "from DBEpisode ep where ( " + where + " ) and ep.branchName is not null and length(ep.branchName)>0 order by ep.date desc";
+				List<DBEpisode> list = session.createQuery(q, DBEpisode.class).setMaxResults(1).list();
+				if (!list.isEmpty()) branchName = list.get(0).getBranchName();
+				long stop = System.nanoTime();
+				LOGGER.info("branchName for " + ep.getGeneratedId() + " took " + ((double)(stop-start))/1000000000.0 + " secs");
+			}
 			
 			long visitorCount = (Long)session.createQuery("select count(*) from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId()).uniqueResult();
 			long upvotes = (Long)session.createQuery("select count(*) from DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId()).uniqueResult();
@@ -925,7 +940,7 @@ public class DB {
 					.stream().map(FlatEpisode::new)
 					.collect(Collectors.toList());
 			
-			return new EpisodeWithChildren(ep, visitorCount, upvotes, user, canUpvote, children, comments, pathbox);
+			return new EpisodeWithChildren(ep, visitorCount, upvotes, user, canUpvote, children, comments, pathbox, branchName);
 		} finally {
 			closeSession(session);
 		}
@@ -1350,12 +1365,17 @@ public class DB {
 	}
 	
 	public static Stream<Long> newMapToIdList(String newMap) {
-		String[] arr = newMap.substring(1,newMap.length()).split(""+EP_INFIX);
+		
+		return Pattern.compile(Pattern.quote(String.valueOf(EP_INFIX)))
+				.splitAsStream(newMap.substring(1,newMap.length()))
+				.map(Long::parseLong);
+		
+		/*String[] arr = newMap.substring(1,newMap.length()).split(String.valueOf(EP_INFIX));
 		ArrayList<Long> list = new ArrayList<>();
 		for (String id : arr) {
 			list.add(Long.parseLong(id));
 		}
-		return list.stream(); // TODO
+		return list.stream(); */
 	}
 	
 	public static FlatEpisode[] getRoots() {
