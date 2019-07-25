@@ -3090,13 +3090,19 @@ public class DB {
 		}
 	}
 	
-	public static String padTitleFromId(long padID) throws DBException {
+	/**
+	 * 
+	 * @param padID
+	 * @return {groupID, padTitle}
+	 * @throws DBException
+	 */
+	public static String[] padInfoFromId(long padID) throws DBException {
 		Session session = openSession();
 		try {
 			
 			DBEtherpad pad = session.get(DBEtherpad.class, padID);
 			if (pad == null) throw new DBException("Not found: " + padID);
-			return pad.getName();
+			return new String[] {pad.getGroupID(),pad.getName()};
 			 
 		} finally {
 			closeSession(session);

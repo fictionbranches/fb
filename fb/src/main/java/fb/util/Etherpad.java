@@ -13,14 +13,9 @@ public class Etherpad {
 	
 	private static final String API_KEY = "039e067923f66bb6606e71470ee75196257d8eeb35fdeb49a069dfe51b7d2240"; // TODO add etherpad api key to database
 	
-	public static final String DOMAIN = "pad.localfbtest.example.net";
+	public static final String DOMAIN = "pad.localfbtest.carolinaphoenix.net";
 	
-	private static final EPLiteClient client = new EPLiteClient("https://"+DOMAIN, API_KEY); // TODO add etherpad URI to database
-	
-	
-	public static void main(String[] args) throws Exception {
-
-	}
+	private static final EPLiteClient epClient = new EPLiteClient("https://"+DOMAIN, API_KEY); // TODO add etherpad URI to database
 	
 	/**
 	 * Create a new etherpad authorID
@@ -32,9 +27,9 @@ public class Etherpad {
 	public static String createAuthor(String username, String authorName) throws EtherpadException {
 		try {
 			System.out.println("Creating author for " + username);
-			return getFrom(client.createAuthorIfNotExistsFor(username, authorName), "authorID");
+			return getFrom(epClient.createAuthorIfNotExistsFor(username, authorName), "authorID");
 		} catch (Exception e) {
-			throw EtherpadException.badResponse();
+			throw new EtherpadException(e);
 		}
 	}
 	
@@ -48,11 +43,11 @@ public class Etherpad {
 	public static String createSession(String groupID, String authorID) throws EtherpadException {
 		try {
 			long weekFromNow = System.currentTimeMillis() / 1000 + 604800;
-			String sessionID = getFrom(client.createSession(groupID, authorID, weekFromNow), "sessionID");
+			String sessionID = getFrom(epClient.createSession(groupID, authorID, weekFromNow), "sessionID");
 			System.out.println("Creating session for " + groupID + " " + authorID + " " + sessionID);
 			return sessionID;
 		} catch (Exception e) {
-			throw EtherpadException.badResponse();
+			throw new EtherpadException(e);
 		}
 	}
 	
@@ -64,12 +59,12 @@ public class Etherpad {
 	 */
 	public static String createPad(String padID) throws EtherpadException {
 		try {
-			String groupID = getFrom(client.createGroupIfNotExistsFor(padID), "groupID");
+			String groupID = getFrom(epClient.createGroupIfNotExistsFor(padID), "groupID");
 			System.out.println("Creating pad " + padID + " with groupID " + groupID);
-			client.createGroupPad(groupID, padID);
+			epClient.createGroupPad(groupID, padID);
 			return groupID;
 		} catch (Exception e) {
-			throw EtherpadException.badResponse();
+			throw new EtherpadException(e);
 		}
 		
 	}
@@ -88,13 +83,14 @@ public class Etherpad {
 			return result;
 		} catch (Exception e) {
 			LOGGER.error("Etherpad error: " + e.getMessage(), e);
-			throw EtherpadException.badResponse();
+			throw new EtherpadException(e);
 		}
 	}
 	
 	public static class EtherpadException extends Exception {
 		private static final long serialVersionUID = 2531439648236175456L;
 		private EtherpadException(String message) {super(message);}
+		private EtherpadException(Throwable cause) {super(cause);}
 		private static EtherpadException badResponse(){return new EtherpadException("Bad response from etherpad backend");}
 	}
 	

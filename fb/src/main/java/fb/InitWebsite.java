@@ -56,6 +56,7 @@ public class InitWebsite {
 	public static final String BASE_DIR = "fbstuff";
 	
 	public static final boolean DEV_MODE = new File(BASE_DIR + "/dev_mode").exists();
+	public static final boolean DISCORD_QUIET_MODE = new File(BASE_DIR + "/discord_quiet").exists();
 	
 	/**
 	 * set this value to the default (will revert to this value after restarts)

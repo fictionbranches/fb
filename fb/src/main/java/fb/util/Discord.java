@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 
+import fb.InitWebsite;
 import fb.objects.FlatEpisode;
 
 public class Discord {
@@ -22,6 +23,7 @@ public class Discord {
 	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	public static synchronized void notifyError(String message) {
+		if (InitWebsite.DISCORD_QUIET_MODE) return;
 		try {
 			if (message.length() > 2000) message = message.substring(0,2000);
 			URL url = new URL("https://discordapp.com/api/channels/" + Strings.getDISCORD_ERROR_CHANNEL() + "/messages");
@@ -54,6 +56,7 @@ public class Discord {
 	}
 	
 	public static void notifyHook(FlatEpisode ep, FlatEpisode root) {
+		if (InitWebsite.DISCORD_QUIET_MODE) return;
 		StringBuilder sb = new StringBuilder();
 		try (Scanner scan = new Scanner(root.link)) {
 			while (scan.hasNext()) {

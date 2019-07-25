@@ -720,13 +720,16 @@ public class AccountStuff {
 		}
 		
 		String padName;
+		String groupID;
 		try {
-			padName = DB.padTitleFromId(padID);
+			String[] padInfo = DB.padInfoFromId(padID);
+			padName = padInfo[1];
+			groupID = padInfo[0];
 		} catch (DBException e) {
 			return Response.ok(Strings.getFile("generic.html",fu).replace("$EXTRA", e.getMessage())).build();
 		}
 		
-		String s = "<h1>"+StringUtils.escape(padName)+"</h1>\n<iframe src='https://"+Etherpad.DOMAIN+"/p/"+padID+"' width=600 height=400></iframe>";
+		String s = "<h1>"+StringUtils.escape(padName)+"</h1>\n<iframe src='https://"+Etherpad.DOMAIN+"/p/"+groupID+"$"+padID+"' width=600 height=400></iframe>";
 		return Response.ok(Strings.getFile("generic.html",fu).replace("$EXTRA", s)).build();
 		
 	}
@@ -735,9 +738,12 @@ public class AccountStuff {
 	@Path("etherpadcookie/{padID}/{sessionID}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response fbetherpadcookie(@PathParam("padID") String padID, @PathParam("sessionID") String sessionID, @CookieParam("sessionID") Cookie sessionIDs) {
-		HashSet<String> ids = new HashSet<>(Arrays.asList(sessionIDs.getValue().split(Pattern.quote(","))));
+		HashSet<String> ids = new HashSet<>();
+		if (sessionIDs != null && sessionIDs.getValue()!=null && sessionIDs.getValue().length()>0) {
+			ids.addAll(Arrays.asList(sessionIDs.getValue().split(Pattern.quote(","))));
+		}
 		ids.add(sessionID);
 		String cookie = ids.stream().collect(Collectors.joining(","));
-		return Response.seeOther(GetStuff.createURI(Strings.getDOMAIN(),"/fb/etherpad/" + padID)).cookie(GetStuff.newCookie("sessionID", cookie, Etherpad.DOMAIN)).build();
+		return Response.seeOther(GetStuff.createURI(Strings.getDOMAIN(),"/fb/etherpad/" + padID)).header("Set-Cookie", "sessionID="+cookie+"; Path=/; Secure").build();
 	}
 }
