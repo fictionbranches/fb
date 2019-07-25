@@ -11,11 +11,14 @@ public class Etherpad {
 	
 	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
-	private static final String API_KEY = "039e067923f66bb6606e71470ee75196257d8eeb35fdeb49a069dfe51b7d2240"; // TODO add etherpad api key to database
-	
-	public static final String DOMAIN = "pad.localfbtest.carolinaphoenix.net";
-	
-	private static final EPLiteClient epClient = new EPLiteClient("https://"+DOMAIN, API_KEY); // TODO add etherpad URI to database
+	private static final EPLiteClient epClient;
+	static {
+		if (Strings.getETHERPAD_DOMAIN().length()>0 && Strings.getETHERPAD_APIKEY().length()>0) {
+			epClient = new EPLiteClient("https://"+Strings.getETHERPAD_DOMAIN(), Strings.getETHERPAD_APIKEY());
+		} else {
+			epClient = null;
+		}
+	}
 	
 	/**
 	 * Create a new etherpad authorID
@@ -25,6 +28,7 @@ public class Etherpad {
 	 * @throws EtherpadException
 	 */
 	public static String createAuthor(String username, String authorName) throws EtherpadException {
+		if (epClient == null) throw EtherpadException.notImplemented();
 		try {
 			System.out.println("Creating author for " + username);
 			return getFrom(epClient.createAuthorIfNotExistsFor(username, authorName), "authorID");
@@ -43,8 +47,9 @@ public class Etherpad {
 	public static String createSession(String groupID, String authorID) throws EtherpadException {
 		try {
 			long weekFromNow = System.currentTimeMillis() / 1000 + 604800;
+			System.out.println("Creating session for " + groupID + " " + authorID);
 			String sessionID = getFrom(epClient.createSession(groupID, authorID, weekFromNow), "sessionID");
-			System.out.println("Creating session for " + groupID + " " + authorID + " " + sessionID);
+			System.out.println("Created session " + sessionID + " for " + groupID + " " + authorID);
 			return sessionID;
 		} catch (Exception e) {
 			throw new EtherpadException(e);
@@ -92,6 +97,7 @@ public class Etherpad {
 		private EtherpadException(String message) {super(message);}
 		private EtherpadException(Throwable cause) {super(cause);}
 		private static EtherpadException badResponse(){return new EtherpadException("Bad response from etherpad backend");}
+		private static EtherpadException notImplemented(){return new EtherpadException("Etherpad integration not implemented");}
 	}
 	
 }

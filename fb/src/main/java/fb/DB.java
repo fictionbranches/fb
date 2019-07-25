@@ -3112,6 +3112,24 @@ public class DB {
 	/**
 	 * 
 	 * @param username
+	 * @param padID
+	 * @return groupID of pad if user can access it, else null
+	 * @throws DBException
+	 */
+	public static String userCanAccessPad(String username, long padID) throws DBException {
+		Session session = openSession();
+		try {
+			DBEtherpad pad = session.get(DBEtherpad.class, padID);
+			if (pad == null) throw new DBException("Not found: " + padID);
+			return pad.getOwner().getId().equals(username)?pad.getGroupID():null; // TODO expand to shared pads
+		} finally {
+			closeSession(session);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param username
 	 * @return list of {padID, padName}
 	 * @throws DBException
 	 */

@@ -53,6 +53,8 @@ public class Strings {
 	private static String DISCORD_NEW_EPISODE_HOOK;
 	private static String DONATE_BUTTON;
 	private static String BACKEND_PORT;
+	private static String ETHERPAD_DOMAIN;
+	private static String ETHERPAD_APIKEY;
 
 	static {
 		r = new Random();
@@ -67,6 +69,14 @@ public class Strings {
 		Session session = DB.openSession();
 		try {
 			DBSiteSetting setting;
+			
+			setting = session.get(DBSiteSetting.class, "etherpad_domain");
+			if (setting != null) ETHERPAD_DOMAIN = setting.getValue();
+			else ETHERPAD_DOMAIN = "";
+			
+			setting = session.get(DBSiteSetting.class, "etherpad_apikey");
+			if (setting != null) ETHERPAD_APIKEY = setting.getValue();
+			else ETHERPAD_APIKEY = "";
 			
 			setting = session.get(DBSiteSetting.class, "donate_button");
 			if (setting != null) DONATE_BUTTON = setting.getValue();
@@ -116,6 +126,14 @@ public class Strings {
 		} finally {
 			DB.closeSession(session);
 		}
+	}
+	
+	public static String getETHERPAD_DOMAIN() {
+		return ETHERPAD_DOMAIN;
+	}
+	
+	public static String getETHERPAD_APIKEY() {
+		return ETHERPAD_APIKEY;
 	}
 	
 	public static String getDOMAIN() {

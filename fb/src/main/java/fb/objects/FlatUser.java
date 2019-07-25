@@ -24,6 +24,7 @@ public class FlatUser {
 	public final boolean childMail;
 	/*public final boolean authorSubSite;
 	public final boolean authorSubMail;*/ //mass mail
+	public final String etherpadID;
 	
 	/**
 	 * Construct from DBUser database object
@@ -45,5 +46,6 @@ public class FlatUser {
 		this.childMail = user.isChildMail();
 		/*this.authorSubSite = user.isAuthorSubSite();
 		this.authorSubMail = user.isAuthorSubMail();*/
+		this.etherpadID = user.getEtherpadID();
 	}
 }
