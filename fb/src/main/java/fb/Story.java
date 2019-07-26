@@ -585,7 +585,8 @@ public class Story {
 		return ret;
 	}
 	
-	public static String getCompleteHTML(Cookie token, long generatedId) {
+	public static String getCompleteHTML(Cookie token, long generatedId, Cookie fbjs) {
+		boolean parseMarkdown = fbjs==null || !"true".equals(fbjs.getValue());
 		List<FlatEpisode> path; 
 		try {
 			path = DB.getFullStory(generatedId);
@@ -596,7 +597,12 @@ public class Story {
 		for (FlatEpisode child : path) if (child != null){ 
 			sb.append("<h1><a href=/fb/story/" + child.generatedId + ">" + escape(child.title) + "</a></h1>");
 			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + escape(child.authorName) + "</a> " + Dates.simpleDateFormat(child.date) + "</p>");
-			sb.append(formatBody(child.body) + "<hr/>\n");
+			sb.append("<div class="+(parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")+">" + (parseMarkdown?formatBody(child.body):escape(child.body)) + "</div><hr/>\n");
+/*=======
+			sb.append("<h1><a href=/fb/story/" + child.generatedId + ">" + Strings.escape(child.title) + "</a></h1>");
+			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + Strings.escape(child.authorName) + "</a> " + Dates.simpleDateFormat(child.date) + "</p>");
+			sb.append("<div class="+(parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")+">" + (parseMarkdown?formatBody(child.body):Strings.escape(child.body)) + "</div><hr/>\n");
+>>>>>>> refs/remotes/origin/master*/
 		}
 		
 		return Strings.getFileWithToken("completestory.html", token).replace("$TITLE", escape(path.get(0).title)).replace("$BODY", sb.toString());
@@ -737,7 +743,7 @@ public class Story {
 	 * @param id id of parent episode
 	 * @return HTML form
 	 */
-	public static String addForm(long parentId, Cookie token) {
+	public static String addForm(long parentId, Cookie token, Cookie fbjs) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -751,10 +757,12 @@ public class Story {
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + parentId);
 		}
+		boolean parseMarkdown = fbjs==null || !"true".equals(fbjs.getValue());
 		return Strings.getFile("addform.html", user)
+				.replace("$MARKDOWNSTATUS", parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")
 				.replace("$TITLE", parent.title)
 				.replace("$ID", parentId+"")
-				.replace("$OLDBODY",Story.formatBody(parent.body));
+				.replace("$OLDBODY",parseMarkdown?Story.formatBody(parent.body):escape(parent.body));
 	}
 	
 	/**

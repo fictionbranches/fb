@@ -44,9 +44,9 @@ public class AddStuff {
 	@GET
 	@Path("add/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response add(@Context UriInfo uriInfo, @PathParam("generatedId") long generatedId, @CookieParam("fbtoken") Cookie fbtoken) {
+	public Response add(@Context UriInfo uriInfo, @PathParam("generatedId") long generatedId, @CookieParam("fbtoken") Cookie fbtoken, @CookieParam("fbjs") Cookie fbjs) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
-		return Response.ok(Story.addForm(generatedId, fbtoken)).build();
+		return Response.ok(Story.addForm(generatedId, fbtoken, fbjs)).build();
 	}
 
 	/**

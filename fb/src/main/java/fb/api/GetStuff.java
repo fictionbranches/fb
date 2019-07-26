@@ -178,7 +178,7 @@ public class GetStuff {
 			break;
 		}
 		
-		boolean parseMarkdown = fbjs==null || !fbjs.getValue().equals("true");
+		boolean parseMarkdown = fbjs==null || !"true".equals(fbjs.getValue());
 		return Response.ok(Story.getHTML(generatedId, sortNum, advancedChildren, fbtoken, parseMarkdown)).build();
 	}
 	
@@ -297,10 +297,10 @@ public class GetStuff {
 	@GET
 	@Path("complete/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response getcomplete(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId) {
+	public Response getcomplete(@CookieParam("fbtoken") Cookie fbtoken, @CookieParam("fbjs") Cookie fbjs, @PathParam("generatedId") long generatedId) {
 		if (!Accounts.isLoggedIn(fbtoken)) return Response.ok(Strings.getFileWithToken("generic.html",fbtoken).replace("$EXTRA", "You must be logged in to do that")).build();
 		
-		String ret = Story.getCompleteHTML(fbtoken, generatedId);
+		String ret = Story.getCompleteHTML(fbtoken, generatedId, fbjs);
 		return Response.ok(ret).build();
 	}
 	
