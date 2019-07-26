@@ -15,9 +15,11 @@ $STYLE
 <meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
 <script  src="/static/formatting0.js"></script>
 <script src=/static/all_pages5.js></script>
-<script src=/static/markdown-it.js></script></head>
-<script src=/static/markdown.js></script></head>
-<script src=/static/addform2.js></script></head>
+<script src=/static/markdown-it.js></script>
+<script src=/static/markdown.js></script>
+<script src=/static/markdown_html.js></script>
+<script src=/static/addform2.js></script>
+</head>
 <body>
 
 <div class="topcorner">
@@ -47,7 +49,7 @@ $ACCOUNT
 	</form>
 	<br/><hr/><br/>
 	<h3>Previous episode</h3><br/>
-	$OLDBODY
+	<div class="entry-content fbepisodebody $MARKDOWNSTATUS">$OLDBODY</div>
 	<br/><hr/>	
 
 <br/><br/><br/>
