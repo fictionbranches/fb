@@ -259,11 +259,13 @@ public class Accounts {
 		String date = (erl.user.date==null)?"the beforefore times":Dates.outputDateFormat(erl.user.date);
 		
 		if (user != null && !user.id.equals(erl.user.id)) {
-			if (result.isSubscribed) {
-				moderator = "<p><a href=/fb/unsubauthor/" + erl.user.id + ">Unsubscribe from this author</a></p>" + moderator;
-			} else {
-				moderator = "<p><a href=/fb/subauthor/" + erl.user.id + ">Subscribe to this author</a></p>" + moderator;
+			String prefix = "<p><a href=/fb/"+(result.isSubscribed?"un":"")+"subauthor/" + erl.user.id + ">"+(result.isSubscribed?"Unsubscribe from":"Subscribe to")+" this author</a></p>\n";
+			
+			if (result.padsOwnedByRequestor>0 && !user.id.equals(erl.user.id)) {
+				prefix += "<p><a href=/fb/etherpadinvites/"+erl.user.id+">Invite author to etherpad</a></p>\n";
 			}
+			
+			moderator = prefix + moderator;
 		}
 		
 		if (page > 1) pageCount += "<a href=\"/fb/user/" + erl.user.id + "/" + (page-1) + "\">Previous</a> ";

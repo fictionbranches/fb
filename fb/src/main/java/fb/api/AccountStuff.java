@@ -771,4 +771,38 @@ public class AccountStuff {
 		String cookie = ids.stream().collect(Collectors.joining(","));
 		return Response.seeOther(GetStuff.createURI(Strings.getDOMAIN(),"/fb/etherpad/" + padID)).header("Set-Cookie", "sessionID="+cookie+"; Path=/; Secure").build();
 	}
+	
+	@GET
+	@Path("etherpadinvites/{username}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response etherpadinvites(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("username") String username) {
+		FlatUser fu;
+		try {
+			fu = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		}
+		
+		
+		
+		StringBuilder sb = new StringBuilder("<h1>Invite to etherpad</h1>\n");
+		sb.append("<p><form action= \"/fb/invitetopad\" method=\"post\">\n" + 
+				"Create new pad: <input type= \"text\" name= \"name\" size=\"100\" placeholder=\"pad name\"/> \n" + 
+				"<input type= \"submit\" value= \"Create\"/></form>\n");
+		
+		List<String[]> pads;
+		try {
+			pads = DB.listPads(fu.id);
+		} catch (DBException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		}
+		if (!pads.isEmpty()) {
+			sb.append("<h2>Pads you own</h2>\n<p>\n");
+			for (String[] pad : pads) {
+				sb.append("<a href=/fb/launchpad/" + pad[0] + ">" + StringUtils.escape(pad[1]) + "</a><br/>\n");
+			}
+			sb.append("\n</p>\n");
+		}
+		return Response.ok(Strings.getFile("generic.html", fu).replace("$EXTRA", sb.toString())).build();
+	}
 }

@@ -1572,6 +1572,7 @@ public class DB {
 	public static UserProfileResult getUserProfile(String userId, int page, FlatUser requestor) throws DBException {
 		page-=1;
 		userId = userId.toLowerCase();
+		
 		Session session = openSession();
 		try {
 			DBUser user = session.get(DBUser.class, userId);
@@ -1585,12 +1586,16 @@ public class DB {
 					.collect(Collectors.toCollection(ArrayList::new));
 			boolean hasNext = list.size() > PAGE_SIZE;
 			boolean isSubscribed = false;
+			long padsOwnedByRequestor = 0;
 			if (requestor != null) {
 				String q2 = "from DBAuthorSubscription ep where ep.author.id='"+user.getId()+"' and ep.subscriber.id='"+requestor.id+"'";
 				isSubscribed = session.createQuery(q2, DBAuthorSubscription.class).uniqueResultOptional().isPresent();
+				
+				String q3 = "select count(*) from DBEtherpad pad where pad.owner.id='"+requestor.id+"'";
+				padsOwnedByRequestor = (Long)session.createQuery(q3).uniqueResult();
 			}
 			EpisodeResultList erl = new EpisodeResultList(new FlatUser(user), hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
-			return new UserProfileResult(erl, isSubscribed);
+			return new UserProfileResult(erl, isSubscribed, padsOwnedByRequestor);
 		} finally {
 			closeSession(session);
 		}
@@ -1599,9 +1604,11 @@ public class DB {
 	public static class UserProfileResult {
 		public final EpisodeResultList episodeResultList;
 		public final boolean isSubscribed;
-		public UserProfileResult(EpisodeResultList erl, boolean isSubscribed) {
+		public final long padsOwnedByRequestor;
+		public UserProfileResult(EpisodeResultList erl, boolean isSubscribed, long padsOwnedByRequestor) {
 			this.isSubscribed = isSubscribed;
 			this.episodeResultList = erl;
+			this.padsOwnedByRequestor = padsOwnedByRequestor;
 		}
 	}
 	
@@ -3139,7 +3146,7 @@ public class DB {
 			DBUser user = DB.getUserById(session, username);
 			if (user == null) throw new DBException("Not found: " + username);
 			
-			return session.createQuery("from DBEtherpad pad where pad.owner.id='" + user.getId() + "'", DBEtherpad.class)
+			return session.createQuery("from DBEtherpad pad where pad.owner.id='" + user.getId() + "' order by pad.date asc", DBEtherpad.class)
 					.stream()
 					.map(pad->new String[] {String.valueOf(pad.getId()),pad.getName()})
 					.collect(Collectors.toList());
