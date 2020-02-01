@@ -15,15 +15,6 @@ div.fbepisodecomment img {
 	max-height: 300px;
 }
 
-.fbepisodebody {
-	width: 90%;
-}
-@media (min-width:600px)  { 
-	.fbepisodebody {
-		width: 540px;
-	}
-}
-
 div.fbcomment {
 	margin: 5px;
 	padding: 5px;
@@ -119,4 +110,7 @@ img.avatarsmall{
 }
 .noborder{
 	border: none;
+}
+.onehundred{
+  width: 100%;
 }

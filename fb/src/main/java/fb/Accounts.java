@@ -524,6 +524,63 @@ public class Accounts {
 		return Strings.getFile("generic.html",null).replace("$EXTRA", "Check your email (and your spam folder) for a confirmation email from noreply@fictionbranches.net");
 	}
 	
+	public static String useraccountform(FlatUser user, String error) {
+		final String checked = "checked";
+		
+		final String widthHTML = 
+				"<p>Select a body text width:</p>\n" + 
+				"<form action=\"/fb/changebodytextwidth\" method=\"post\">\n" + 
+				"  <input type=\"radio\" name=\"bodytextwidth\" value=\"540\" "+(user.bodyTextWidth==540?"checked":"")+" /> Narrow (600px)<br/>\n" + 
+				"  <input type=\"radio\" name=\"bodytextwidth\" value=\"900\" "+(user.bodyTextWidth==900?"checked":"")+" /> Medium (900px)<br/>\n" + 
+				"  <input type=\"radio\" name=\"bodytextwidth\" value=\"1440\" "+(user.bodyTextWidth==1440?"checked":"")+" /> Wide (1600px)<br/>\n" + 
+				"  <input type=\"radio\" name=\"bodytextwidth\" value=\"0\" "+(user.bodyTextWidth==0?"checked":"")+" /> Unconstrained<br/>\n" + 
+				"  <input type= \"submit\" value= \"Submit\"/>\n" + 
+				"</form>\n" + 
+				"<p>(Text will fit to window if window is narrower than selection.)</p>"
+				;
+		
+		return Strings.getFile("useraccount.html", user)
+				.replace("$COMMENT_SITE_CHECKED", user.commentSite?checked:"")
+				.replace("$COMMENT_MAIL_CHECKED", user.commentMail?checked:"")
+				.replace("$CHILD_SITE_CHECKED", user.childSite?checked:"")
+				.replace("$CHILD_MAIL_CHECKED", user.childMail?checked:"")
+				.replace("$ID", user.id)
+				.replace("$AUTHORNAME", Strings.escape(user.author))
+				.replace("$THEMES", Strings.getSelectThemes())
+				.replace("$BIOBODY", Strings.escape(user.bio))
+				.replace("$AVATARURL", Strings.escape(user.avatar))
+				.replace("$EXTRA", error==null||error.length()==0?"":"ERROR: " + error)
+				.replace("$BODYTEXTWIDTHFORM", widthHTML)
+				;
+	}
+	
+	/**
+	 * Changes the author name of the currently logged in user
+	 * @param fbtoken
+	 * @param author new author name
+	 * @throws FBLoginException if user is not logged in, or is root
+	 */
+	public static void changeBodyTextWidth(Cookie fbtoken, int bodyTextWidth) throws FBLoginException {
+		if (fbtoken == null) throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "ERROR: You must be logged in to do that"));
+		UserSession sesh = active.get(fbtoken.getValue());
+		if (sesh == null) throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "You must be logged in to do that"));
+		FlatUser user;
+		try {
+			user = DB.getFlatUser(sesh.userID);
+		} catch (DBException e) {
+			throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "Invalid user"));
+		}
+		if (user.id.equals(DB.ROOT_ID)) throw new FBLoginException(useraccountform(user, "ERROR: This user account may not be modified"));
+		
+		if (bodyTextWidth < 0) bodyTextWidth = 0;
+		
+		try {
+			DB.changeBodyTextWidth(user.id, bodyTextWidth);
+		} catch (DBException e) {
+			throw new FBLoginException(Strings.getFile("generic.html", user).replace("$EXTRA", "Invalid user"));
+		}
+	}
+	
 	/**
 	 * Changes the author name of the currently logged in user
 	 * @param fbtoken
@@ -531,22 +588,22 @@ public class Accounts {
 	 * @throws FBLoginException if user is not logged in, or is root
 	 */
 	public static void changeAuthor(Cookie fbtoken, String author) throws FBLoginException {
-		if (fbtoken == null) throw new FBLoginException(Strings.getFile("changeauthorform.html", null).replace("$EXTRA", "You must be logged in to do that"));
+		if (fbtoken == null) throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "ERROR: You must be logged in to do that"));
 		UserSession sesh = active.get(fbtoken.getValue());
-		if (sesh == null) throw new FBLoginException(Strings.getFile("changeauthorform.html", null).replace("$EXTRA", "You must be logged in to do that"));
+		if (sesh == null) throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "You must be logged in to do that"));
 		FlatUser user;
 		try {
 			user = DB.getFlatUser(sesh.userID);
 		} catch (DBException e) {
-			throw new FBLoginException(Strings.getFile("changeauthorform.html", null).replace("$EXTRA", "Invalid user"));
+			throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "Invalid user"));
 		}
-		if (user.id.equals(DB.ROOT_ID)) throw new FBLoginException(Strings.getFile("changeauthorform.html", user).replace("$EXTRA", "This user account may not be modified"));
-		if (author.length() == 0) throw new FBLoginException(Strings.getFile("changeauthorform.html", user).replace("$EXTRA", "Author cannot be empty"));
-		if (author.length() > Accounts.AUTHOR_LENGTH_LIMIT) throw new FBLoginException(Strings.getFile("changeauthorform.html", user).replace("$EXTRA", "Author cannot be longer than "+Accounts.AUTHOR_LENGTH_LIMIT+" characters"));
+		if (user.id.equals(DB.ROOT_ID)) throw new FBLoginException(useraccountform(user, "ERROR: This user account may not be modified"));
+		if (author.length() == 0) throw new FBLoginException(useraccountform(user, "ERROR: Author cannot be empty"));
+		if (author.length() > Accounts.AUTHOR_LENGTH_LIMIT) throw new FBLoginException(useraccountform(user, "ERROR: Author cannot be longer than "+Accounts.AUTHOR_LENGTH_LIMIT+" characters"));
 		try {
 			DB.changeAuthorName(user.id, author);
 		} catch (DBException e) {
-			throw new FBLoginException(Strings.getFile("changeauthorform.html", user).replace("$EXTRA", "Invalid user"));
+			throw new FBLoginException(Strings.getFile("generic.html", user).replace("$EXTRA", "Invalid user"));
 		}
 	}
 	
@@ -557,13 +614,13 @@ public class Accounts {
 	 * @throws FBLoginException if user is not logged in, or is root
 	 */
 	public static void changeTheme(Cookie fbtoken, String theme) throws FBLoginException {
-		if (fbtoken == null) throw new FBLoginException(Strings.getFile("changethemeform.html", null).replace("$EXTRA", "You must be logged in to do that"));
+		if (fbtoken == null) throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "You must be logged in to do that"));
 		UserSession sesh = active.get(fbtoken.getValue());
-		if (sesh == null) throw new FBLoginException(Strings.getFile("changethemeform.html", null).replace("$EXTRA", "You must be logged in to do that"));
+		if (sesh == null) throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "You must be logged in to do that"));
 		try {
 			DB.changeTheme(sesh.userID, theme);
 		} catch (DBException e) {
-			throw new FBLoginException(Strings.getFile("changethemeform.html", null).replace("$EXTRA", "Invalid user"));
+			throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "Invalid user"));
 		}
 	}
 	
@@ -574,14 +631,14 @@ public class Accounts {
 	 * @throws FBLoginException if user is not logged in, or is root, or bio is incorrect
 	 */
 	public static void changeBio(Cookie fbtoken, String bio) throws FBLoginException {
-		if (fbtoken == null) throw new FBLoginException(Strings.getFile("changebioform.html", null).replace("$EXTRA", "You must be logged in to do that"));
+		if (fbtoken == null) throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "You must be logged in to do that"));
 		UserSession sesh = active.get(fbtoken.getValue());
-		if (sesh == null) throw new FBLoginException(Strings.getFile("changebioform.html", null).replace("$EXTRA", "You must be logged in to do that"));
+		if (sesh == null) throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "You must be logged in to do that"));
 		FlatUser user;
 		try {
 			user = DB.getFlatUser(sesh.userID);
 		} catch (DBException e) {
-			throw new FBLoginException(Strings.getFile("changebioform.html", null).replace("$EXTRA", "Invalid user"));
+			throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "Invalid user"));
 		}
 		
 		// Check new bio for correctness
@@ -595,12 +652,12 @@ public class Accounts {
 			for (String s : list) errors.append("\"" + s + "\"");
 			errors.append("<br/>\n");
 		}
-		if (errors.length() > 0) throw new FBLoginException(Strings.getFile("changebioform.html", user).replace("$EXTRA", errors.toString()));
+		if (errors.length() > 0) throw new FBLoginException(useraccountform(user, errors.toString()));
 		
 		try {
 			DB.changeBio(user.id, bio);
 		} catch (DBException e) {
-			throw new FBLoginException(Strings.getFile("changebioform.html", user).replace("$EXTRA", "Invalid user"));
+			throw new FBLoginException(Strings.getFile("generic.html", user).replace("$EXTRA", "Invalid user"));
 		}
 	}
 	
@@ -611,13 +668,13 @@ public class Accounts {
 	 * @throws FBLoginException if user is not logged in, or is root, or bio is incorrect
 	 */
 	public static void changeAvatar(Cookie fbtoken, String avatar) throws FBLoginException {
-		if (fbtoken == null) throw new FBLoginException(Strings.getFile("changeavatarform.html", null).replace("$EXTRA", "You must be logged in to do that"));
+		if (fbtoken == null) throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "You must be logged in to do that"));
 		UserSession sesh = active.get(fbtoken.getValue());
-		if (sesh == null) throw new FBLoginException(Strings.getFile("changeavatarform.html", null).replace("$EXTRA", "You must be logged in to do that"));
+		if (sesh == null) throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "You must be logged in to do that"));
 		try {
 			DB.changeAvatar(sesh.userID, avatar);
 		} catch (DBException e) {
-			throw new FBLoginException(Strings.getFile("changeavatarform.html", null).replace("$EXTRA", "Invalid user"));
+			throw new FBLoginException(Strings.getFile("generic.html", null).replace("$EXTRA", "Invalid user"));
 		}
 	}
 		

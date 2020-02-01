@@ -177,37 +177,28 @@ public class AccountStuff {
 		} catch (FBLoginException e) {
 			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
 		}
-		
-		final String checked = "checked";
-		
-		return Response.ok(Strings.getFile("useraccount.html", user)
-				.replace("$COMMENT_SITE_CHECKED", user.commentSite?checked:"")
-				.replace("$COMMENT_MAIL_CHECKED", user.commentMail?checked:"")
-				.replace("$CHILD_SITE_CHECKED", user.childSite?checked:"")
-				.replace("$CHILD_MAIL_CHECKED", user.childMail?checked:"")
-				.replace("$ID", user.id)).build();
+				
+		return Response.ok(Accounts.useraccountform(user, null)).build();
 	}
 	
-	@GET
-	@Path("changeauthor")
+	@POST
+	@Path("changebodytextwidth")
 	@Produces(MediaType.TEXT_HTML)
-	public Response changeauthor(@CookieParam("fbtoken") Cookie fbtoken) {
+	public Response changebodytextwidth(@FormParam("bodytextwidth") int bodytextwidth, @CookieParam("fbtoken") Cookie fbtoken) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
-		
-		FlatUser user;
+
 		try {
-			user = Accounts.getFlatUser(fbtoken);
+			Accounts.changeBodyTextWidth(fbtoken, bodytextwidth);
 		} catch (FBLoginException e) {
-			user = null;
+			return Response.ok(e.getMessage()).build();  //failed, try again
 		}
-		if (user == null) return Response.ok("You must be logged in to do that").build();
-		return Response.ok(Strings.getFile("changeauthorform.html", user).replace("$EXTRA", "")).build();
+		return Response.seeOther(GetStuff.createURI("/fb/useraccount")).build(); //redirect on success
 	}
 	
 	@POST
 	@Path("changeauthorpost")
 	@Produces(MediaType.TEXT_HTML)
-	public Response changeauthorpost(@FormParam("author") String author, @CookieParam("fbtoken") Cookie fbtoken, @FormParam("g-recaptcha-response") String google) {
+	public Response changeauthorpost(@FormParam("author") String author, @CookieParam("fbtoken") Cookie fbtoken) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 
 		try {
@@ -216,23 +207,6 @@ public class AccountStuff {
 			return Response.ok(e.getMessage()).build();  //failed, try again
 		}
 		return Response.seeOther(GetStuff.createURI("/fb/useraccount")).build(); //redirect on success
-	}
-	
-	@GET
-	@Path("changetheme")
-	@Produces(MediaType.TEXT_HTML)
-	public Response changetheme(@CookieParam("fbtoken") Cookie fbtoken) {
-		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
-		
-		FlatUser user;
-		try {
-			user = Accounts.getFlatUser(fbtoken);
-		} catch (FBLoginException e) {
-			user = null;
-		}
-		
-		if (user == null) return Response.ok("You must be logged in to do that").build();
-		return Response.ok(Strings.getFile("changethemeform.html", user).replace("$EXTRA", "").replace("$THEMES", Strings.getSelectThemes())).build();
 	}
 	
 	@POST
@@ -249,26 +223,6 @@ public class AccountStuff {
 		return Response.seeOther(GetStuff.createURI("/fb/useraccount")).build(); //redirect on success
 	}
 	
-	@GET
-	@Path("changebio")
-	@Produces(MediaType.TEXT_HTML)
-	public Response changebio(@CookieParam("fbtoken") Cookie fbtoken) {
-		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
-		
-		FlatUser user;
-		try {
-			user = Accounts.getFlatUser(fbtoken);
-		} catch (FBLoginException e) {
-			user = null;
-		}
-		
-		if (user == null) return Response.ok("You must be logged in to do that").build();
-
-		String bio = user.bio;
-
-		return Response.ok(Strings.getFile("changebioform.html", user).replace("$EXTRA", "").replace("$BODY", bio)).build();
-	}
-	
 	@POST
 	@Path("changebiopost")
 	@Produces(MediaType.TEXT_HTML)
@@ -281,24 +235,6 @@ public class AccountStuff {
 			return Response.ok(e.getMessage()).build();  //failed, try again
 		}
 		return Response.seeOther(GetStuff.createURI("/fb/useraccount")).build(); //redirect on success
-	}
-	
-	@GET
-	@Path("changeavatar")
-	@Produces(MediaType.TEXT_HTML)
-	public Response changeavatar(@CookieParam("fbtoken") Cookie fbtoken) {
-		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
-		
-		FlatUser user;
-		try {
-			user = Accounts.getFlatUser(fbtoken);
-		} catch (FBLoginException e) {
-			user = null;
-		}
-		
-		if (user == null) return Response.ok("You must be logged in to do that").build();
-
-		return Response.ok(Strings.getFile("changeavatarform.html", user).replace("$EXTRA", "")).build();
 	}
 	
 	@POST

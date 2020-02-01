@@ -29,7 +29,6 @@ import fb.DB;
 import fb.InitWebsite;
 import fb.db.DBSiteSetting;
 import fb.objects.FlatUser;
-import fb.objects.Theme;
 
 public class Strings {
 	
@@ -170,12 +169,8 @@ public class Strings {
 		readSnippetsFile("snippets", "addform.html", fileMap);
 		readSnippetsFile("snippets", "adminform.html", fileMap);
 		readSnippetsFile("snippets", "announcements.md", fileMap);
-		readSnippetsFile("snippets", "changeauthorform.html", fileMap);
-		readSnippetsFile("snippets", "changeavatarform.html", fileMap);
-		readSnippetsFile("snippets", "changebioform.html", fileMap);
 		readSnippetsFile("snippets", "changeemailform.html", fileMap);
 		readSnippetsFile("snippets", "changepasswordform.html", fileMap);
-		readSnippetsFile("snippets", "changethemeform.html", fileMap);
 		readSnippetsFile("snippets", "commentflagform.html", fileMap);
 		readSnippetsFile("snippets", "completestory.html", fileMap);
 		readSnippetsFile("snippets", "confirmpasswordresetform.html", fileMap);
@@ -287,12 +282,64 @@ public class Strings {
 		return filesMap.get(name)
 				.replace("$DONATEBUTTON", Strings.getDONATE_BUTTON())
 				.replace("$ACCOUNT", account)
-				.replace("$STYLE", user==null?"":themeToCss(user.theme));
+				.replace("$STYLE", themeToCss(user));
 	}
 	
-	public static String themeToCss(Theme theme) {
-		if (theme == null) return "";
-		return "<style>" + theme.css + "</style>";
+	public static String themeToCss(FlatUser user) {
+		
+		final String base1 = 
+				".fbepisodebody {\n" + 
+				"	width: 90%;\n" + 
+				"	text-align: left;\n" + 
+				"}\n"
+				;
+		final String base2 = 
+				"@media (min-width: $BIGWIDTHpx)  { \n" + 
+				"	.fbepisodebody {\n" + 
+				"		width: $WIDTHpx;\n" + 
+				"	}\n" + 
+				"}\n"
+				;
+		
+		if (user == null) {
+			int width = 900;
+			return 
+					"<style>\n" + 
+					base1 + 
+					base2
+					.replace("$BIGWIDTH", ((int)(width/0.9))+"")
+					.replace("$WIDTH", width+"")
+					.replace("$THEME", "")
+					+"</style>\n"
+					;
+		}
+		
+		String theme;
+		if (user.theme == null) theme = "";
+		else theme = user.theme.css;
+		if (theme == null) theme = "";
+		
+		int width = user.bodyTextWidth;
+		
+		if (width <= 0) return 
+				"<style>\n" + 
+				theme + "\n" + 
+				base1
+				+"</style>\n"
+				;
+		
+		if (width < 99) width = 99;
+		
+		return 
+				"<style>\n" + 
+				theme + "\n" + 
+				base1 + 
+				base2
+				.replace("$BIGWIDTH", ((int)(width/0.9))+"")
+				.replace("$WIDTH", width+"")
+				.replace("$THEME", "")
+				+"</style>\n"
+				;
 	}
 	
 	public static String readTextFile(String path) {

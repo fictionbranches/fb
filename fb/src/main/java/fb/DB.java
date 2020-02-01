@@ -1326,6 +1326,31 @@ public class DB {
 	 * @param newAuthor new author name
 	 * @throws DBException if id not found
 	 */
+	public static void changeBodyTextWidth(String id, int newBodyTextWidth) throws DBException {
+		Session session = openSession();
+		try {
+			DBUser user = getUserById(session, id);
+			if (user == null) throw new DBException("User id does not exist");
+			user.setBodyTextWidth(newBodyTextWidth);
+			try {
+				session.beginTransaction();
+				session.merge(user);
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+				throw new DBException("Database error");
+			}
+		} finally {
+			closeSession(session);
+		}
+	}
+	
+	/**
+	 * Change a user's author name
+	 * @param id id of user
+	 * @param newAuthor new author name
+	 * @throws DBException if id not found
+	 */
 	public static void changeAuthorName(String id, String newAuthor) throws DBException {
 		Session session = openSession();
 		try {

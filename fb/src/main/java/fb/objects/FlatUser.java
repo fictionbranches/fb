@@ -23,6 +23,8 @@ public class FlatUser {
 	public final boolean childSite;
 	public final boolean childMail;
 	
+	public final int bodyTextWidth;
+	
 	/**
 	 * Construct from DBUser database object
 	 * @param user
@@ -41,5 +43,6 @@ public class FlatUser {
 		this.commentMail = user.isCommentMail();
 		this.childSite = user.isChildSite();
 		this.childMail = user.isChildMail();
+		this.bodyTextWidth = user.getBodyTextWidth();
 	}
 }

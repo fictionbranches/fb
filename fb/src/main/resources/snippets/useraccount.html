@@ -2,7 +2,7 @@
 <head> 
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 <title>Fiction Branches</title>
-<link rel="stylesheet" href="/static/css/base19.css">
+<link rel="stylesheet" href="/static/css/base20.css">
 $STYLE
 <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
 <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
@@ -11,6 +11,7 @@ $STYLE
 <link rel="apple-touch-icon" href="/favicon-120x120.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
+<script  src="/static/formatting0.js"></script>
 <script src=/static/all_pages5.js></script></head>
 <body>
 
@@ -22,8 +23,12 @@ $ACCOUNT
 
 	<h1>Modify your account</h1>
 	
+	$EXTRA
+	
+	<p><a href=/fb/user/$ID>View your account</a></p>
 	<p>
-	<hr/><h2>Notification settings</h2>
+	<hr/> <!-- ------------------------------------------------------ -->
+	<h2>Notification settings</h2>
 	<form action="/fb/notificationsettings" method="post">
 		<table>
 			<thead><tr>
@@ -44,17 +49,64 @@ $ACCOUNT
 		</table>
 		<input type= "submit" value= "Submit"/>
 	</form>
-	</p><hr/>
+	</p>
+	<hr/> <!-- ------------------------------------------------------ -->
 	
-	<p><a href=/fb/changeauthor>Change Author name</a></p>
 	<p><a href=/fb/changeemail>Change email address</a></p>
 	<p><a href=/fb/changepassword>Change password</a></p>
-	<p><a href=/fb/changetheme>Change theme</a></p>
-	<p><a href=/fb/changebio>Change bio</a></p>
-	<p><a href=/fb/changeavatar>Change avatar</a></p>
-	<br/><br/>
-	<p><a href=/fb/user/$ID>View your account</a></p>
 	
+	<hr/> <!-- ------------------------------------------------------ -->
+	
+	<form action= "/fb/changeauthorpost" method="post">
+	<p>
+		Change author name: <input type= "text" class="onehundred" name= "author" value="$AUTHORNAME" placeholder="new author name"/><br/>
+	</p>
+	<input type= "submit" value= "Submit"/>
+	</form>
+	
+	<hr/> <!-- ------------------------------------------------------ -->
+	
+	<form action= "/fb/changethemepost" method="post">
+		<p>
+			Change theme<br/>
+			<select name="theme">
+			<option value="Default">Choose a theme</option>
+			$THEMES
+			</select>
+		</p>
+		<input type= "submit" value= "Submit"/>
+	</form>
+	
+	<hr/> <!-- ------------------------------------------------------ -->
+	
+	<form action= "/fb/changebiopost" method="post">
+		<p>
+			<input type="button" id="formatButton" value="Show Formatting Help"></input><br/>
+			<div id="formattingDiv" style="display:none">
+                <iframe id="formattingFrame" src=/static/formatting3.html frameborder="0" scrolling="no" style="position: relative; width: 100%;"></iframe>
+			</div>
+			Change bio<br/>
+			<textarea name= "bio" >$BIOBODY</textarea>
+		</p>
+		<input type= "submit" value= "Submit"/>
+	</form>
+	
+	<hr/> <!-- ------------------------------------------------------ -->
+		
+	<form action= "/fb/changeavatarpost" method="post">
+		<p>
+			New avatar URL: <input type= "text" class="onehundred" name= "avatar" value="$AVATARURL" placeholder="avatar"/><br/>
+		</p>
+		<input type= "submit" value= "Submit"/>
+	</form>
+	
+	<p><a href=/fb/changeavatar>Change avatar</a></p>
+	
+	<hr/> <!-- ------------------------------------------------------ -->
+	
+	$BODYTEXTWIDTHFORM
+	
+	<hr/> <!-- ------------------------------------------------------ -->
 	
 <br/><br/><br/>
 $DONATEBUTTON

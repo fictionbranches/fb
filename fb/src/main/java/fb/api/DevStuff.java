@@ -63,14 +63,37 @@ public class DevStuff {
 	
 	@GET
 	@Path("/static/css/{file}")
+	@Produces("text/css")
 	public static Response getcss(@PathParam("file") String file) {
 		return readTextResource("static_html/static/css/" + file);
 	}
 	
 	@GET
-	@Path("/static/{file}")
-	public static Response getstatic(@PathParam("file") String file) {
-		return readTextResource("static_html/static/" + file);
+	@Path("/static/{file}.js")
+	@Produces("text/javascript")
+	public static Response getstaticjs(@PathParam("file") String file) {
+		return readTextResource("static_html/static/" + file + ".js");
+	}
+	
+	@GET
+	@Path("/static/{file}.html")
+	@Produces(MediaType.TEXT_HTML)
+	public static Response getstatichtml(@PathParam("file") String file) {
+		return readTextResource("static_html/static/" + file + ".html");
+	}
+	
+	@GET
+	@Path("/static/{file}.css")
+	@Produces("text/css")
+	public static Response getstaticcss(@PathParam("file") String file) {
+		return readTextResource("static_html/static/" + file + ".css");
+	}
+	
+	@GET
+	@Path("/static/{file}.txt")
+	@Produces("text/plain")
+	public static Response getstatictxt(@PathParam("file") String file) {
+		return readTextResource("static_html/static/" + file + ".txt");
 	}
 	
 	public static String devModeBecomeNormal(Cookie token) {
