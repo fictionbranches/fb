@@ -73,6 +73,7 @@ import fb.objects.EpisodeWithChildren;
 import fb.objects.FlaggedComment;
 import fb.objects.FlaggedEpisode;
 import fb.objects.FlatEpisode;
+import fb.objects.FlatEtherpad;
 import fb.objects.FlatUser;
 import fb.objects.ModEpisode;
 import fb.objects.Notification;
@@ -3100,16 +3101,17 @@ public class DB {
 	/**
 	 * 
 	 * @param padID
-	 * @return {groupID, padTitle}
+	 * @return 
 	 * @throws DBException
 	 */
-	public static String[] padInfoFromId(long padID) throws DBException {
+	public static FlatEtherpad getEtherpad(long padID) throws DBException {
 		Session session = openSession();
 		try {
 			
 			DBEtherpad pad = session.get(DBEtherpad.class, padID);
 			if (pad == null) throw new DBException("Not found: " + padID);
-			return new String[] {pad.getGroupID(),pad.getName()};
+			return new FlatEtherpad(pad);
+			//return new String[] {pad.getGroupID(),pad.getName()};
 			 
 		} finally {
 			closeSession(session);
@@ -3126,8 +3128,18 @@ public class DB {
 	public static String userCanAccessPad(String username, long padID) throws DBException {
 		Session session = openSession();
 		try {
+			DBUser user = DB.getUserById(session, username);
+			if (user == null) throw new DBException("Not found: " + username);
 			DBEtherpad pad = session.get(DBEtherpad.class, padID);
 			if (pad == null) throw new DBException("Not found: " + padID);
+			
+			if (pad.getOwner().getId().equals(user.getId())) return pad.getGroupID();
+			
+			if (session.createQuery("from DBEtherpadInvite inv where inv.accepted=true and inv.invitee.id='" + user.getId() + "' and inv.pad.id=" + pad.getId())
+					.uniqueResultOptional().isPresent()) {
+				return pad.getGroupID();
+			}
+			
 			return pad.getOwner().getId().equals(username)?pad.getGroupID():null; // TODO expand to shared pads
 		} finally {
 			closeSession(session);

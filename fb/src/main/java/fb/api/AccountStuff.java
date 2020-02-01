@@ -31,6 +31,7 @@ import fb.DB.DBException;
 import fb.InitWebsite;
 import fb.db.DBAuthorSubscription;
 import fb.db.DBUser;
+import fb.objects.FlatEtherpad;
 import fb.objects.FlatUser;
 import fb.util.Etherpad;
 import fb.util.Etherpad.EtherpadException;
@@ -744,19 +745,18 @@ public class AccountStuff {
 			return Response.ok(Strings.getFile("generic.html",fu).replace("$EXTRA", "Not found: " + StringUtils.escape(padIDString))).build();
 		}
 		
-		String padName;
-		String groupID;
+		FlatEtherpad pad;
 		try {
-			String[] padInfo = DB.padInfoFromId(padID);
-			padName = padInfo[1];
-			groupID = padInfo[0];
+			pad = DB.getEtherpad(padID);
 		} catch (DBException e) {
 			return Response.ok(Strings.getFile("generic.html",fu).replace("$EXTRA", e.getMessage())).build();
 		}
 		
-		String s = "<h1>"+StringUtils.escape(padName)+"</h1>\n<iframe src='https://"+Strings.getETHERPAD_DOMAIN()+"/p/"+groupID+"$"+padID+"' width=600 height=400></iframe>";
+		String s = "<h1>"+StringUtils.escape(pad.name)+"</h1>\n<iframe src='https://"+Strings.getETHERPAD_DOMAIN()+"/p/"+pad.groupID+"$"+pad.id+
+				"' width='100%' height='800' " + 
+				" style='width: 100%; max-width: 60%; height: 800px'" + 
+				"></iframe>";
 		return Response.ok(Strings.getFile("generic.html",fu).replace("$EXTRA", s)).build();
-		
 	}
 	
 	@GET
