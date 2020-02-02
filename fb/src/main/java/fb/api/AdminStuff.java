@@ -92,7 +92,7 @@ public class AdminStuff {
 		sb.append("<input type=\"submit\" value=\"Create new token\" /></form></p>\n");
 		sb.append("<p><table><thead><tr><th>Token</th><th>Comment</th><th>Date</th><th></th></tr></thead><tbody>\n");
 		sb.append(DB.getArchiveTokens().stream()
-			.map(at->"<tr><td>" + at.token + "</td><td>" + at.comment + "</td><td>" + Dates.simpleDateFormat(at.date) + "</td><td><a href=/fb/admin/deletearchivetoken/" + at.id + ">Delete</a></td></tr>")
+			.map(at->"<tr><td>" + at.token + "</td><td>" + at.comment + "</td><td>" + Dates.simpleDateFormat2(at.date) + "</td><td><a href=/fb/admin/deletearchivetoken/" + at.id + ">Delete</a></td></tr>")
 			.collect(Collectors.joining("\n")));
 		sb.append("</tbody></table></p>\n");
 		

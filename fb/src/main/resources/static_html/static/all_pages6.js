@@ -28,4 +28,20 @@ $(document).ready(function(event) {
 		req.send("email="+encodeURIComponent(emailString)+"&password="+encodeURIComponent(passwordString)); 
 		event.preventDefault();
 	});
+	
+	var outputTimestamps = document.getElementsByClassName("output-timestamp");
+	var simpleTimestamps = document.getElementsByClassName("simple-timestamp");	
+	
+	var timestamps = outputTimestamps;
+	for(var i = 0; i < timestamps.length; i++) {
+		var timestamp = timestamps.item(i);
+		var date = new Date(+(timestamp.dataset.unixtimemillis));
+		timestamp.innerText = date.toLocaleDateString() + " " + date.toLocaleTimeString() + " " + date.toLocaleTimeString('en-us',{timeZoneName:'short'}).split(' ')[2];
+	}
+	
+	timestamps = simpleTimestamps;
+	for(var i = 0; i < timestamps.length; i++) {
+		var timestamp = timestamps.item(i);
+		timestamp.innerText = new Date(+(timestamp.dataset.unixtimemillis)).toLocaleDateString();
+	}
 });

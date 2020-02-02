@@ -144,8 +144,8 @@ public class Story {
 					.replace("$AUTHORNAME", Strings.escape(child.authorName))
 					.replace("$ID", ""+child.generatedId)
 					.replace("$LINK", Strings.escape(child.link))
-					.replace("$COMPLETEDATE", escape(Dates.completeSimpleDateFormat(child.date)))
-					.replace("$DATE", escape(Dates.simpleDateFormat(child.date)))
+					.replace("$COMPLETEDATE", Dates.completeSimpleDateFormat2(child.date))
+					.replace("$DATE", Dates.simpleDateFormat2(child.date))
 					.replace("$CHILDCOUNT", Long.toString(child.childCount))
 					.replace("$HITS", Long.toString(child.hits))
 					.replace("$VIEWS", Long.toString(child.views))
@@ -172,7 +172,7 @@ public class Story {
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
 			commentHTML.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p><hr/>");
 			commentHTML.append(((c.user.avatar==null||c.user.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a><br/>\n");
-			commentHTML.append("<p><a href=/fb/story/" + ep.generatedId + "#comment" + c.id + ">" + Strings.escape(Dates.outputDateFormat(c.date)) + "</a>");
+			commentHTML.append("<p><a href=/fb/story/" + ep.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>");
 			if (user != null) {
 				if (c.user.id.equals(user.id)) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete</a>");
 				else if (user.level>=10) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete as mod</a>");
@@ -189,7 +189,7 @@ public class Story {
 		else editHTML = Strings.getString("story_editor")
 				.replace("$EDITORID", ep.editorId)
 				.replace("$EDITORNAME", escape(ep.editorName))
-				.replace("$EDITDATE", escape(Dates.outputDateFormat(ep.editDate)));
+				.replace("$EDITDATE", (Dates.outputDateFormat2(ep.editDate)));
 
 		return Strings.getFile("story.html", user)
 				.replace("$TITLE", escape(ep.title))
@@ -201,7 +201,7 @@ public class Story {
 				.replace("$AVATARURL", (ep.authorAvatar==null||ep.authorAvatar.trim().length()==0)?"":(Strings.getString("story_avatar").replace("$AVATARURL", Strings.escape(ep.authorAvatar))))
 				.replace("$PARENTID", (ep.parentId == null) ? ".." : (""+ep.parentId))
 				.replace("$ID", ""+generatedId)
-				.replace("$DATE", escape(Dates.outputDateFormat(ep.date)) + editHTML)
+				.replace("$DATE", (Dates.outputDateFormat2(ep.date)) + editHTML)
 				.replace("$MODIFY", modify)
 				.replace("$ADDEP", addEp)
 				.replace("$SORTORDER", sortOrder)
@@ -311,7 +311,9 @@ public class Story {
 		StringBuilder sb = new StringBuilder("<h1>Announcements</h1>\n<hr/>\n");
 		for (Announcement a : list) {
 			sb.append("<p>" + Story.formatBody(a.body) + "</p>\n");
-			sb.append("<p> - <a href=/fb/user/" + a.authorId + ">" + Strings.escape(a.authorName) + "</a> (" + Dates.simpleDateFormat(a.date) + ")</p>\n");
+			sb.append("<p> - <a href=/fb/user/" + a.authorId + ">" + Strings.escape(a.authorName) + "</a> (" + 
+					Dates.simpleDateFormat2(a.date) + 
+					")</p>\n");
 			if (!a.read) sb.append("<p><a href=/fb/markannouncementread/" + a.id + ">Mark read</a></p>\n");
 			if (user != null && user.level >= 100) sb.append("<p><a href=/fb/admin/deleteannouncement/" + a.id + ">Delete as admin</a></p>\n");
 			sb.append("<hr/>\n");
@@ -364,7 +366,7 @@ public class Story {
 					.replace("$TITLE", escape(child.title))
 					.replace("$AUTHORID", child.authorId)
 					.replace("$AUTHORNAME", escape(child.authorName))
-					.replace("$DATE", escape(Dates.simpleDateFormat(child.date)))
+					.replace("$DATE", Dates.simpleDateFormat2(child.date))
 					.replace("$STORY", story)
 					.replace("$EPISODEDEPTH",""+child.depth)
 					.replace("$LINK", escape(child.link));
@@ -590,7 +592,8 @@ public class Story {
 		StringBuilder sb = new StringBuilder();
 		for (FlatEpisode child : path) if (child != null){ 
 			sb.append("<h1><a href=/fb/story/" + child.generatedId + ">" + Strings.escape(child.title) + "</a></h1>");
-			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + Strings.escape(child.authorName) + "</a> " + Dates.simpleDateFormat(child.date) + "</p>");
+			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + Strings.escape(child.authorName) + "</a> " + 
+					Dates.simpleDateFormat2(child.date) + "</p>");
 			sb.append("<div class="+(parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")+">" + (parseMarkdown?formatBody(child.body):Strings.escape(child.body)) + "</div><hr/>\n");
 		}
 		
@@ -649,7 +652,7 @@ public class Story {
 			sb.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Author</th><th>Date</th><th>Depth</th></tr>");
 			for (FlatEpisode ep : result) {
 				sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + Strings.escape(ep.link) + "</a></td><td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + 
-						Strings.escape(ep.authorName) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat(ep.date) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>\n");
+						Strings.escape(ep.authorName) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat2(ep.date) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>\n");
 			}
 			sb.append("</table>");
 		} else {
