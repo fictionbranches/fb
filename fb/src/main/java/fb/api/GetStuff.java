@@ -205,7 +205,7 @@ public class GetStuff {
 		sb.append(ep.link + "\n");
 		sb.append(ep.title + "\n");
 		sb.append(ep.authorName + "\n");
-		sb.append(Dates.outputDateFormat(ep.date) + "\n");
+		sb.append(Dates.outputDateFormat2(ep.date) + "\n");
 		sb.append(ep.body + "\n");
 		return sb.toString();
 	}

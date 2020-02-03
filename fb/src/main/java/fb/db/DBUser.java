@@ -71,6 +71,9 @@ public class DBUser {
 	private boolean childSite;
 	private boolean childMail;
 	
+	@Column(columnDefinition = "int default 900") 
+	private int bodyTextWidth;
+
 	public String getId() {
 		return id;
 	}
@@ -197,6 +200,14 @@ public class DBUser {
 
 	public void setEtherpadID(String etherpadID) {
 		this.etherpadID = etherpadID;
+	}
+	
+	public int getBodyTextWidth() {
+		return bodyTextWidth;
+	}
+
+	public void setBodyTextWidth(int bodyTextWidth) {
+		this.bodyTextWidth = bodyTextWidth;
 	}
 
 	public boolean equals(Object o) {

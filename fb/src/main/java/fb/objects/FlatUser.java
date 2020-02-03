@@ -26,6 +26,8 @@ public class FlatUser {
 	public final boolean authorSubMail;*/ //mass mail
 	public final String etherpadID;
 	
+	public final int bodyTextWidth;
+	
 	/**
 	 * Construct from DBUser database object
 	 * @param user
@@ -44,8 +46,10 @@ public class FlatUser {
 		this.commentMail = user.isCommentMail();
 		this.childSite = user.isChildSite();
 		this.childMail = user.isChildMail();
+
 		/*this.authorSubSite = user.isAuthorSubSite();
 		this.authorSubMail = user.isAuthorSubMail();*/
 		this.etherpadID = user.getEtherpadID();
+		this.bodyTextWidth = user.getBodyTextWidth();
 	}
 }
