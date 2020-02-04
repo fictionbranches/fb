@@ -180,6 +180,7 @@ public class Strings {
 		readSnippetsFile("snippets", "faq.md", fileMap);
 		readSnippetsFile("snippets", "flagform.html", fileMap);
 		readSnippetsFile("snippets", "generic.html", fileMap);
+		readSnippetsFile("snippets", "generic_meta.html", fileMap);
 		readSnippetsFile("snippets", "genericfooter.html", fileMap);
 		readSnippetsFile("snippets", "genericheader.html", fileMap);
 		readSnippetsFile("snippets", "loginform.html", fileMap);

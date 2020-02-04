@@ -259,11 +259,26 @@ public class GetStuff {
 		return Response.ok(Story.getRecentsTable(story, pageNum, reverse)).build();
 	}
 	
+	private Response notLoggedInEpisode(long generatedId) {
+		FlatEpisode ep;
+		try {
+			ep = DB.getFlatEp(generatedId);
+		} catch (DBException e) {
+			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		}
+		
+		return Response.ok(Strings.getFile("generic_meta.html",null)
+			.replace("$EXTRA", "You must be logged in to do that")
+			.replace("$TITLE", Strings.escape(ep.title))
+			.replace("$OGDESCRIPTION", Strings.escape("By " + ep.authorName + System.lineSeparator() + ep.body))
+			).build();
+	}
+	
 	@GET
 	@Path("outline/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response outline(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId, @QueryParam("page") String page) {
-		if (!Accounts.isLoggedIn(fbtoken)) return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		if (!Accounts.isLoggedIn(fbtoken)) return notLoggedInEpisode(generatedId);
 		
 		if (page != null) try {
 			int pageNum = Integer.parseInt(page);
@@ -279,21 +294,16 @@ public class GetStuff {
 	@Path("path/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response path(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId) {
-		FlatUser user;
-		try {
-			user = Accounts.getFlatUser(fbtoken);
-		} catch (FBLoginException e) {
-			user = null;
-		}
-		if (user != null) return Response.ok(Story.getPath(fbtoken, generatedId)).build();
-		else return Response.ok(Strings.getFile("generic.html",user).replace("$EXTRA", "You must be logged in to do that")).build();
+		if (!Accounts.isLoggedIn(fbtoken)) return notLoggedInEpisode(generatedId);
+		
+		return Response.ok(Story.getPath(fbtoken, generatedId)).build();
 	}
 	
 	@GET
 	@Path("complete/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response getcomplete(@CookieParam("fbtoken") Cookie fbtoken, @CookieParam("fbjs") Cookie fbjs, @PathParam("generatedId") long generatedId) {
-		if (!Accounts.isLoggedIn(fbtoken)) return Response.ok(Strings.getFileWithToken("generic.html",fbtoken).replace("$EXTRA", "You must be logged in to do that")).build();
+		if (!Accounts.isLoggedIn(fbtoken)) return notLoggedInEpisode(generatedId);
 		
 		String ret = Story.getCompleteHTML(fbtoken, generatedId, fbjs);
 		return Response.ok(ret).build();
