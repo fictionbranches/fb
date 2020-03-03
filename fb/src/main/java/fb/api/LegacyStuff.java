@@ -105,7 +105,8 @@ public class LegacyStuff {
 	@GET
 	@Path("legacy/{anything}/{oldId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response legacyCatchAll(@PathParam("oldId") String oldId, @PathParam("anything") String anything) {
+	public Response legacyCatchAll2(@PathParam("oldId") String oldId, @PathParam("anything") String anything, @QueryParam("page") String page) {
+		if (page != null && page.trim().length()>0) return legacy(page);
 		if (oldId.trim().toLowerCase().compareTo("root") == 0) return Response.seeOther(GetStuff.createURI("/fb")).build();
 		return legacy(oldId);
 	}
