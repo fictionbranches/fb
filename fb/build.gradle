@@ -60,10 +60,10 @@ dependencies {
 	compile (group: 'org.glassfish.jersey.containers', name: 'jersey-container-grizzly2-http', version: '2.30') // Grizzly embedded container for Jersey
 	compile (group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '2.30') // Fails at runtime without this dependency
 	
-	compile group: 'org.hibernate', name: 'hibernate-core', version: '5.4.10.Final' // ORM
-	compile group: 'org.hibernate', name: 'hibernate-c3p0', version: '5.4.10.Final' // better connection pool
-	compile group: 'org.hibernate', name: 'hibernate-search-orm', version: '5.11.4.Final' // search engine
-	compile group: 'org.postgresql', name: 'postgresql', version: '42.2.9' // postgres JDBC driver
+	compile group: 'org.hibernate', name: 'hibernate-core', version: '5.4.14.Final' // ORM
+	compile group: 'org.hibernate', name: 'hibernate-c3p0', version: '5.4.14.Final' // better connection pool
+	compile group: 'org.hibernate', name: 'hibernate-search-orm', version: '5.11.5.Final' // search engine
+	compile group: 'org.postgresql', name: 'postgresql', version: '42.2.12' // postgres JDBC driver
 		
 	compile group: 'org.apache.commons', name: 'commons-text', version: '1.8' // StringEscapeUtils.escapeHtml4
 	

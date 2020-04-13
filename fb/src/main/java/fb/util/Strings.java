@@ -203,6 +203,7 @@ public class Strings {
 		readSnippetsFile("snippets", "usersearchform.html", fileMap);
 		readSnippetsFile("snippets", "verifyaccount.html", fileMap);
 		readSnippetsFile("snippets", "welcome.html", fileMap);
+		readSnippetsFile("snippets", "stats.html", fileMap);
 		
 		return Collections.unmodifiableMap(fileMap);
 	}

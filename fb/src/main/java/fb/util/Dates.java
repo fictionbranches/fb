@@ -31,6 +31,18 @@ public class Dates {
 
 	}
 	
+	/**
+	 * "yyyy-MM-dd"
+	 * @param date
+	 * @return
+	 */
+	public static String plainDate(Date date) {
+		if (date == null)
+			return "since the beforefore times";
+		return simpleDate.get().format(date);
+
+	}
+	
 	private static final ThreadLocal<DateFormat> completeSimpleDate = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyyMMddHHmmss"));
 	/**
 	 * "yyyyMMddHHmmss" WITHOUT JAVASCRIPT HELPER

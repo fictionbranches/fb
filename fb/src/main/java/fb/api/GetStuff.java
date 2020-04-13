@@ -1,9 +1,12 @@
 package fb.api;
 
+import java.math.BigInteger;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.GET;
@@ -18,12 +21,14 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
 
+import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.core.UriBuilder;
-import javax.ws.rs.core.UriInfo;
+import com.google.gson.Gson;
 
 import fb.Accounts;
 import fb.Accounts.FBLoginException;
@@ -479,5 +484,85 @@ public class GetStuff {
 		DB.PopularUserTime t = popularTime(time);
 		if (t==null) return Response.seeOther(GetStuff.createURI("/fb/leaderboardepisodes?time=week")).build();
 		return Response.ok(Accounts.getMostEpisodes(fbtoken, t)).build();
+	}
+	
+	@GET
+	@Path("stats")
+	@Produces(MediaType.TEXT_HTML)
+	public Response stats(@CookieParam("fbtoken") Cookie fbtoken, @QueryParam("start") String start, @QueryParam("end") String end) {
+		
+		ArrayList<String> dates = new ArrayList<>();
+		ArrayList<BigInteger> counts = new ArrayList<>();
+		
+		if (start == null || end == null || !isDate(start) || !isDate(end)) {
+			String[] defaultDates = defaultDates();
+			start = defaultDates[0];
+			end = defaultDates[1];
+		}
+		Session session = DB.openSession();
+		try {
+			
+			/*@SuppressWarnings("unused")
+			class StatResult {
+				String day;
+				int ct;
+				public StatResult(String day, int ct) {
+					this.day = day;
+					this.ct = ct;
+				}
+			}*/
+			
+			String query = "SELECT d.day,count(fbepisodes.date) as ct from (\n" + 
+					"    SELECT generate_series('"+start+"'\\:\\:timestamp, '"+end+"'\\:\\:timestamp, '1 day')\n" + 
+					"  ) d(day)\n" + 
+					"LEFT JOIN fbepisodes ON date_trunc('day', fbepisodes.date)=d.day\n" + 
+					"group by d.day\n" + 
+					"order by d.day asc;";
+			
+			@SuppressWarnings("unchecked")
+			Stream<Object[]> stream = session.createNativeQuery(query)
+			.getResultStream();
+			
+			stream.forEach(result->{
+				String day = Dates.plainDate(Date.from(((java.sql.Timestamp)result[0]).toInstant())); // ugh
+				BigInteger count = (BigInteger)result[1];
+				dates.add(day);
+				counts.add(count);
+			});
+			
+		} finally {
+			DB.closeSession(session);
+		}
+		
+		Gson g = new Gson();
+		
+		String labelData = g.toJson(dates);
+		String inputData = g.toJson(counts);
+		
+		
+		
+		return Response.ok(Strings.getFileWithToken("stats.html", fbtoken)
+				.replace("$LABELDATA", labelData)
+				.replace("$INPUTDATA", inputData)				
+				.replace("$STARTDATE", start)				
+				.replace("$ENDDATE", end)				
+				).build();
+	}
+	
+	private static String[] defaultDates() {
+		Calendar now = Calendar.getInstance();
+		String end = Dates.plainDate(now.getTime());
+		now.add(Calendar.YEAR, -1);
+		String start = Dates.plainDate(now.getTime());
+		return new String[]{start, end};
+	}
+	
+	public static boolean isDate(String date) {
+		if (date.length() != 10) return false;
+		int[] ints = {0,1,2,3,5,6,8,9};
+		int[] dashes = {4,7};
+		for (int i : ints) if (date.charAt(i) < '0' || date.charAt(i) > '9') return false;
+		for (int i : dashes) if (date.charAt(i) != '-') return false;
+		return true;
 	}
 }

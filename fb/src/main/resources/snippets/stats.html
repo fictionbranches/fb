@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<title>Fiction Branches</title>
+<link rel="stylesheet" href="/static/css/base20.css" />
+$STYLE
+<link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16" />
+<link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+<link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192 /">
+<link rel="apple-touch-icon" href="/favicon-120x120.png" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src=/static/all_pages6.js></script>
+
+<meta property="og:site_name" content="Fiction Branches" />
+<meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
+
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chartist/0.11.4/chartist.min.css" />
+    <style>
+svg {
+  background-color: white;
+}
+.ct-series .ct-line {
+  stroke: blue;
+}
+.ct-label {
+  color: black;
+}
+    </style>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/chartist/0.11.4/chartist.min.js"></script>
+	
+</head>
+<body>
+<div class="topcorner">
+<a href="/"><img alt="Fiction Branches" src="/images/fblogo.png" class="fblogo" /></a>
+<br/>
+$ACCOUNT
+</div>
+
+
+<form>
+<p>
+<label for="startdate">Start:</label>
+<input type="date" id="startdate" name="start" value="$STARTDATE" />
+</p><p>
+<label for="enddate">End:</label>
+<input type="date" id="enddate" name="end" value="$ENDDATE" />
+</p>
+<p><input type="submit" /></p>
+
+</form>
+
+<div id="datacontainer" data-datestrings='$LABELDATA' data-datecounts='$INPUTDATA' style="display: none;"></div>
+
+	<h2>Episodes per day</h2>
+    <div id="mainchart" class="mychart"></div>
+    <h2>Episodes per day, cumulative</h2>
+    <div id="cumchart" class="mychart"></div>
+    
+
+
+<script src="/static/charts.js"></script>
+
+<br/><br/><br/>
+$DONATEBUTTON
+</body>
+</html>
