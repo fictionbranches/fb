@@ -8,7 +8,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import org.apache.commons.text.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,9 +19,10 @@ public class Markdown {
 	public static final Markdown m = new Markdown();
 	
 	public static String formatBody(String body) {
+		body = Strings.escape(body);
 		synchronized (lock) {
 			try {
-				return (String) ((Invocable) m.engine).invokeFunction("markdownToHTML", escape(body));
+				return (String) ((Invocable) m.engine).invokeFunction("markdownToHTML", body);
 			} catch (NoSuchMethodException | ScriptException e) {
 				System.err.println(e + " " + e.getMessage());
 				return body;
@@ -75,10 +75,6 @@ public class Markdown {
 		parser = Parser.builder(options).build();
 		renderer = HtmlRenderer.builder(options).build();
 	}*/
-	
-	public static String escape(String string) {
-		return StringEscapeUtils.escapeHtml4(string);
-	}
 	
 	public static Reader getJsReaderFromJar(String filepath) {
 		return new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath));

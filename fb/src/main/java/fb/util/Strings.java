@@ -19,6 +19,7 @@ import java.util.Scanner;
 
 import javax.ws.rs.core.Cookie;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -252,7 +253,7 @@ public class Strings {
 	}
 	
 	public static String escape(String string) {
-		return Markdown.escape(string);
+		return StringEscapeUtils.escapeHtml4(string);
 	}
 	
 	public static String getString(String name) {
