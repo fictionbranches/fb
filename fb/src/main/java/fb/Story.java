@@ -602,7 +602,7 @@ public class Story {
 			sb.append("<h1><a href=/fb/story/" + child.generatedId + ">" + Strings.escape(child.title) + "</a></h1>");
 			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + Strings.escape(child.authorName) + "</a> " + 
 					Dates.simpleDateFormat2(child.date) + "</p>");
-			sb.append("<div class="+(parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")+">" + (parseMarkdown?formatBody(child.body):Strings.escape(child.body)) + "</div><hr/>\n");
+			sb.append("<div class=\"fbepisodebody "+(parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")+"\">" + (parseMarkdown?formatBody(child.body):Strings.escape(child.body)) + "</div><hr/>\n");
 		}
 		
 		FlatEpisode ep = path.get(path.size()-1);
