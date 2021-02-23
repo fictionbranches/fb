@@ -1776,6 +1776,7 @@ public class DB {
 			try {
 				session.beginTransaction();
 				session.createQuery("delete DBFlaggedComment fc where fc.comment.id=" + commentId).executeUpdate();
+				session.createQuery("delete DBNotification n where n.comment.id=" + commentId).executeUpdate();
 				session.delete(comment);
 				session.getTransaction().commit();
 			} catch (Exception e) {
