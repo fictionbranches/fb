@@ -1,5 +1,5 @@
 $(document).ready(function(event) {
-	
+		
 	if (document.cookie.indexOf("fbjs=") < 0) document.cookie = "fbjs=true; max-age=" + (60 * 60 * 24 * 365 * 100);
 	
 	$("#logoutButton").submit(function( event ) {
@@ -44,4 +44,8 @@ $(document).ready(function(event) {
 		var timestamp = timestamps.item(i);
 		timestamp.innerText = new Date(+(timestamp.dataset.unixtimemillis)).toLocaleDateString();
 	}
+	
+	Array.prototype.forEach.call(document.getElementsByClassName("avatarimg"),x=>x.onerror = ()=>x.style.display='none');
+	Array.prototype.forEach.call(document.getElementsByClassName("avatarsmall"),x=>x.onerror = ()=>x.style.display='none');
+	
 });
