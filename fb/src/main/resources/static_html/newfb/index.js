@@ -39,7 +39,7 @@ $(document).ready(function(event) {
 		}
 		let obj = {};
 		obj.id = epid;
-		obj.sendhtml = 'true';
+		obj.sendhtml = 'false';
 		req.send(JSON.stringify(obj));
 	}
 	
