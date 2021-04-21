@@ -1153,6 +1153,39 @@ public class DB {
 		}
 	}
 	
+	/**
+	 * 
+	 * @param username requestor
+	 * @param page most recent page is 1
+	 * @return
+	 * @throws DBException
+	 */
+	public static CommentResultList getRecentComments(int page) throws DBException {
+		Session session = openSession();
+		page-=1;
+		try {
+			
+			String sql = "SELECT COUNT(*) FROM fbcomments";
+			int totalCount = ((BigInteger)(session.createNativeQuery(sql).uniqueResult())).intValue();
+			
+			List<Comment> list = session.createNativeQuery(
+					"SELECT * FROM fbcomments " + 
+					" ORDER BY date DESC" + 
+					" OFFSET " + (COMMENT_PAGE_SIZE*page) +
+					" LIMIT " + COMMENT_PAGE_SIZE +
+					"",
+				DBComment.class)
+					.stream()
+					.map(Comment::new)
+					.collect(Collectors.toUnmodifiableList());
+												
+			return new CommentResultList(list, totalCount/COMMENT_PAGE_SIZE+1);
+		}finally {
+			closeSession(session);
+		}
+	}
+	private static final int COMMENT_PAGE_SIZE = 50;
+	
 	public static StreamingOutput getOutlinePage(Cookie token, long generatedId, int pageNum) {
 		final int page = pageNum - 1;
 		final int OUTLINE_PAGE_SIZE = 300;
@@ -1551,6 +1584,15 @@ public class DB {
 			this.user = user;
 			this.episodes = episodes;
 			this.morePages = morePages;
+			this.numPages = numPages;
+		}
+	}
+	
+	public static class CommentResultList {
+		public final List<Comment> comments;
+		public final int numPages;
+		public CommentResultList(List<Comment> comments, int numPages) {
+			this.comments = comments;
 			this.numPages = numPages;
 		}
 	}

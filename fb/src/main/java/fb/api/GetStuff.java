@@ -1,5 +1,7 @@
 package fb.api;
 
+import static fb.util.Strings.escape;
+
 import java.math.BigInteger;
 import java.net.URI;
 import java.util.ArrayList;
@@ -33,9 +35,11 @@ import com.google.gson.Gson;
 import fb.Accounts;
 import fb.Accounts.FBLoginException;
 import fb.DB;
+import fb.DB.CommentResultList;
 import fb.DB.DBException;
 import fb.InitWebsite;
 import fb.Story;
+import fb.objects.Comment;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.util.Dates;
@@ -264,12 +268,91 @@ public class GetStuff {
 		return Response.ok(Story.getRecentsTable(story, pageNum, reverse)).build();
 	}
 	
+	@GET
+	@Path("recentcomments")
+	@Produces(MediaType.TEXT_HTML)
+	public Response recentcomments(@CookieParam("fbtoken") Cookie fbtoken, @CookieParam("fbjs") Cookie fbjs, @QueryParam("page") String pageStr) throws DBException {
+		
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e1) {
+			user = null;
+		}
+		
+		int page;
+		try {
+			page = Integer.parseInt(pageStr);
+			if (page < 1) page = 1;
+		} catch (Exception e) {
+			page = 1;
+		}
+		
+		boolean parseMarkdown = fbjs==null || !"true".equals(fbjs.getValue());
+				
+		CommentResultList crl = DB.getRecentComments(page);
+		
+		StringBuilder prevNext = new StringBuilder();
+		if (crl.numPages <= 8) {
+			for (int i=1; i<=crl.numPages; ++i) {
+				if (i == page) prevNext.append(i + " ");
+				else prevNext.append("<a class=\"monospace\" href=?page=" + i + ">" + i + "</a> ");
+			}
+		} else {
+			if (page <= 3) { // 1 2 3 4 ... n
+				for (int i=1; i<=4; ++i) {
+					if (i == page) prevNext.append(i + " ");
+					else prevNext.append("<a class=\"monospace\" href=?page=" + i + ">" + i + "</a> ");
+				}
+				prevNext.append("... ");
+				prevNext.append("<a class=\"monospace\" href=?page=" + crl.numPages + ">" + crl.numPages + "</a> ");
+			} else if (page >= crl.numPages-3) { // 1 ... n-3 n-2 n-1 n
+				prevNext.append("<a class=\"monospace\" href=?page=" + 1 + ">" + 1 + "</a> ");
+				prevNext.append("... ");
+				for (int i=crl.numPages-3; i<=crl.numPages; ++i) {
+					if (i == page) prevNext.append(i + " ");
+					else prevNext.append("<a class=\"monospace\" href=?page=" + i + ">" + i + "</a> ");
+				}
+			} else { // 1 ... x-2 x-1 x x+1 x+2 ... n
+				prevNext.append("<a class=\"monospace\" href=?page=" + 1 + ">" + 1 + "</a> ");
+				prevNext.append("... ");
+				for (int i=page-2; i<=page+2; ++i) {
+					if (i == page) prevNext.append(i + " ");
+					else prevNext.append("<a class=\"monospace\" href=?page=" + i + ">" + i + "</a> ");
+				}
+				prevNext.append("... ");
+				prevNext.append("<a class=\"monospace\" href=?page=" + crl.numPages + ">" + crl.numPages + "</a> ");
+			}
+		}
+		
+		StringBuilder html = new StringBuilder();
+		html.append("<h1>Recent comments</h1>");
+		html.append("<p>"+prevNext+"</p>");
+		html.append("<hr/><hr/>\n");
+		for (Comment c : crl.comments) {
+			html.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p>");
+			html.append("<p>By ");
+			if (!(c.user.avatar==null||c.user.avatar.trim().length()==0)) html.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" /> ");
+			html.append("<a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a> - \n");
+			html.append("<a href=/fb/story/" + c.episode.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a></p>\n");
+			html.append("<p>On " + "<a href=/fb/story/" + c.episode.generatedId + ">" + (Strings.escape(c.episode.link)) + "</a></p>\n");
+			html.append("<hr/><hr/>\n");
+		}
+		
+		return Response.ok(Strings.getFile("generic_meta.html", user)
+				.replace("$EXTRA", html.toString())
+				.replace("$TITLE", "Recent comments")
+				.replace("$OGDESCRIPTION", "Just a list of the comments on the site.")
+				).build();
+		
+	}
+	
 	private Response notLoggedInEpisode(long generatedId) {
 		FlatEpisode ep;
 		try {
 			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e) {
-			return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+			return notLoggedInOther();
 		}
 		
 		return Response.ok(Strings.getFile("generic_meta.html",null)
@@ -277,6 +360,15 @@ public class GetStuff {
 			.replace("$TITLE", Strings.escape(ep.title))
 			.replace("$OGDESCRIPTION", Strings.escape("By " + ep.authorName + System.lineSeparator() + ep.body))
 			).build();
+	}
+	
+	/**
+	 * For pages that require login, but aren't episode-specific
+	 * @param generatedId
+	 * @return
+	 */
+	private Response notLoggedInOther() {
+		return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
 	}
 	
 	@GET

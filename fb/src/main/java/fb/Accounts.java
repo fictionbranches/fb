@@ -398,7 +398,9 @@ public class Accounts {
 		UserSession sesh = active.get(token);
 		if (sesh == null) throw new FBLoginException("");
 		try {
-			return DB.getFlatUser(sesh.userID);
+			FlatUser user = DB.getFlatUser(sesh.userID);
+			sesh.ping();
+			return user;
 		} catch (DBException e) {
 			throw new FBLoginException("");
 		}
