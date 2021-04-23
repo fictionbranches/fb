@@ -3,6 +3,7 @@ package fb.api;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import fb.InitWebsite;
 import fb.util.BadLogger;
 import fb.util.Discord;
+import fb.util.StringUtils;
 import fb.util.Strings;
 
 /**
@@ -29,6 +31,18 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 	@Override
 	public String generate(Request request, int status, String reasonPhrase, String description,
 			Throwable exception) {
+				
+		if (exception instanceof URISyntaxException || exception instanceof IllegalArgumentException) {
+			
+			String mess = exception.getMessage();
+			mess = mess.substring(mess.indexOf("http"));
+			
+			StringBuilder sb = new StringBuilder();
+			sb.append("<p><h1>Invalid URL</h1><br/>\n");
+			sb.append("<p>" + StringUtils.escape(mess) + "</p>");
+			return Strings.getFile("emptygeneric.html", null).replace("$EXTRA", sb.toString());
+		}
+		
 		LOGGER.warn("************NEW ERROR PAGE*****************");
 		LOGGER.warn(String.format("Error page URL\t%s", request.getRequestURL()));
 		LOGGER.warn(String.format("Error page request\t%s", request));

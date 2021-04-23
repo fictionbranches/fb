@@ -1,9 +1,12 @@
 package fb.api;
 
+import java.math.BigInteger;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.GET;
@@ -18,22 +21,27 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
 
+import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.core.UriBuilder;
-import javax.ws.rs.core.UriInfo;
+import com.google.gson.Gson;
 
 import fb.Accounts;
 import fb.Accounts.FBLoginException;
 import fb.DB;
+import fb.DB.CommentResultList;
 import fb.DB.DBException;
 import fb.InitWebsite;
 import fb.Story;
+import fb.objects.Comment;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.util.Dates;
+import fb.util.StringUtils;
 import fb.util.Strings;
 
 @Path("fb")
@@ -265,10 +273,113 @@ public class GetStuff {
 	}
 	
 	@GET
+	@Path("recentcomments")
+	@Produces(MediaType.TEXT_HTML)
+	public Response recentcomments(@CookieParam("fbtoken") Cookie fbtoken, @CookieParam("fbjs") Cookie fbjs, @QueryParam("page") String pageStr) throws DBException {
+		
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e1) {
+			user = null;
+		}
+		
+		int page;
+		try {
+			page = Integer.parseInt(pageStr);
+			if (page < 1) page = 1;
+		} catch (Exception e) {
+			page = 1;
+		}
+		
+		boolean parseMarkdown = fbjs==null || !"true".equals(fbjs.getValue());
+				
+		CommentResultList crl = DB.getRecentComments(page);
+		
+		StringBuilder prevNext = new StringBuilder();
+		if (crl.numPages <= 8) {
+			for (int i=1; i<=crl.numPages; ++i) {
+				if (i == page) prevNext.append(i + " ");
+				else prevNext.append("<a class=\"monospace\" href=?page=" + i + ">" + i + "</a> ");
+			}
+		} else {
+			if (page <= 3) { // 1 2 3 4 ... n
+				for (int i=1; i<=4; ++i) {
+					if (i == page) prevNext.append(i + " ");
+					else prevNext.append("<a class=\"monospace\" href=?page=" + i + ">" + i + "</a> ");
+				}
+				prevNext.append("... ");
+				prevNext.append("<a class=\"monospace\" href=?page=" + crl.numPages + ">" + crl.numPages + "</a> ");
+			} else if (page >= crl.numPages-3) { // 1 ... n-3 n-2 n-1 n
+				prevNext.append("<a class=\"monospace\" href=?page=" + 1 + ">" + 1 + "</a> ");
+				prevNext.append("... ");
+				for (int i=crl.numPages-3; i<=crl.numPages; ++i) {
+					if (i == page) prevNext.append(i + " ");
+					else prevNext.append("<a class=\"monospace\" href=?page=" + i + ">" + i + "</a> ");
+				}
+			} else { // 1 ... x-2 x-1 x x+1 x+2 ... n
+				prevNext.append("<a class=\"monospace\" href=?page=" + 1 + ">" + 1 + "</a> ");
+				prevNext.append("... ");
+				for (int i=page-2; i<=page+2; ++i) {
+					if (i == page) prevNext.append(i + " ");
+					else prevNext.append("<a class=\"monospace\" href=?page=" + i + ">" + i + "</a> ");
+				}
+				prevNext.append("... ");
+				prevNext.append("<a class=\"monospace\" href=?page=" + crl.numPages + ">" + crl.numPages + "</a> ");
+			}
+		}
+		
+		StringBuilder html = new StringBuilder();
+		html.append("<h1>Recent comments</h1>");
+		html.append("<p>"+prevNext+"</p>");
+		html.append("<hr/><hr/>\n");
+		for (Comment c : crl.comments) {
+			html.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):StringUtils.escape(c.text)) + "</div></p>");
+			html.append("<p>By ");
+			if (!(c.user.avatar==null||c.user.avatar.trim().length()==0)) html.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+StringUtils.escape(c.user.avatar) + "\" /> ");
+			html.append("<a href=/fb/user/" + c.user.id + ">" + StringUtils.escape(c.user.author) + "</a> - \n");
+			html.append("<a href=/fb/story/" + c.episode.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a></p>\n");
+			html.append("<p>On " + "<a href=/fb/story/" + c.episode.generatedId + ">" + (StringUtils.escape(c.episode.link)) + "</a></p>\n");
+			html.append("<hr/><hr/>\n");
+		}
+		
+		return Response.ok(Strings.getFile("generic_meta.html", user)
+				.replace("$EXTRA", html.toString())
+				.replace("$TITLE", "Recent comments")
+				.replace("$OGDESCRIPTION", "Just a list of the comments on the site.")
+				).build();
+		
+	}
+	
+	private Response notLoggedInEpisode(long generatedId) {
+		FlatEpisode ep;
+		try {
+			ep = DB.getFlatEp(generatedId);
+		} catch (DBException e) {
+			return notLoggedInOther();
+		}
+		
+		return Response.ok(Strings.getFile("generic_meta.html",null)
+			.replace("$EXTRA", "You must be logged in to do that")
+			.replace("$TITLE", StringUtils.escape(ep.title))
+			.replace("$OGDESCRIPTION", StringUtils.escape("By " + ep.authorName + System.lineSeparator() + ep.body))
+			).build();
+	}
+	
+	/**
+	 * For pages that require login, but aren't episode-specific
+	 * @param generatedId
+	 * @return
+	 */
+	private Response notLoggedInOther() {
+		return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+	}
+	
+	@GET
 	@Path("outline/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response outline(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId, @QueryParam("page") String page) {
-		if (!Accounts.isLoggedIn(fbtoken)) return Response.ok(Strings.getFile("generic.html",null).replace("$EXTRA", "You must be logged in to do that")).build();
+		if (!Accounts.isLoggedIn(fbtoken)) return notLoggedInEpisode(generatedId);
 		
 		if (page != null) try {
 			int pageNum = Integer.parseInt(page);
@@ -284,21 +395,16 @@ public class GetStuff {
 	@Path("path/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response path(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId) {
-		FlatUser user;
-		try {
-			user = Accounts.getFlatUser(fbtoken);
-		} catch (FBLoginException e) {
-			user = null;
-		}
-		if (user != null) return Response.ok(Story.getPath(fbtoken, generatedId)).build();
-		else return Response.ok(Strings.getFile("generic.html",user).replace("$EXTRA", "You must be logged in to do that")).build();
+		if (!Accounts.isLoggedIn(fbtoken)) return notLoggedInEpisode(generatedId);
+		
+		return Response.ok(Story.getPath(fbtoken, generatedId)).build();
 	}
 	
 	@GET
 	@Path("complete/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response getcomplete(@CookieParam("fbtoken") Cookie fbtoken, @CookieParam("fbjs") Cookie fbjs, @PathParam("generatedId") long generatedId) {
-		if (!Accounts.isLoggedIn(fbtoken)) return Response.ok(Strings.getFileWithToken("generic.html",fbtoken).replace("$EXTRA", "You must be logged in to do that")).build();
+		if (!Accounts.isLoggedIn(fbtoken)) return notLoggedInEpisode(generatedId);
 		
 		String ret = Story.getCompleteHTML(fbtoken, generatedId, fbjs);
 		return Response.ok(ret).build();
@@ -474,5 +580,85 @@ public class GetStuff {
 		DB.PopularUserTime t = popularTime(time);
 		if (t==null) return Response.seeOther(GetStuff.createURI("/fb/leaderboardepisodes?time=week")).build();
 		return Response.ok(Accounts.getMostEpisodes(fbtoken, t)).build();
+	}
+	
+	@GET
+	@Path("stats")
+	@Produces(MediaType.TEXT_HTML)
+	public Response stats(@CookieParam("fbtoken") Cookie fbtoken, @QueryParam("start") String start, @QueryParam("end") String end) {
+		
+		ArrayList<String> dates = new ArrayList<>();
+		ArrayList<BigInteger> counts = new ArrayList<>();
+		
+		if (start == null || end == null || !isDate(start) || !isDate(end)) {
+			String[] defaultDates = defaultDates();
+			start = defaultDates[0];
+			end = defaultDates[1];
+		}
+		Session session = DB.openSession();
+		try {
+			
+			/*@SuppressWarnings("unused")
+			class StatResult {
+				String day;
+				int ct;
+				public StatResult(String day, int ct) {
+					this.day = day;
+					this.ct = ct;
+				}
+			}*/
+			
+			String query = "SELECT d.day,count(fbepisodes.date) as ct from (\n" + 
+					"    SELECT generate_series('"+start+"'\\:\\:timestamp, '"+end+"'\\:\\:timestamp, '1 day')\n" + 
+					"  ) d(day)\n" + 
+					"LEFT JOIN fbepisodes ON date_trunc('day', fbepisodes.date)=d.day\n" + 
+					"group by d.day\n" + 
+					"order by d.day asc;";
+			
+			@SuppressWarnings("unchecked")
+			Stream<Object[]> stream = session.createNativeQuery(query)
+			.getResultStream();
+			
+			stream.forEach(result->{
+				String day = Dates.plainDate(Date.from(((java.sql.Timestamp)result[0]).toInstant())); // ugh
+				BigInteger count = (BigInteger)result[1];
+				dates.add(day);
+				counts.add(count);
+			});
+			
+		} finally {
+			DB.closeSession(session);
+		}
+		
+		Gson g = new Gson();
+		
+		String labelData = g.toJson(dates);
+		String inputData = g.toJson(counts);
+		
+		
+		
+		return Response.ok(Strings.getFileWithToken("stats.html", fbtoken)
+				.replace("$LABELDATA", labelData)
+				.replace("$INPUTDATA", inputData)				
+				.replace("$STARTDATE", start)				
+				.replace("$ENDDATE", end)				
+				).build();
+	}
+	
+	private static String[] defaultDates() {
+		Calendar now = Calendar.getInstance();
+		String end = Dates.plainDate(now.getTime());
+		now.add(Calendar.YEAR, -1);
+		String start = Dates.plainDate(now.getTime());
+		return new String[]{start, end};
+	}
+	
+	public static boolean isDate(String date) {
+		if (date.length() != 10) return false;
+		int[] ints = {0,1,2,3,5,6,8,9};
+		int[] dashes = {4,7};
+		for (int i : ints) if (date.charAt(i) < '0' || date.charAt(i) > '9') return false;
+		for (int i : dashes) if (date.charAt(i) != '-') return false;
+		return true;
 	}
 }

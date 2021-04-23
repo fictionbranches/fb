@@ -1225,6 +1225,39 @@ public class DB {
 		}
 	}
 	
+	/**
+	 * 
+	 * @param username requestor
+	 * @param page most recent page is 1
+	 * @return
+	 * @throws DBException
+	 */
+	public static CommentResultList getRecentComments(int page) throws DBException {
+		Session session = openSession();
+		page-=1;
+		try {
+			
+			String sql = "SELECT COUNT(*) FROM fbcomments";
+			int totalCount = ((BigInteger)(session.createNativeQuery(sql).uniqueResult())).intValue();
+			
+			List<Comment> list = session.createNativeQuery(
+					"SELECT * FROM fbcomments " + 
+					" ORDER BY date DESC" + 
+					" OFFSET " + (COMMENT_PAGE_SIZE*page) +
+					" LIMIT " + COMMENT_PAGE_SIZE +
+					"",
+				DBComment.class)
+					.stream()
+					.map(Comment::new)
+					.collect(Collectors.toUnmodifiableList());
+												
+			return new CommentResultList(list, totalCount/COMMENT_PAGE_SIZE+1);
+		}finally {
+			closeSession(session);
+		}
+	}
+	private static final int COMMENT_PAGE_SIZE = 50;
+	
 	public static StreamingOutput getOutlinePage(Cookie token, long generatedId, int pageNum) {
 		final int page = pageNum - 1;
 		final int OUTLINE_PAGE_SIZE = 300;
@@ -1656,6 +1689,15 @@ public class DB {
 		}
 	}
 	
+	public static class CommentResultList {
+		public final List<Comment> comments;
+		public final int numPages;
+		public CommentResultList(List<Comment> comments, int numPages) {
+			this.comments = comments;
+			this.numPages = numPages;
+		}
+	}
+	
 	public static boolean emailInUse(String email) {
 		try {
 			getFlatUserByEmail(email);
@@ -1877,6 +1919,7 @@ public class DB {
 			try {
 				session.beginTransaction();
 				session.createQuery("delete DBFlaggedComment fc where fc.comment.id=" + commentId).executeUpdate();
+				session.createQuery("delete DBNotification n where n.comment.id=" + commentId).executeUpdate();
 				session.delete(comment);
 				session.getTransaction().commit();
 			} catch (Exception e) {

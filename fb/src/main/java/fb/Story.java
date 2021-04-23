@@ -583,7 +583,15 @@ public class Story {
 		for (FlatEpisode child : path) if (child != null){
 			sb.append(child.depth + ". " + epLine(child));
 		}
-		String ret = Strings.getFile("path.html", user).replace("$ID", ""+generatedId).replace("$CHILDREN", sb.toString());
+		
+		FlatEpisode ep = path.get(path.size()-1);
+		
+		String ret = Strings.getFile("path.html", user)
+				.replace("$ID", ""+generatedId)
+				.replace("$CHILDREN", sb.toString())
+				.replace("$OGDESCRIPTION", StringUtils.escape("By " + ep.authorName + System.lineSeparator() + ep.body))
+				.replace("$TITLE", escape(ep.title))
+				;
 		LOGGER.info("Took " + (((double)(System.nanoTime()-aStart))/1000000000.0) + " to generate html");
 		LOGGER.info("Total path page took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
 		return ret;
@@ -599,18 +607,19 @@ public class Story {
 		}
 		StringBuilder sb = new StringBuilder();
 		for (FlatEpisode child : path) if (child != null){ 
-			sb.append("<h1><a href=/fb/story/" + child.generatedId + ">" + escape(child.title) + "</a></h1>");
-			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + escape(child.authorName) + "</a> " + Dates.simpleDateFormat2(child.date) + "</p>");
-			sb.append("<div class="+(parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")+">" + (parseMarkdown?formatBody(child.body):escape(child.body)) + "</div><hr/>\n");
-/*=======
-			sb.append("<h1><a href=/fb/story/" + child.generatedId + ">" + Strings.escape(child.title) + "</a></h1>");
-			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + Strings.escape(child.authorName) + "</a> " + 
+			sb.append("<h1><a href=/fb/story/" + child.generatedId + ">" + StringUtils.escape(child.title) + "</a></h1>");
+			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + StringUtils.escape(child.authorName) + "</a> " + 
 					Dates.simpleDateFormat2(child.date) + "</p>");
-			sb.append("<div class="+(parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")+">" + (parseMarkdown?formatBody(child.body):Strings.escape(child.body)) + "</div><hr/>\n");
->>>>>>> refs/remotes/origin/master*/
+			sb.append("<div class=\"fbepisodebody "+(parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")+"\">" + (parseMarkdown?formatBody(child.body):StringUtils.escape(child.body)) + "</div><hr/>\n");
 		}
 		
-		return Strings.getFileWithToken("completestory.html", token).replace("$TITLE", escape(path.get(0).title)).replace("$BODY", sb.toString());
+		FlatEpisode ep = path.get(path.size()-1);
+		
+		return Strings.getFileWithToken("completestory.html", token)
+				.replace("$TITLE", escape(ep.title))
+				.replace("$BODY", sb.toString())
+				.replace("$OGDESCRIPTION", StringUtils.escape("By " + ep.authorName + System.lineSeparator() + ep.body))
+				;
 	}
 	
 	public static String getSearchForm(Cookie token, long generatedId) {
@@ -1115,7 +1124,7 @@ public class Story {
 					"$EDITDATE", "$EDITORID", "$EDITORNAME", "$EPISODES", "$EXTRA", "$HITS", "$ID", "$LINK", 
 					"$MODERATORSTATUS", "$MODIFY", "$NUMPAGES", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
 					"$PATHTOHERE", "$PREVNEXT", "$RAWBODY", "$RECAPTCHASITEKEY", "$SEARCHTERM", "$SORTORDER", 
-					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS")
+					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS", "$OGDESCRIPTION")
 					.collect(Collectors.toSet())));
 	
 	/**

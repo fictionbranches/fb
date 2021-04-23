@@ -1,5 +1,4 @@
 $(document).ready(function(event) {
-	let converter = new showdown.Converter();
 	
 	function escapeHtml(str) {
 		let div = document.createElement('div');
@@ -40,7 +39,7 @@ $(document).ready(function(event) {
 		}
 		let obj = {};
 		obj.id = epid;
-		obj.sendhtml = 'true';
+		obj.sendhtml = 'false';
 		req.send(JSON.stringify(obj));
 	}
 	
@@ -54,7 +53,7 @@ $(document).ready(function(event) {
 		}
 		
 		html += "<hr/>";
-		html += converter.makeHtml(ep.body);
+		html += markdownToHTML(ep.body);
 		html += '<br/><hr/><br/>';
 		for (let child of ep.children) { 
 			html += '<p><a id="link' + child.id + '" href="?ep=' + child.id + '">' + escapeHtml(child.link) + '</a> (' + child.childCount + ')</p>';

@@ -18,6 +18,7 @@ import java.util.Scanner;
 
 import javax.ws.rs.core.Cookie;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -197,6 +198,7 @@ public class Strings {
 		readSnippetsFile("snippets", "faq.md", fileMap);
 		readSnippetsFile("snippets", "flagform.html", fileMap);
 		readSnippetsFile("snippets", "generic.html", fileMap);
+		readSnippetsFile("snippets", "generic_meta.html", fileMap);
 		readSnippetsFile("snippets", "genericfooter.html", fileMap);
 		readSnippetsFile("snippets", "genericheader.html", fileMap);
 		readSnippetsFile("snippets", "loginform.html", fileMap);
@@ -219,6 +221,7 @@ public class Strings {
 		readSnippetsFile("snippets", "usersearchform.html", fileMap);
 		readSnippetsFile("snippets", "verifyaccount.html", fileMap);
 		readSnippetsFile("snippets", "welcome.html", fileMap);
+		readSnippetsFile("snippets", "stats.html", fileMap);
 		
 		return Collections.unmodifiableMap(fileMap);
 	}

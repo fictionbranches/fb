@@ -16,6 +16,20 @@ $STYLE
 <meta property="og:site_name" content="Fiction Branches" />
 <meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
 
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chartist/0.11.4/chartist.min.css" />
+    <style>
+svg {
+  background-color: white;
+}
+.ct-series .ct-line {
+  stroke: blue;
+}
+.ct-label {
+  color: black;
+}
+    </style>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/chartist/0.11.4/chartist.min.js"></script>
+	
 </head>
 <body>
 <div class="topcorner">
@@ -23,7 +37,31 @@ $STYLE
 <br/>
 $ACCOUNT
 </div>
-	<p>$EXTRA</p>
+
+
+<form>
+<p>
+<label for="startdate">Start:</label>
+<input type="date" id="startdate" name="start" value="$STARTDATE" />
+</p><p>
+<label for="enddate">End:</label>
+<input type="date" id="enddate" name="end" value="$ENDDATE" />
+</p>
+<p><input type="submit" /></p>
+
+</form>
+
+<div id="datacontainer" data-datestrings='$LABELDATA' data-datecounts='$INPUTDATA' style="display: none;"></div>
+
+	<h2>Episodes per day</h2>
+    <div id="mainchart" class="mychart"></div>
+    <h2>Episodes per day, cumulative</h2>
+    <div id="cumchart" class="mychart"></div>
+    
+
+
+<script src="/static/charts.js"></script>
+
 <br/><br/><br/>
 $DONATEBUTTON
 </body>

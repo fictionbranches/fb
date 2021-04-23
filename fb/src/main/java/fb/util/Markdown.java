@@ -20,9 +20,10 @@ public class Markdown {
 	public static final Markdown m = new Markdown();
 	
 	public static String formatBody(String body) {
+		body = escape(body);
 		synchronized (lock) {
 			try {
-				return (String) ((Invocable) m.engine).invokeFunction("markdownToHTML", escape(body));
+				return (String) ((Invocable) m.engine).invokeFunction("markdownToHTML", body);
 			} catch (NoSuchMethodException | ScriptException e) {
 				System.err.println(e + " " + e.getMessage());
 				return body;
