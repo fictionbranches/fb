@@ -85,7 +85,9 @@ public class Story {
 					(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ""+generatedId)):(Strings.getString("story_downvote").replace("$ID", ""+generatedId))) + "</div>";
 			modify += Strings.getString("story_logged_in_extras").replace("$ID", ""+generatedId) + 
 					(InitWebsite.SEARCHING_ALLOWED?(Strings.getString("story_search_from_here").replace("$ID", ""+generatedId)):"") + 
-					"<p>"+(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ""+generatedId)):(Strings.getString("story_downvote").replace("$ID", ""+generatedId)))+"</p>";
+					"<p>"+(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ""+generatedId)):(Strings.getString("story_downvote").replace("$ID", ""+generatedId))) + " " + 
+					(ep.isFavorite?(Strings.getString("story_unfavorite").replace("$ID", ""+generatedId)):(Strings.getString("story_favorite").replace("$ID", ""+generatedId)))+"</p>"
+					;
 		}
 		
 		if (modify.length() != 0) modify = "<p>" + modify + "</p>";

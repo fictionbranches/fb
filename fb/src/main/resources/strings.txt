@@ -23,6 +23,9 @@ story_search_from_here~<br/><a href=/fb/search/$ID>&#x1F50DSearch from here</a>
 story_upvote~<a href=/fb/story/$ID?vote=up>Upvote this episode</a>
 story_downvote~Upvoted! <a href=/fb/story/$ID?vote=down>Undo upvote</a>
 
+story_favorite~<a href=/fb/story/$ID?favorite=up>Favorite this episode</a>
+story_unfavorite~Favorited! <a href=/fb/story/$ID?favorite=down>Undo favorite</a>
+
 story_editor~<br/>Episode last modified by <a href='/fb/user/$EDITORID' rel='editor'>$EDITORNAME</a> on $EDITDATE
 
 story_childtable_head_advanced~<table class="fbchildtable sortable"><thead><tr><th class="leftcolumn fbchildtable sorttable_nosort">Next episode</th><th class="fbchildtablenumeric">Children</th><th class="fbchildtablenumeric">Date</th><th class="fbchildtable sorttable_nosort">Author</th><th class="fbchildtablenumeric">Upvotes</th><th class="fbchildtablenumeric">Views</th><th class="fbchildtablenumeric">Hits</th></tr></thead><tbody>
@@ -55,3 +58,7 @@ recents_table_head_story_head~<table class="fbtable"><tr><th>Episode</th><th>Aut
 recents_table_head_story_column~<td class="fbtable">$TITLE</td>
 recents_table_row_same_linktitle~<tr class='hentry'><td class="fbtable"><a class='url entry-title' href='/fb/story/$ID'>$LINK</a></td><td class="fbtable"><span='author'><a href=/fb/user/$AUTHORID>$AUTHORNAME</a></span></td><td class="fbtable"><time class='published'>$DATE</time></td>$STORY<td class="textalignright">$EPISODEDEPTH</td></tr>
 recents_table_row_different_linktitle~<tr class='hentry'><td class="fbtable">$TITLE<br/><a class='url entry-title' href='/fb/story/$ID'>$LINK</a></td><td class="fbtable"><span='author'><a href=/fb/user/$AUTHORID>$AUTHORNAME</a></span></td><td class="fbtable"><time class='published'>$DATE</time></td>$STORY<td class="textalignright">$EPISODEDEPTH</td></tr>
+
+#### favorites
+favorites_selector~<select id="fbtableorder"><option value="">Change sort order</option><option value="/fb/favorites?sort=newfav">Recently favorited (default)</option><option value="/fb/favorites?sort=oldfav">Oldest favorited</option><option value="/fb/favorites?sort=newest">Recently written</option><option value="/fb/favorites?sort=oldest">Oldest written</option></select>
+

@@ -53,6 +53,7 @@ import fb.db.DBComment;
 import fb.db.DBEmailChange;
 import fb.db.DBEpisode;
 import fb.db.DBEpisodeView;
+import fb.db.DBFavEp;
 import fb.db.DBFlaggedComment;
 import fb.db.DBFlaggedEpisode;
 import fb.db.DBModEpisode;
@@ -165,6 +166,7 @@ public class DB {
 		configuration.addAnnotatedClass(DBAnnouncementView.class);
 		configuration.addAnnotatedClass(DBNotification.class);
 		configuration.addAnnotatedClass(DBTheme.class);
+		configuration.addAnnotatedClass(DBFavEp.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -396,7 +398,7 @@ public class DB {
 					note.setEpisode(child);
 					session.save(note);
 				}
-				if (sendMailNotification) new Thread(()->
+				if (sendMailNotification && !InitWebsite.DEV_MODE) new Thread(()->
 					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>")
 				).start();
 				
@@ -548,6 +550,7 @@ public class DB {
 					session.createQuery("delete DBFlaggedEpisode flag where flag.episode.generatedId=" + generatedId).executeUpdate();
 					session.createQuery("delete DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
+					session.createQuery("delete DBFavEp fe where fe.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBNotification nt where nt.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					
 					session.createNativeQuery(
@@ -782,6 +785,7 @@ public class DB {
 	@SuppressWarnings("unchecked")
 	public static EpisodeWithChildren getFullEp(long generatedId, String username) throws DBException {
 		boolean canUpvote = false;
+		boolean isFavorite = false;
 		Session session = openSession();
 		try {
 			DBUser user = null;
@@ -810,7 +814,14 @@ public class DB {
 					username = username.toLowerCase().trim();
 					user = DB.getUserById(session, username);
 					if (user != null) {
-						canUpvote = session.createQuery("from DBUpvote vote where vote.episode.generatedId=" + ep.getGeneratedId() + " and vote.user.id='" + user.getId() + "'").uniqueResultOptional().isEmpty();
+						canUpvote = session
+								.createQuery("from DBUpvote vote where vote.episode.generatedId=" + ep.getGeneratedId() + " and vote.user.id='" + user.getId() + "'")
+								.uniqueResultOptional()
+								.isEmpty();
+						isFavorite = session
+								.createQuery("from DBFavEp fav where fav.episode.generatedId=" + ep.getGeneratedId() + " and fav.user.id='" + user.getId() + "'")
+								.uniqueResultOptional()
+								.isPresent();
 						if (session.createQuery("from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId() + " and ev.user.id='" + username + "'").uniqueResultOptional().isEmpty()) {
 							try {
 							session.beginTransaction();
@@ -869,7 +880,7 @@ public class DB {
 					.stream().map(FlatEpisode::new)
 					.collect(Collectors.toList());
 			
-			return new EpisodeWithChildren(ep, visitorCount, upvotes, user, canUpvote, children, comments, pathbox);
+			return new EpisodeWithChildren(ep, visitorCount, upvotes, user, canUpvote, isFavorite, children, comments, pathbox);
 		} finally {
 			closeSession(session);
 		}
@@ -933,6 +944,56 @@ public class DB {
 				upvote.setEpisode(null);
 				upvote.setUser(null);
 				session.delete(upvote);
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+				throw new DBException("Database error " + e.getMessage());
+			}
+		} finally {
+			closeSession(session);
+		}
+	}
+	
+	public static void favoriteEp(long generatedId, String username) throws DBException {
+		Session session = openSession();
+		try {
+			DBUser user = DB.getUserById(session, username);
+			if (user == null) throw new DBException("Not found: " + username);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException ("Not found: " + generatedId);
+			
+			try {
+				session.beginTransaction();
+				DBFavEp favorite = new DBFavEp();
+				favorite.setEpisode(ep);
+				favorite.setUser(user);
+				favorite.setDate(new Date());
+				session.save(favorite);
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+				throw new DBException("Database error " + e.getMessage());
+			}
+		} finally {
+			closeSession(session);
+		}
+	}
+	
+	public static void unfavoriteEp(long generatedId, String username) throws DBException {
+		Session session = openSession();
+		try {
+			DBUser user = DB.getUserById(session, username);
+			if (user == null) throw new DBException("Not found: " + username);
+			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			if (ep == null) throw new DBException ("Not found: " + generatedId);
+			
+			DBFavEp favorite = session.createQuery("from DBFavEp uv where uv.episode.generatedId=" + ep.getGeneratedId() + " and uv.user.id='" + user.getId() + "'", DBFavEp.class).uniqueResult();
+			
+			if (favorite != null)try {
+				session.beginTransaction();
+				favorite.setEpisode(null);
+				favorite.setUser(null);
+				session.delete(favorite);
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
@@ -1718,7 +1779,7 @@ public class DB {
 					session.save(note);
 				}
 				
-				if (sendMailNotification) {
+				if (sendMailNotification && !InitWebsite.DEV_MODE) {
 					final String email = comment.getEpisode().getAuthor().getEmail();
 					final String authorid = author.getId();
 					final String authorauthor = author.getAuthor();
@@ -1732,7 +1793,6 @@ public class DB {
 				}
 				
 				session.getTransaction().commit();
-				
 				
 			} catch (Exception e) {
 				session.getTransaction().rollback();
@@ -2352,6 +2412,7 @@ public class DB {
 				
 				session.createQuery("delete DBEpisodeView ev where ev.user.id='" + userB + "'").executeUpdate();
 				session.createQuery("delete DBUpvote uv where uv.user.id='" + userB + "'").executeUpdate();
+				session.createQuery("delete DBFavEp uv where uv.user.id='" + userB + "'").executeUpdate();
 				session.createQuery("delete DBAnnouncementView uv where uv.viewer.id='" + userB + "'").executeUpdate();
 				
 				session.createQuery("delete DBFlaggedComment uv where uv.user.id='" + userB + "'").executeUpdate();

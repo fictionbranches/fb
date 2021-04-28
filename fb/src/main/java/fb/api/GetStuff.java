@@ -130,9 +130,17 @@ public class GetStuff {
 	@GET
 	@Path("story/{generatedid}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response get(@Context UriInfo uriInfo, @PathParam("generatedid") long generatedId, @QueryParam("sort") String sort, @QueryParam("vote") String vote, 
-			@CookieParam("fbchildsort") Cookie fbchildsort, @CookieParam("fbadvancedchildren") Cookie fbadvancedchildren, 
-			@CookieParam("fbtoken") Cookie fbtoken, @CookieParam("fbjs") Cookie fbjs) {
+	public Response get(
+			@Context UriInfo uriInfo, 
+			@PathParam("generatedid") long generatedId,
+			@QueryParam("sort") String sort, 
+			@QueryParam("vote") String vote, 
+			@QueryParam("favorite") String favorite,
+			@CookieParam("fbchildsort") Cookie fbchildsort,
+			@CookieParam("fbadvancedchildren") Cookie fbadvancedchildren, 
+			@CookieParam("fbtoken") Cookie fbtoken,
+			@CookieParam("fbjs") Cookie fbjs
+			) {
 		if (vote != null && fbtoken != null) {
 			final Response redirectHere = Response.seeOther(GetStuff.createURI("/fb/story/" + generatedId)).build();
 			String username = Accounts.getUsernameFromCookie(fbtoken);
@@ -141,6 +149,20 @@ public class GetStuff {
 			try {
 				if (vote.equalsIgnoreCase("up")) DB.upvote(generatedId, username);
 				else if (vote.equalsIgnoreCase("down")) DB.downvote(generatedId, username);
+			} catch (DBException e) {
+				return redirectHere;
+			}
+			return redirectHere;
+		}
+		
+		if (favorite != null && fbtoken != null) {
+			final Response redirectHere = Response.seeOther(GetStuff.createURI("/fb/story/" + generatedId)).build();
+			String username = Accounts.getUsernameFromCookie(fbtoken);
+			if (username == null) return redirectHere;
+
+			try {
+				if (favorite.equalsIgnoreCase("up")) DB.favoriteEp(generatedId, username);
+				else if (favorite.equalsIgnoreCase("down")) DB.unfavoriteEp(generatedId, username);
 			} catch (DBException e) {
 				return redirectHere;
 			}

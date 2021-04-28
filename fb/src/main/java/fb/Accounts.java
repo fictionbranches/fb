@@ -208,6 +208,9 @@ public class Accounts {
 			unreadNotifications=0;
 		}
 		if (unreadNotifications > 0) response.append("<p><a href=/fb/notifications>" + unreadNotifications + " new notification" + ((unreadNotifications>1)?"s":"") + "</a></p>");
+		
+		response.append("<p><a href=/fb/favorites>Favorite episodes</a></p>\n");
+		
 		if (InitWebsite.DEV_MODE) {
 			response.append("<p>");
 			if (user.level != ((byte)1)) response.append("<br/><a href=/fb/becomenormal>Become a normal user</a>");

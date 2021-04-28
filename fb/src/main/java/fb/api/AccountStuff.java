@@ -1,5 +1,8 @@
 package fb.api;
 
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -14,6 +17,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +26,8 @@ import fb.Accounts.FBLoginException;
 import fb.DB;
 import fb.DB.DBException;
 import fb.InitWebsite;
+import fb.db.DBEpisode;
+import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.util.GoogleRECAPTCHA;
 import fb.util.GoogleRECAPTCHA.GoogleCheckException;
@@ -434,5 +440,106 @@ public class AccountStuff {
 		}
 		
 		return Response.seeOther(GetStuff.createURI("/fb/useraccount")).build();
+	}
+	
+	@GET
+	@Path("favorites")
+	@Produces(MediaType.TEXT_HTML)
+	public Response getFavoriteEpisodes(@CookieParam("fbtoken") Cookie fbtoken, @QueryParam("delete") String delete, @QueryParam("sort") String sort) {
+		
+		if (delete != null && delete.length() > 0) {
+			
+			final Response redirectHere = Response.seeOther(GetStuff.createURI("/fb/favorites")).build();
+			int epToDelete;
+			try {
+				epToDelete = Integer.parseInt(delete);
+			} catch (Exception e) {
+				return redirectHere;
+			}
+			
+			FlatUser user;
+			try {
+				user = Accounts.getFlatUser(fbtoken);
+			} catch (FBLoginException e) {
+				return redirectHere;
+			}
+			
+			try {
+				DB.unfavoriteEp(epToDelete, user.id);
+			} catch (DBException e) {}
+			
+			return redirectHere;
+		}
+		
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic_meta.html", null)
+					.replace("$TITLE", "Favorite episodes")
+					.replace("$OGDESCRIPTION", "Your own personal list of favorite episodes")
+					.replace("$EXTRA","You must be logged in to do that")).build();
+		}
+		
+		ArrayList<FlatEpisode> eps;
+		
+		String query = "SELECT fbepisodes.* FROM fbepisodes,fbfaveps WHERE generatedid=episode_generatedid AND fbfaveps.user_id='"+user.id+"' ORDER BY $ORDERBY LIMIT 100";
+		
+		// fbfaveps.date ASC
+		if (sort == null) sort = "";
+		switch (sort) {
+		case "default":
+		case "newfav":			
+		default:
+			query = query.replace("$ORDERBY", "fbfaveps.date DESC");
+			break;
+		case "oldfav":
+			query = query.replace("$ORDERBY", "fbfaveps.date ASC");
+			break;
+		case "newest":
+			query = query.replace("$ORDERBY", "fbepisodes.date DESC");
+			break;
+		case "oldest":
+			query = query.replace("$ORDERBY", "fbepisodes.date ASC");
+			break;
+		}
+		
+		Session session = DB.openSession();
+		try {
+			eps = session.createNativeQuery(
+					query,
+					DBEpisode.class)
+					.stream()
+					.map(FlatEpisode::new)
+					.collect(Collectors.toCollection(ArrayList::new));
+		} finally {
+			DB.closeSession(session);
+		}
+		
+
+		
+		StringBuilder html = new StringBuilder();
+		html.append(
+				"<h1>Favorite episodes</h1>\n"
+				+ "<h4>You can add a favorite episode from that episode's page</h4>\n"
+				+ Strings.getString("favorites_selector") + "\n");
+		if (eps.isEmpty()) {
+			html.append("<p>You do not have any favorite episodes (yet).</p>\n");
+		} else {
+			for (var ep : eps) {
+				html.append("<p><a href=/fb/story/" + ep.generatedId + ">"+Strings.escape(ep.link)+"</a>");
+				if (!ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())) {
+					html.append(" ("+Strings.escape(ep.title)+") ");
+				}
+				html.append("&nbsp;-&nbsp;<a href=?delete=" + ep.generatedId + ">Remove</a></p>");
+			}
+		}
+		
+		
+		return Response.ok(Strings.getFile("favoritespage.html", user)
+				.replace("$TITLE", "Favorite episodes")
+				.replace("$OGDESCRIPTION", "Your own personal list of favorite episodes")
+				.replace("$EXTRA", html.toString())
+				).build();
 	}
 }

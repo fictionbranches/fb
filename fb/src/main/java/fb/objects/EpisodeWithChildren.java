@@ -31,6 +31,7 @@ public class EpisodeWithChildren {
 	public final long upvotes;
 	public final FlatUser viewer;
 	public final boolean viewerCanUpvote;
+	public final boolean isFavorite;
 	public final List<Episode> children;
 	public final Long parentId;
 	public final List<Comment> comments;
@@ -40,7 +41,7 @@ public class EpisodeWithChildren {
 	 * Construct a complete Episode from a DBEpisode database object
 	 * @param ep
 	 */
-	public EpisodeWithChildren(DBEpisode ep, long views, long upvotes, DBUser viewer, boolean viewerCanUpvote, List<Episode> children, List<Comment> comments, List<FlatEpisode> pathbox) {
+	public EpisodeWithChildren(DBEpisode ep, long views, long upvotes, DBUser viewer, boolean viewerCanUpvote, boolean isFavorite, List<Episode> children, List<Comment> comments, List<FlatEpisode> pathbox) {
 		this.generatedId = ep.getGeneratedId();
 		this.newMap = ep.getNewMap();
 		this.oldMap = ep.getOldMap();
@@ -63,6 +64,7 @@ public class EpisodeWithChildren {
 		this.parentId = (ep.getParent() == null) ? null : ep.getParent().getGeneratedId();
 		this.viewer = (viewer==null)?null:(new FlatUser(viewer));
 		this.viewerCanUpvote = viewerCanUpvote;
+		this.isFavorite = isFavorite;
 		this.comments = comments;
 		this.pathbox = pathbox;
 		
