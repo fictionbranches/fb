@@ -28,8 +28,8 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
-import javax.ws.rs.core.Cookie;
-import javax.ws.rs.core.StreamingOutput;
+import jakarta.ws.rs.core.Cookie;
+import jakarta.ws.rs.core.StreamingOutput;
 
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
@@ -843,7 +843,7 @@ public class DB {
 			
 			String query = CHILD_QUERY + ep.getGeneratedId() + CHILD_QUERY_POST;
 			
-			Stream<Object> stream = session.createNativeQuery(query).stream();
+			Stream<Object> stream = session.createNativeQuery(query).stream(); // TODO this is extremely slow, multiple seconds sometimes
 			
 			ArrayList<Episode> children = stream.map(x->{
 				Object[] arr = (Object[])x;

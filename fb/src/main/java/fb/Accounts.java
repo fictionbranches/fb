@@ -23,7 +23,6 @@ import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import javax.ws.rs.core.Cookie;
 
 import org.apache.commons.validator.routines.EmailValidator;
 import org.slf4j.Logger;
@@ -49,6 +48,7 @@ import fb.objects.Notification;
 import fb.objects.User;
 import fb.util.Dates;
 import fb.util.Strings;
+import jakarta.ws.rs.core.Cookie;
 
 public class Accounts {
 	

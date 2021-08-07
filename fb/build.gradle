@@ -1,5 +1,6 @@
 plugins {
   id "com.github.jk1.dependency-license-report" version "1.6"
+    id("com.github.johnrengelman.shadow") version "7.0.0"
 }
 apply plugin: 'java-library'
 apply plugin:'application'
@@ -11,76 +12,46 @@ mainClassName = 'fb.InitWebsite'
 sourceCompatibility = 1.11
 targetCompatibility = 1.11
 
-jar {
-	from {
-		(configurations.runtime).collect {
-			it.isDirectory() ? it : zipTree(it)
-		}
-	}
-	manifest {
-		attributes("Main-Class": mainClassName )
-	}
-	exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA' 
-}
 run {
 	if (project.hasProperty('runArgs')) {
  		args findProperty('runArgs') 
  	}
  	standardInput = System.in
 }
-tasks.withType(JavaExec) {
-    jvmArgs = ["-Xss16m", "-Xmx3072m"]
-}
 
-configurations {
-	implementation {
-		exclude group: 'javax.activation', module: 'activation'
-		exclude group: 'javax.activation', module: 'javax.activation-api'
-		exclude group: 'org.jvnet.staxex', module: 'stax-ex'
-	}
-	compile {
-		exclude group: 'javax.activation', module: 'activation'
-		exclude group: 'javax.activation', module: 'javax.activation-api'
-		exclude group: 'org.jvnet.staxex', module: 'stax-ex'
-	}
-	runtime {
-		exclude group: 'javax.activation', module: 'activation'
-		exclude group: 'javax.activation', module: 'javax.activation-api'
-		exclude group: 'org.jvnet.staxex', module: 'stax-ex'
-	}
-}
+applicationDefaultJvmArgs = ["-Xss16m", "-Xmx3072m"]
 
 dependencies {
-	
-	// bumping versions on jakarta and glassfish resulted in classload errors and/or inability to accept POST requests //TODO 
-	
-	compile group: 'jakarta.activation', name: 'jakarta.activation-api', version: '1.2.1' // On Java 9+, fails at runtime without this dependency
-	compile group: 'com.sun.activation', name: 'jakarta.activation', version: '1.2.1' // On Java 9+, fails at runtime without this dependency
-	
-	compile (group: 'org.glassfish.jersey.containers', name: 'jersey-container-grizzly2-http', version: '2.30') // Grizzly embedded container for Jersey
-	compile (group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '2.30') // Fails at runtime without this dependency
-	
-	compile group: 'org.hibernate', name: 'hibernate-core', version: '5.4.28.Final' // ORM
-	compile group: 'org.hibernate', name: 'hibernate-c3p0', version: '5.4.28.Final' // better connection pool
-	compile group: 'org.hibernate', name: 'hibernate-search-orm', version: '5.11.8.Final' // search engine
-	compile group: 'org.postgresql', name: 'postgresql', version: '42.2.19' // postgres JDBC driver
 		
-	compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.30'
+	implementation group: 'jakarta.activation', name: 'jakarta.activation-api', version: '2.0.1' // On Java 9+, fails at runtime without this dependency
+	implementation group: 'com.sun.activation', name: 'jakarta.activation', version: '2.0.1' // On Java 9+, fails at runtime without this dependency
+	implementation group: 'javax.validation', name: 'validation-api', version: '2.0.1.Final'
+	
+	
+	implementation (group: 'org.glassfish.jersey.containers', name: 'jersey-container-grizzly2-http', version: '3.0.2') // Grizzly embedded container for Jersey
+	implementation (group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '3.0.2') // Fails at runtime without this dependency
+	
+	implementation group: 'org.hibernate', name: 'hibernate-core', version: '5.5.6.Final' // ORM
+	implementation group: 'org.hibernate', name: 'hibernate-c3p0', version: '5.5.6.Final' // better connection pool
+	implementation group: 'org.hibernate', name: 'hibernate-search-orm', version: '5.11.9.Final' // search engine
+	implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.23' // postgres JDBC driver
 		
-	compile group: 'org.apache.commons', name: 'commons-text', version: '1.9' // StringEscapeUtils.escapeHtml4
+	implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.32'
+		
+	implementation group: 'org.apache.commons', name: 'commons-text', version: '1.9' // StringEscapeUtils.escapeHtml4
 	
-	compile group: 'com.google.code.gson', name: 'gson', version: '2.8.6'
+	implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.7'
 	
-	compile group: 'org.springframework.security', name: 'spring-security-crypto', version: '5.4.5' // password hashing
+	implementation group: 'org.springframework.security', name: 'spring-security-crypto', version: '5.5.1' // password hashing
 	
-	compile group: 'commons-validator', name: 'commons-validator', version: '1.7' // email address validation
+	implementation group: 'commons-validator', name: 'commons-validator', version: '1.7' // email address validation
 	
-	compile (group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2') 
+	implementation (group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2') 
 	
-	compile group: 'com.rometools', name: 'rome', version: '1.15.0' // RSS
+	implementation group: 'com.rometools', name: 'rome', version: '1.16.0' // RSS
 	
-	compile group: 'com.github.wumpz', name: 'diffutils', version: '3.0'
+	implementation group: 'com.github.wumpz', name: 'diffutils', version: '3.0'
 	
-	compile group: 'net.gjerull.etherpad', name: 'etherpad_lite_client', version: '1.2.13'
+	implementation group: 'net.gjerull.etherpad', name: 'etherpad_lite_client', version: '1.2.13'
 	
 }

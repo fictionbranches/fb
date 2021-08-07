@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 
-import javax.ws.rs.core.Cookie;
+import jakarta.ws.rs.core.Cookie;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.hibernate.Session;
