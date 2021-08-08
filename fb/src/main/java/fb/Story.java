@@ -633,7 +633,7 @@ public class Story {
 		return Strings.getFile("searchform.html", user).replace("$SEARCHTERM", "").replace("$TITLE", "Searching '" + Strings.escape(ep.title) + "'").replace("$ID", ""+generatedId).replace("$EXTRA", "");
 	}
 	
-	public static String searchPost(Cookie token, long generatedId, String search, String page) {
+	public static String searchPost(Cookie token, long generatedId, String search, String page, String sort) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -650,15 +650,15 @@ public class Story {
 		}
 		EpisodeResultList results;
 		try {
-			results = DB.search(generatedId, search, pageNum);
+			results = DB.search(generatedId, search, pageNum, sort==null?"":sort);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
 		} 
 		List<FlatEpisode> result = results.episodes;
 		
 		StringBuilder sb = new StringBuilder();
-		if (pageNum > 1) sb.append(searchButton(generatedId,"Prev", search, pageNum-1));
-		if (results.morePages) sb.append(searchButton(generatedId,"Next", search, pageNum+1));
+		if (pageNum > 1) sb.append(searchButton(generatedId,"Prev", search, pageNum-1, sort));
+		if (results.morePages) sb.append(searchButton(generatedId,"Next", search, pageNum+1, sort));
 		if (sb.length() > 0) {
 			String asdf = sb.toString();
 			sb = new StringBuilder("<p>" + asdf + "</p>");
@@ -678,10 +678,11 @@ public class Story {
 		return Strings.getFile("searchform.html", user).replace("$SEARCHTERM", Strings.escape(search)).replace("$TITLE", "Search results").replace("$ID", ""+generatedId).replace("$EXTRA", sb.toString());
 	}
 	
-	private static String searchButton(long generatedId, String name, String search, int page) {
+	private static String searchButton(long generatedId, String name, String search, int page, String sort) {
 		return "<form class=\"simplebutton\" action=\"/fb/search/"+generatedId+"\" method=\"get\">\n" + 
 				"  <input type=\"hidden\" name=\"q\" value=\""+Strings.escape(search)+"\" />\n" + 
 				"  <input type=\"hidden\" name=\"page\" value=\""+page+"\" />\n" + 
+				(sort == null ? "" : "  <input type=\"hidden\" name=\"sort\" value=\""+sort+"\" />\n") + 
 				"  <input class=\"simplebutton\" type=\"submit\" value=\""+name+"\" />\n" + 
 				"</form>";
 	}

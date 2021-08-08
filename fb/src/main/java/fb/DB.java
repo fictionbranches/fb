@@ -34,6 +34,8 @@ import jakarta.ws.rs.core.StreamingOutput;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.RegexpQuery;
+import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.automaton.RegExp;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -1015,7 +1017,7 @@ public class DB {
 		}
 	}
 	
-	public static EpisodeResultList search(long generatedId, String search, int page) throws DBException {
+	public static EpisodeResultList search(long generatedId, String search, int page, String sort) throws DBException {
 		LOGGER.info(String.format("Searching \"%s\" on page %d (page number %d", search, generatedId, page));
 		Session session = openSession();
 		page-=1;
@@ -1033,11 +1035,33 @@ public class DB {
 			
 			try {
 				
+				Sort sorter = null;
+				switch (sort) {
+//				case "default":
+//				case "": 
+//				default: 
+//					sorter = null;
+//					break;
+				case "newest":
+					sorter = new Sort(new SortField("date", SortField.Type.LONG, true));
+					break;
+				case "oldest":
+					sorter = new Sort(new SortField("date", SortField.Type.LONG, false));
+					break;
+				}
+				
+				var q = sesh.createFullTextQuery(combinedQuery, DBEpisode.class);
+				if (sorter != null) q.setSort(sorter);
+				q.setFirstResult(PAGE_SIZE*page);
+				q.setMaxResults(PAGE_SIZE+1);
+				
 				@SuppressWarnings("unchecked")
-				Stream<Object> stream = sesh.createFullTextQuery(combinedQuery, DBEpisode.class)
-						.setFirstResult(PAGE_SIZE*page)
-						.setMaxResults(PAGE_SIZE+1)
-						.stream();
+				Stream<Object> stream = q.stream();
+//				Stream<Object> stream = sesh.createFullTextQuery(combinedQuery, DBEpisode.class)
+//						.setSort(new Sort(SortField.FIELD_SCORE, new SortField()))
+//						.setFirstResult(PAGE_SIZE*page)
+//						.setMaxResults(PAGE_SIZE+1)
+//						.stream();
 				
 				ArrayList<FlatEpisode> list = stream
 					.map(e->new FlatEpisode((DBEpisode)e))
@@ -1045,7 +1069,7 @@ public class DB {
 				boolean hasNext = list.size() > PAGE_SIZE;
 				return new EpisodeResultList(null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
 			} catch (Exception e) {
-				throw new RuntimeException("Search exception on id " + generatedId + " with search query \"" + search + "\" -- "  + e + " -- " + e.getMessage());
+				throw new RuntimeException("Search exception on id " + generatedId + " with search query \"" + search + "\" -- "  + e + " -- " + e.getMessage(), e);
 			}
 		} finally {
 			closeSession(session);

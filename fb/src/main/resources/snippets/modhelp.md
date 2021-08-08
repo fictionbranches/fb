@@ -1,7 +1,5 @@
 # Moderator guidelines
 
-https://pad.fictionbranches.net/p/4BQmLWApgV
-
 ### TODO: add guidelines for correct and incorrect moderation
 
 # Moderator help
