@@ -8,14 +8,7 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.FormParam;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-
+import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,10 +20,20 @@ import fb.Accounts.FBLoginException;
 import fb.DB;
 import fb.DB.DBException;
 import fb.Story;
+import fb.db.DBEpisode;
 import fb.objects.Episode;
 import fb.objects.EpisodeWithChildren;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
+import jakarta.ws.rs.FormParam;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 @Path("fbapi")
 public class JSONStuff {
@@ -178,18 +181,6 @@ public class JSONStuff {
 		}
 	}
 	
-	@SuppressWarnings("squid:ClassVariableVisibilityCheck")
-	class JSONToken {
-		public String token;
-	}
-	
-	@SuppressWarnings("squid:ClassVariableVisibilityCheck")
-	class JSONGetEpisodeRequest {
-		public String token;
-		public Long id;
-		public String sendhtml;
-	}
-	
 	class JSONError {
 		public final String error;
 		public JSONError(String error) {
@@ -197,15 +188,11 @@ public class JSONStuff {
 		}
 	}
 	
-	@POST
+	@GET
 	@Path("getroots")
-	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getRoots(String json) {		
+	public Response getRoots(@QueryParam("token") String token) {		
 		
-		JSONToken jtoken = g.get().fromJson(json, JSONToken.class);
-		String token = null;
-		if (jtoken != null && jtoken.token != null) token = jtoken.token;
 		List<FlatEpisode> roots = Story.getRootEpisodes();
 		FlatUser user;
 		try { 
@@ -220,25 +207,11 @@ public class JSONStuff {
 		return Response.ok(g().toJson(ret)).build();
 	}
 	
-	@POST
-	@Path("getepisode")
-	@Consumes(MediaType.APPLICATION_JSON)
+	@GET
+	@Path("getepisode/{generatedid}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getEpisode(String json) {
+	public Response getEpisode(@PathParam("generatedid") long generatedId, @QueryParam("token") String token, @QueryParam("sendhtml") Boolean sendHTML) {
 		try {
-			JSONGetEpisodeRequest jepreq = g.get().fromJson(json, JSONGetEpisodeRequest.class);
-			String token = null;
-			long generatedId;
-			boolean sendhtml = false;
-			if (jepreq != null) {
-				if (jepreq.token != null) token = jepreq.token;
-				if (jepreq.id != null) generatedId = jepreq.id;
-				else return Response.ok(g().toJson(new JSONError("Invalid episode id"))).build();
-				if (jepreq.sendhtml != null && jepreq.sendhtml.trim().equalsIgnoreCase("true")) {
-					sendhtml = true;
-
-				}
-			} else return Response.ok(g().toJson(new JSONError("Invalid json"))).build();
 			FlatUser user;
 			try {
 				user = Accounts.getFlatUserUsingTokenString(token);
@@ -251,7 +224,7 @@ public class JSONStuff {
 			} catch (DBException e1) {
 				return Response.ok(g().toJson(new JSONError("Not found: " + generatedId))).build();
 			}
-
+			boolean sendhtml = (sendHTML != null) && (sendHTML == true);
 			HashMap<String,Object> ret = new HashMap<>();
 			ret.put("episode",new JSONEpisode(ep, sendhtml));
 			if (user != null) ret.put("user",new JSONUser(user));
@@ -260,5 +233,46 @@ public class JSONStuff {
 			LOGGER.error("JSON getEpisode error", e);
 			return Response.ok(g().toJson(new JSONError(e.getMessage()))).build();
 		}
+	}
+	
+	@GET
+	@Path("recentepisodes")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response recentEpisodes(@QueryParam("token") String token, @QueryParam("before") Long before, @QueryParam("after") Long after) {
+		
+		
+		FlatUser user;
+		try { 
+			user = Accounts.getFlatUserUsingTokenString(token); 
+		} catch (FBLoginException e) {
+			user = null;
+		}
+		
+		String query = "SELECT * FROM fbepisodes ";
+		if (before != null || after != null) query += "WHERE ";
+		if (before != null) query += "date < to_timestamp(" + before + ") ";
+		if (before != null && after != null) query += " AND ";
+		if (after != null) query += "date > to_timestamp(" + after + ") ";
+		query += "ORDER BY date DESC LIMIT 100";
+		
+		List<JSONSimpleEpisode> episodes;
+		
+		Session session = DB.openSession();
+		try {
+			
+			episodes = session.createNativeQuery(query, DBEpisode.class).stream()
+				.map(FlatEpisode::new)
+				.map(JSONSimpleEpisode::new)
+				.collect(Collectors.toList());
+			
+		} finally {
+			DB.closeSession(session);
+		}
+		
+		HashMap<String,Object> ret = new HashMap<>();
+		ret.put("episodes",episodes);
+		if (user != null) ret.put("user",new JSONUser(user));
+		return Response.ok(g().toJson(ret)).build();
+		
 	}
 }

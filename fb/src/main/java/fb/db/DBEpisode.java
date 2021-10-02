@@ -30,7 +30,9 @@ import org.hibernate.search.annotations.TokenizerDef;
 import fb.DB;
 
 @Entity
-@Table(name="fbepisodes")
+@Table(name="fbepisodes", indexes = {
+		@javax.persistence.Index(columnList = "date", name = "ep_date_index")
+})
 @Indexed
 @AnalyzerDef(name = "fbEpisodeAnalyzer",
    tokenizer = @TokenizerDef(factory = StandardTokenizerFactory.class), 

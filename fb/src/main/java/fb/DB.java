@@ -573,14 +573,7 @@ public class DB {
 					for (DBUser user : mergeUsers) session.merge(user);
 					for (DBFlaggedEpisode flag : deleteFlags) session.delete(flag);
 					session.delete(ep);
-					
-					/*StringBuilder sb = new StringBuilder("update DBEpisode ep set ep.childCount=(ep.childCount-1) where "); 
-					
-					for (long pathId : DB.newMapToIdList(parentMap)) {
-						sb.append("ep.generatedId=" + pathId + " or ");
-					}
-					String updateCounts = sb.substring(0, sb.length() - 4);*/
-					
+										
 					String updateCounts = "update DBEpisode ep set ep.childCount=(ep.childCount-1) where " + 
 						DB.newMapToIdList(parentMap)
 							.map(pathId -> "ep.generatedId=" + pathId)
@@ -1037,11 +1030,6 @@ public class DB {
 				
 				Sort sorter = null;
 				switch (sort) {
-//				case "default":
-//				case "": 
-//				default: 
-//					sorter = null;
-//					break;
 				case "newest":
 					sorter = new Sort(new SortField("date", SortField.Type.LONG, true));
 					break;
@@ -1057,11 +1045,6 @@ public class DB {
 				
 				@SuppressWarnings("unchecked")
 				Stream<Object> stream = q.stream();
-//				Stream<Object> stream = sesh.createFullTextQuery(combinedQuery, DBEpisode.class)
-//						.setSort(new Sort(SortField.FIELD_SCORE, new SortField()))
-//						.setFirstResult(PAGE_SIZE*page)
-//						.setMaxResults(PAGE_SIZE+1)
-//						.stream();
 				
 				ArrayList<FlatEpisode> list = stream
 					.map(e->new FlatEpisode((DBEpisode)e))
@@ -1371,19 +1354,6 @@ public class DB {
 				.map(FlatEpisode::new)
 				.collect(Collectors.toUnmodifiableList());
 			
-			/*CriteriaBuilder cb = session.getCriteriaBuilder();
-			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-			Root<DBEpisode> root = query.from(DBEpisode.class);
-			
-			Predicate[] preds = ids.stream().map(id->cb.equal(root.get("generatedId"), id)).toArray(length->new Predicate[length]);
-			
-			query.select(root).where(cb.or(preds)).orderBy(cb.asc(root.get("generatedId")));
-			
-			final ArrayList<FlatEpisode> list = new ArrayList<>(ids.size());
-			for (int i=0; i<=ids.size(); i+=STREAM_SIZE) {
-				session.createQuery(query).setFirstResult(i).setMaxResults(STREAM_SIZE).stream().forEach(pathEp->list.add(new FlatEpisode(pathEp)));
-			}
-			return list;*/
 		} finally {
 			closeSession(session);
 			LOGGER.info("Total path took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
@@ -2645,19 +2615,11 @@ public class DB {
 		}
 	}
 	
-	private static final String POPULAR_QUERY = "select generatedid,newmap,link,title,date,max(childcount), max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes\n" + 
-			"from (\n" + 
-			"    (select fbepisodes.generatedid,fbepisodes.newmap,fbepisodes.link,fbepisodes.title,fbepisodes.date,childcount, fbepisodes.viewcount as hitscount, count(*) as viewscount, 0 as upvotescount\n" + 
-			"        from fbepisodes, fbepisodeviews\n" + 
-			"        where fbepisodes.generatedid=fbepisodeviews.episode_generatedid\n" + 
-			"        group by fbepisodes.generatedid)\n" + 
-			"    union\n" + 
-			"    (select fbepisodes.generatedid,fbepisodes.newmap,fbepisodes.link,fbepisodes.title,fbepisodes.date,childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, count(*) as upvotescount\n" + 
-			"        from fbepisodes,fbupvotes\n" + 
-			"        where fbepisodes.generatedid=fbupvotes.episode_generatedid\n" + 
-			"        group by fbepisodes.generatedid)\n" + 
-			"    ) as countstuff\n" + 
-			"group by generatedid,newmap,link,title,date \n";
+	private static final String POPULAR_QUERY = 
+			  "select generatedid,newmap,link,title,date,childcount,viewcount as hits, \n"
+			+ "(select count(*) from fbepisodeviews where episode_generatedid=generatedid) as views,\n"
+			+ "(select count(*) from fbupvotes      where episode_generatedid=generatedid) as upvotes\n"
+			+ "from fbepisodes ";
 	
 	private static final String POPULAR_USERS_QUERY = "select username, author, date, max(episodescount) as episodes, max(hitscount) as hits, max(viewscount) as views, max(upvotescount) as upvotes from (\n" + 
 			"(select fbusers.id as username, author,fbusers.date as date,count(*) as episodescount, 0 as hitscount, 0 as upvotescount, 0 as viewscount\n" + 
