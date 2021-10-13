@@ -238,7 +238,7 @@ public class JSONStuff {
 	@GET
 	@Path("recentepisodes")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response recentEpisodes(@QueryParam("token") String token, @QueryParam("before") Long before, @QueryParam("after") Long after) {
+	public Response recentEpisodes(@QueryParam("token") String token, @QueryParam("before") Long before, @QueryParam("after") Long after, @QueryParam("reverse") String reverse) {
 		
 		
 		FlatUser user;
@@ -248,12 +248,15 @@ public class JSONStuff {
 			user = null;
 		}
 		
+		String order = "DESC";
+		if (reverse != null && reverse.trim().toLowerCase().equals("true")) order = "ASC";
+		
 		String query = "SELECT * FROM fbepisodes ";
 		if (before != null || after != null) query += "WHERE ";
 		if (before != null) query += "date < to_timestamp(" + before + ") ";
 		if (before != null && after != null) query += " AND ";
 		if (after != null) query += "date > to_timestamp(" + after + ") ";
-		query += "ORDER BY date DESC LIMIT 100";
+		query += "ORDER BY date " + order + " LIMIT 100";
 		
 		List<JSONSimpleEpisode> episodes;
 		
