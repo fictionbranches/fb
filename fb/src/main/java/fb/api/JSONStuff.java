@@ -99,6 +99,7 @@ public class JSONStuff {
 		public final int childCount;
 		public final int depth;
 		public final Long parentId;
+		public final long[] path;
 		public final long hits;
 		public final List<JSONChildEpisode> children;
 		public JSONEpisode(EpisodeWithChildren ep, boolean sendhtml) {
@@ -115,6 +116,7 @@ public class JSONStuff {
 			this.childCount=ep.childCount;
 			this.depth=ep.depth;
 			this.parentId=ep.parentId;
+			this.path = DB.newMapToIdList(ep.newMap).mapToLong(x->x).toArray();
 			this.hits=ep.hits;
 			this.body=sendhtml?Story.formatBody(ep.body):ep.body;
 			this.children = ep.children.stream().map(JSONChildEpisode::new).collect(Collectors.toList());
@@ -162,6 +164,7 @@ public class JSONStuff {
 		public final int childCount;
 		public final int depth;
 		public final Long parentId;
+		public final long rootId;
 		public final long hits;
 		public JSONSimpleEpisode(FlatEpisode ep) {
 			this.id = ep.generatedId;
@@ -177,6 +180,7 @@ public class JSONStuff {
 			this.childCount=ep.childCount;
 			this.depth=ep.depth;
 			this.parentId=ep.parentId;
+			this.rootId = DB.newMapToIdList(ep.newMap).findFirst().get();
 			this.hits=ep.hits;
 		}
 	}

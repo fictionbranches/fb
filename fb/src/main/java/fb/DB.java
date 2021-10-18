@@ -8,6 +8,7 @@ import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1383,11 +1384,7 @@ public class DB {
 	
 	public static Stream<Long> newMapToIdList(String newMap) {
 		String[] arr = newMap.substring(1,newMap.length()).split(""+EP_INFIX);
-		ArrayList<Long> list = new ArrayList<>();
-		for (String id : arr) {
-			list.add(Long.parseLong(id));
-		}
-		return list.stream(); // TODO
+		return Arrays.stream(arr).map(Long::parseLong);
 	}
 	
 	public static FlatEpisode[] getRoots() {
