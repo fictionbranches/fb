@@ -19,7 +19,7 @@ public class Markdown {
 	public static final Markdown m = new Markdown();
 	
 	public static String formatBody(String body) {
-		body = Strings.escape(body);
+		body = Text.escape(body);
 		synchronized (lock) {
 			try {
 				return (String) ((Invocable) m.engine).invokeFunction("markdownToHTML", body);

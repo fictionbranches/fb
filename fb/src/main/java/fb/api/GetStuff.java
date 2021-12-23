@@ -1,6 +1,6 @@
 package fb.api;
 
-import static fb.util.Strings.escape;
+import static fb.util.Text.escape;
 
 import java.math.BigInteger;
 import java.net.URI;
@@ -354,10 +354,10 @@ public class GetStuff {
 		for (Comment c : crl.comments) {
 			html.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p>");
 			html.append("<p>By ");
-			if (!(c.user.avatar==null||c.user.avatar.trim().length()==0)) html.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" /> ");
-			html.append("<a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a> - \n");
+			if (!(c.user.avatar==null||c.user.avatar.trim().length()==0)) html.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" /> ");
+			html.append("<a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a> - \n");
 			html.append("<a href=/fb/story/" + c.episode.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a></p>\n");
-			html.append("<p>On " + "<a href=/fb/story/" + c.episode.generatedId + ">" + (Strings.escape(c.episode.link)) + "</a></p>\n");
+			html.append("<p>On " + "<a href=/fb/story/" + c.episode.generatedId + ">" + (escape(c.episode.link)) + "</a></p>\n");
 			html.append("<hr/><hr/>\n");
 		}
 		
@@ -379,8 +379,8 @@ public class GetStuff {
 		
 		return Response.ok(Strings.getFile("generic_meta.html",null)
 			.replace("$EXTRA", "You must be logged in to do that")
-			.replace("$TITLE", Strings.escape(ep.title))
-			.replace("$OGDESCRIPTION", Strings.escape("By " + ep.authorName + System.lineSeparator() + ep.body))
+			.replace("$TITLE", escape(ep.title))
+			.replace("$OGDESCRIPTION", escape("By " + ep.authorName + System.lineSeparator() + ep.body))
 			).build();
 	}
 	

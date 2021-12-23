@@ -13,9 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import fb.InitWebsite;
-import fb.util.BadLogger;
 import fb.util.Discord;
 import fb.util.Strings;
+import fb.util.Text;
 
 /**
  * BE CAREFUL EDITING THIS CLASS!!!!!!!!!!!!
@@ -38,7 +38,7 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 			
 			StringBuilder sb = new StringBuilder();
 			sb.append("<p><h1>Invalid URL</h1><br/>\n");
-			sb.append("<p>" + Strings.escape(mess) + "</p>");
+			sb.append("<p>" + Text.escape(mess) + "</p>");
 			return Strings.getFile("emptygeneric.html", null).replace("$EXTRA", sb.toString());
 		}
 		
@@ -93,7 +93,7 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 			Discord.notifyError(message.toString());
 
 			if (exception != null) {
-				List<String> lines = BadLogger.traceToLines(exception);
+				List<String> lines = Text.traceToLines(exception);
 				final String header = "```\n";
 				message = new StringBuilder(header);
 				for (String line : lines) {

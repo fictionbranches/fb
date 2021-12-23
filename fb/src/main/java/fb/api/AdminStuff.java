@@ -27,6 +27,7 @@ import fb.db.DBSiteSetting;
 import fb.objects.FlatUser;
 import fb.util.Dates;
 import fb.util.Strings;
+import fb.util.Text;
 
 @Path("fb")
 public class AdminStuff {
@@ -50,7 +51,7 @@ public class AdminStuff {
 		Session session = DB.openSession();
 		try {
 			DBSiteSetting button = session.get(DBSiteSetting.class, "donate_button");
-			if (button != null) oldDonateButton = Strings.escape(button.getValue());
+			if (button != null) oldDonateButton = Text.escape(button.getValue());
 		} finally {
 			DB.closeSession(session);
 		}

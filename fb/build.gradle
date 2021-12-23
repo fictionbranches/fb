@@ -20,7 +20,9 @@ run {
 }
 
 applicationDefaultJvmArgs = ["-Xss16m", "-Xmx3072m"]
-
+tasks.withType(JavaCompile) {
+    options.deprecation = true
+}
 dependencies {
 		
 	implementation group: 'jakarta.activation', name: 'jakarta.activation-api', version: '2.0.1' // On Java 9+, fails at runtime without this dependency
@@ -28,21 +30,21 @@ dependencies {
 	implementation group: 'javax.validation', name: 'validation-api', version: '2.0.1.Final'
 	
 	
-	implementation (group: 'org.glassfish.jersey.containers', name: 'jersey-container-grizzly2-http', version: '3.0.2') // Grizzly embedded container for Jersey
-	implementation (group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '3.0.2') // Fails at runtime without this dependency
+	implementation (group: 'org.glassfish.jersey.containers', name: 'jersey-container-grizzly2-http', version: '3.0.3') // Grizzly embedded container for Jersey
+	implementation (group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '3.0.3') // Fails at runtime without this dependency
 	
-	implementation group: 'org.hibernate', name: 'hibernate-core', version: '5.5.6.Final' // ORM
-	implementation group: 'org.hibernate', name: 'hibernate-c3p0', version: '5.5.6.Final' // better connection pool
-	implementation group: 'org.hibernate', name: 'hibernate-search-orm', version: '5.11.9.Final' // search engine
-	implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.23' // postgres JDBC driver
+	implementation group: 'org.hibernate', name: 'hibernate-core', version: '5.6.3.Final' // ORM
+	implementation group: 'org.hibernate', name: 'hibernate-c3p0', version: '5.6.3.Final' // better connection pool
+	implementation group: 'org.hibernate', name: 'hibernate-search-orm', version: '5.11.10.Final' // search engine
+	implementation group: 'org.postgresql', name: 'postgresql', version: '42.3.1' // postgres JDBC driver
 		
 	implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.32'
 		
 	implementation group: 'org.apache.commons', name: 'commons-text', version: '1.9' // StringEscapeUtils.escapeHtml4
 	
-	implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.7'
+	implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.9'
 	
-	implementation group: 'org.springframework.security', name: 'spring-security-crypto', version: '5.5.1' // password hashing
+	implementation group: 'org.springframework.security', name: 'spring-security-crypto', version: '5.6.1' // password hashing
 	
 	implementation group: 'commons-validator', name: 'commons-validator', version: '1.7' // email address validation
 	
@@ -54,9 +56,13 @@ dependencies {
 	
 	implementation group: 'net.gjerull.etherpad', name: 'etherpad_lite_client', version: '1.2.13'
 	
-	implementation group: 'org.graalvm.js', name: 'js',               version: '21.2.0'
-	implementation group: 'org.graalvm.js', name: 'js-scriptengine',  version: '21.2.0'
-	implementation group: 'org.graalvm.truffle', name: 'truffle-api', version: '21.2.0'
+	implementation group: 'org.openjdk.nashorn', name: 'nashorn-core', version: '15.3'
 	
-	
+	/*
+	implementation group: 'org.graalvm.regex',   name: 'regex',            version: '21.3.0'
+	implementation group: 'org.graalvm.js',      name: 'js',               version: '21.3.0'
+	implementation group: 'org.graalvm.js',      name: 'js-scriptengine',  version: '21.3.0'
+	implementation group: 'org.graalvm.truffle', name: 'truffle-api',      version: '21.3.0'
+	*/
+		
 }

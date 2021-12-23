@@ -32,6 +32,7 @@ import fb.objects.FlatUser;
 import fb.util.GoogleRECAPTCHA;
 import fb.util.GoogleRECAPTCHA.GoogleCheckException;
 import fb.util.Strings;
+import fb.util.Text;
 
 @Path("fb")
 public class AccountStuff {
@@ -527,9 +528,9 @@ public class AccountStuff {
 			html.append("<p>You do not have any favorite episodes (yet).</p>\n");
 		} else {
 			for (var ep : eps) {
-				html.append("<p><a href=/fb/story/" + ep.generatedId + ">"+Strings.escape(ep.link)+"</a>");
+				html.append("<p><a href=/fb/story/" + ep.generatedId + ">"+Text.escape(ep.link)+"</a>");
 				if (!ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())) {
-					html.append(" ("+Strings.escape(ep.title)+") ");
+					html.append(" ("+Text.escape(ep.title)+") ");
 				}
 				html.append("&nbsp;-&nbsp;<a href=?delete=" + ep.generatedId + ">Remove</a></p>");
 			}

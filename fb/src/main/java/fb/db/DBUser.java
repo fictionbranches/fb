@@ -9,28 +9,16 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
-import org.apache.lucene.analysis.core.LowerCaseFilterFactory;
-import org.apache.lucene.analysis.standard.StandardFilterFactory;
-import org.apache.lucene.analysis.standard.StandardTokenizerFactory;
 import org.hibernate.search.annotations.Analyze;
 import org.hibernate.search.annotations.Analyzer;
-import org.hibernate.search.annotations.AnalyzerDef;
 import org.hibernate.search.annotations.Field;
 import org.hibernate.search.annotations.Index;
 import org.hibernate.search.annotations.Indexed;
 import org.hibernate.search.annotations.Store;
-import org.hibernate.search.annotations.TokenFilterDef;
-import org.hibernate.search.annotations.TokenizerDef;
 
 @Entity
 @Table(name="fbusers")
 @Indexed
-@AnalyzerDef(name = "fbUserAnalyzer",
-tokenizer = @TokenizerDef(factory = StandardTokenizerFactory.class), 
-filters = {
-  @TokenFilterDef(factory = LowerCaseFilterFactory.class),
-  @TokenFilterDef(factory = StandardFilterFactory.class) 
-})
 public class DBUser {
 		
 	@Id
@@ -39,7 +27,7 @@ public class DBUser {
 	@Column(unique=true)
 	private String email;
 		
-	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbUserAnalyzer"))
+	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String author;
 	
 	private Date date;
@@ -48,7 +36,7 @@ public class DBUser {
 	private String avatar;
 	
 	@Column(columnDefinition = "text") 
-	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbUserAnalyzer"))
+	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String bio;
 	
 	private String password;

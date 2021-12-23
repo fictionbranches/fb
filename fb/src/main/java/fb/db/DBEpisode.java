@@ -11,12 +11,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
-import org.apache.lucene.analysis.core.LowerCaseFilterFactory;
-import org.apache.lucene.analysis.standard.StandardFilterFactory;
-import org.apache.lucene.analysis.standard.StandardTokenizerFactory;
 import org.hibernate.search.annotations.Analyze;
 import org.hibernate.search.annotations.Analyzer;
-import org.hibernate.search.annotations.AnalyzerDef;
 import org.hibernate.search.annotations.DateBridge;
 import org.hibernate.search.annotations.Field;
 import org.hibernate.search.annotations.Index;
@@ -24,8 +20,6 @@ import org.hibernate.search.annotations.Indexed;
 import org.hibernate.search.annotations.Resolution;
 import org.hibernate.search.annotations.SortableField;
 import org.hibernate.search.annotations.Store;
-import org.hibernate.search.annotations.TokenFilterDef;
-import org.hibernate.search.annotations.TokenizerDef;
 
 import fb.DB;
 
@@ -34,12 +28,6 @@ import fb.DB;
 		@javax.persistence.Index(columnList = "date", name = "ep_date_index")
 })
 @Indexed
-@AnalyzerDef(name = "fbEpisodeAnalyzer",
-   tokenizer = @TokenizerDef(factory = StandardTokenizerFactory.class), 
-   filters = {
-     @TokenFilterDef(factory = LowerCaseFilterFactory.class),
-     @TokenFilterDef(factory = StandardFilterFactory.class) 
-})
 public class DBEpisode {
 	
 	@Id
@@ -56,10 +44,10 @@ public class DBEpisode {
 			
 	private String legacyId = null;
 	
-	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbEpisodeAnalyzer"))
+	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String title;
 	
-	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbEpisodeAnalyzer"))
+	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String link;
 	
 	private int childCount;
@@ -86,7 +74,7 @@ public class DBEpisode {
 	private DBModEpisode mod;
 	
 	@Column(columnDefinition = "text")
-	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbEpisodeAnalyzer"))
+	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String body;
 	
 	public int episodeDepthFromNewMap() {

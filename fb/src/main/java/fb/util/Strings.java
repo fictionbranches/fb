@@ -1,7 +1,6 @@
 package fb.util;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.FileVisitResult;
@@ -17,9 +16,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 
-import jakarta.ws.rs.core.Cookie;
-
-import org.apache.commons.text.StringEscapeUtils;
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +26,7 @@ import fb.DB;
 import fb.InitWebsite;
 import fb.db.DBSiteSetting;
 import fb.objects.FlatUser;
+import jakarta.ws.rs.core.Cookie;
 
 public class Strings {
 	
@@ -252,11 +249,7 @@ public class Strings {
 		}
 		return Collections.unmodifiableMap(stringsMap);
 	}
-	
-	public static String escape(String string) {
-		return StringEscapeUtils.escapeHtml4(string);
-	}
-	
+		
 	public static String getString(String name) {
 		String value = stringsTxtMap.get(name);
 		if (value == null) value = "";
@@ -345,21 +338,7 @@ public class Strings {
 				+"</style>\n"
 				;
 	}
-	
-	public static String readTextFile(String path) {
-		return readTextFile(new File(path));
-	}
-	
-	public static String readTextFile(File file) {
-		StringBuilder sb = new StringBuilder();
-		try (Scanner scan = new Scanner(file)) {
-			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
-		} catch (FileNotFoundException e) {
-			LOGGER.warn("Not found: " + file, e);
-		}
-		return sb.toString();
-	}
-	
+		
 	public static String getSelectThemes() {
 		List<String> list = DB.getThemeNames();
 		Collections.sort(list);

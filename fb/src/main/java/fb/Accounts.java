@@ -1,6 +1,6 @@
 package fb;
 
-import static fb.util.Strings.escape;
+import static fb.util.Text.escape;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -48,6 +48,7 @@ import fb.objects.Notification;
 import fb.objects.User;
 import fb.util.Dates;
 import fb.util.Strings;
+import fb.util.Text;
 import jakarta.ws.rs.core.Cookie;
 
 public class Accounts {
@@ -86,7 +87,7 @@ public class Accounts {
 		if (dir.exists()) {
 			if (dir.isDirectory()) {
 				for (File f : dir.listFiles()) {
-					UserSession sesh = new Gson().fromJson(Strings.readTextFile(f), UserSession.class);
+					UserSession sesh = new Gson().fromJson(Text.readTextFile(f), UserSession.class);
 					String token = f.getName();
 					active.put(token, sesh);
 				}
@@ -248,12 +249,12 @@ public class Accounts {
 			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
 			if (rootEp == null) story = "";
 			else story = rootEp.link;
-			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(Strings.escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + 
+			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + 
 					Dates.simpleDateFormat2(ep.date) + 
-					"</td><td class=\"fbtable\">" + Strings.escape(story) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>");
+					"</td><td class=\"fbtable\">" + escape(story) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>");
 		}
 		sb.append("</table>");
-		String avatar = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + Strings.escape(profileUser.user.avatar) + "\" /> ");
+		String avatar = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + escape(profileUser.user.avatar) + "\" /> ");
 		String bio = profileUser.user.bio==null?"":Story.formatBody(profileUser.user.bio);
 		String pageCount = "";
 		
@@ -350,7 +351,7 @@ public class Accounts {
 		String timeParam = popularTimeParam(time);
 		sb.append("<table class=\"popular\"><thead><tr><th>Author</th><th><a href=/fb/leaderboardepisodes?time="+timeParam+">Episodes</a></th><th><a href=/fb/leaderboardhits?time="+timeParam+">Hits</a></th><th><a href=/fb/leaderboardviews?time="+timeParam+">Views</a></th><th><a href=/fb/leaderboardupvotes?time="+timeParam+">Upvotes</a></th></tr></thead><tbody>\n");
 		for (User user : arr) {
-			sb.append("<tr><td><a href=/fb/user/" + user.username + ">" + Strings.escape(user.author) + "</a></td><td>" + user.episodes + "</td><td>" + user.hits + "</td><td>" + user.views + "</td><td>" + user.upvotes + "</td></tr>\n");
+			sb.append("<tr><td><a href=/fb/user/" + user.username + ">" + escape(user.author) + "</a></td><td>" + user.episodes + "</td><td>" + user.hits + "</td><td>" + user.views + "</td><td>" + user.upvotes + "</td></tr>\n");
 		}
 		sb.append("</tbody></table>\n");
 		return sb.toString();
@@ -368,8 +369,8 @@ public class Accounts {
 		sb.append("<h1> Fiction Branches Staff</h1><hr/>");
 		
 		for (FlatUser staff : DB.getStaff()) {
-			String avatar = (staff.avatar==null||staff.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\"" + Strings.escape(staff.avatar) + "\" /> ");
-			sb.append("<h3>" + avatar + "<a href=/fb/user/" + staff.id + ">" + Strings.escape(staff.author) + "</a></h3>\n");
+			String avatar = (staff.avatar==null||staff.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\"" + escape(staff.avatar) + "\" /> ");
+			sb.append("<h3>" + avatar + "<a href=/fb/user/" + staff.id + ">" + escape(staff.author) + "</a></h3>\n");
 			if (staff.level >= 100) sb.append("<p>Admin</p>\n");
 			else if (staff.level >= 10) sb.append("<p>Moderator</p>\n");
 			sb.append("<p>Member since " + Dates.outputDateFormat2(staff.date) + "</p>\n");
@@ -552,10 +553,10 @@ public class Accounts {
 				.replace("$CHILD_SITE_CHECKED", user.childSite?checked:"")
 				.replace("$CHILD_MAIL_CHECKED", user.childMail?checked:"")
 				.replace("$ID", user.id)
-				.replace("$AUTHORNAME", Strings.escape(user.author))
+				.replace("$AUTHORNAME", escape(user.author))
 				.replace("$THEMES", Strings.getSelectThemes())
-				.replace("$BIOBODY", Strings.escape(user.bio))
-				.replace("$AVATARURL", Strings.escape(user.avatar==null?"":user.avatar))
+				.replace("$BIOBODY", escape(user.bio))
+				.replace("$AVATARURL", escape(user.avatar==null?"":user.avatar))
 				.replace("$EXTRA", error==null||error.length()==0?"":"ERROR: " + error)
 				.replace("$BODYTEXTWIDTHFORM", widthHTML)
 				;
@@ -819,7 +820,7 @@ public class Accounts {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1> Flag queue</h1>\n");
 		for (FlaggedEpisode flag : DB.getFlags()) {
-			sb.append("<a href=/fb/getflag/" + flag.id + ">" + Strings.escape(flag.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + Strings.escape(flag.user.author) + "</a> on " + Dates.outputDateFormat2(flag.date) + "<br/>\n");
+			sb.append("<a href=/fb/getflag/" + flag.id + ">" + escape(flag.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + escape(flag.user.author) + "</a> on " + Dates.outputDateFormat2(flag.date) + "<br/>\n");
 		}
 		return Strings.getFile("generic.html", user).replace("$EXTRA", sb.toString());
 	}
@@ -835,7 +836,7 @@ public class Accounts {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1> Mod queue</h1>\n");
 		for (ModEpisode mod : DB.getMods()) {
-			sb.append("<a href=/fb/getmod/" + mod.modId + ">" + Strings.escape(mod.link) + "</a> submitted by <a href=/fb/user/" + mod.userId + ">" + Strings.escape(mod.author) + "</a> on " + Dates.outputDateFormat2(mod.date) + "<br/>\n");
+			sb.append("<a href=/fb/getmod/" + mod.modId + ">" + escape(mod.link) + "</a> submitted by <a href=/fb/user/" + mod.userId + ">" + escape(mod.author) + "</a> on " + Dates.outputDateFormat2(mod.date) + "<br/>\n");
 		}
 		return Strings.getFile("generic.html", user).replace("$EXTRA", sb.toString());
 	}
@@ -851,7 +852,7 @@ public class Accounts {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1>Comment flag queue</h1>\n");
 		for (FlaggedComment c : DB.getFlaggedComments()) {
-			sb.append("<a href=/fb/getflaggedcomment/" + c.id + ">" + c.id + "</a> submitted by <a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a> on " + Dates.outputDateFormat2(c.date) + "<br/>\n");
+			sb.append("<a href=/fb/getflaggedcomment/" + c.id + ">" + c.id + "</a> submitted by <a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a> on " + Dates.outputDateFormat2(c.date) + "<br/>\n");
 		}
 		return Strings.getFile("generic.html", user).replace("$EXTRA", sb.toString());
 	}
@@ -877,16 +878,16 @@ public class Accounts {
 			Comment c = flag.comment;
 			commentHTML.append("<div class=\"fbcomment\">\n");
 			commentHTML.append("<p>" + Story.formatBody(c.text) + "</p><hr/>");
-			commentHTML.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+Strings.escape(c.user.avatar) + "\" /><a href=/fb/user/" + c.user.id + ">" + Strings.escape(c.user.author) + "</a><br/>\n");
+			commentHTML.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" /><a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a><br/>\n");
 			commentHTML.append(Dates.outputDateFormat2(c.date));
 			commentHTML.append("</div>\n");
 			
 		sb.append("<h1>Flag text:</h1>");
 		
-		sb.append("<a href=/fb/story/" + flag.comment.episode.generatedId + ">" + Strings.escape(flag.comment.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + Strings.escape(flag.user.author) + "</a> on " + 
+		sb.append("<a href=/fb/story/" + flag.comment.episode.generatedId + ">" + escape(flag.comment.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + escape(flag.user.author) + "</a> on " + 
 				Dates.outputDateFormat2(flag.date) + "<br/>\n");
 		sb.append("<a href=/fb/clearflaggedcomment/" + flag.id + ">Delete this flag</a><br/>\n");
-		sb.append("<p>" + Strings.escape(flag.text) + "</p>");
+		sb.append("<p>" + escape(flag.text) + "</p>");
 		return Strings.getFile("generic.html", user).replace("$EXTRA",sb.toString());
 	}
 	
@@ -921,10 +922,10 @@ public class Accounts {
 		}
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1> Flagged episode</h1>\n");
-		sb.append("<a href=/fb/story/" + flag.episode.generatedId + ">" + Strings.escape(flag.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + Strings.escape(flag.user.author) + "</a> on " + 
+		sb.append("<a href=/fb/story/" + flag.episode.generatedId + ">" + escape(flag.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + escape(flag.user.author) + "</a> on " + 
 				Dates.outputDateFormat2(flag.date) + "<br/>\n");
 		sb.append("<a href=/fb/clearflag/" + flag.id + ">Delete this flag</a><br/>\n");
-		sb.append("<p>" + Strings.escape(flag.text) + "</p>");
+		sb.append("<p>" + escape(flag.text) + "</p>");
 		return Strings.getFile("generic.html", user).replace("$EXTRA",sb.toString());
 	}
 	
@@ -947,12 +948,12 @@ public class Accounts {
 		sb.append("<p>This is the proposed new version. The current version is available " + "<a href=/fb/story/" + mod.episodeGeneratedId + ">here</a></p>");
 		if (doDiff) sb.append("<p><a href=/fb/getmod/" + id + ">Get complete modification</a></p>");
 		else sb.append("<p><a href=/fb/getmod/" + id + "?diff>Get diff</a></p>");
-		sb.append("<p><a href=/fb/story/" + mod.episodeGeneratedId + ">" + Strings.escape(mod.oldLink) + "</a> submitted by <a href=/fb/user/" + mod.userId + ">" + Strings.escape(mod.author) + "</a> on " + 
+		sb.append("<p><a href=/fb/story/" + mod.episodeGeneratedId + ">" + escape(mod.oldLink) + "</a> submitted by <a href=/fb/user/" + mod.userId + ">" + escape(mod.author) + "</a> on " + 
 				Dates.outputDateFormat2(mod.date) + "</p>\n");
 		sb.append("<p><a href=/fb/acceptmod/" + mod.modId + ">Accept this modification</a></p>\n");
 		sb.append("<p><a href=/fb/rejectmod/" + mod.modId + ">Reject this modification</a></p>\n");
-		sb.append("<p><hr/><h4>New link:</h4> " + Strings.escape(mod.link) + "</p>\n");
-		sb.append("<p><hr/><h4>New title:</h4> " + Strings.escape(mod.title) + "</p>\n");
+		sb.append("<p><hr/><h4>New link:</h4> " + escape(mod.link) + "</p>\n");
+		sb.append("<p><hr/><h4>New title:</h4> " + escape(mod.title) + "</p>\n");
 		if (doDiff) {
 			String oldBody = mod.currentEpisode.body;
 			try {
@@ -963,7 +964,7 @@ public class Accounts {
 		                .oldTag(f -> (f?"<del>":"</del>"))
 		                .newTag(f -> (f?"<strong>":"</strong>"))
 		                .build();
-				List<DiffRow> rows = generator.generateDiffRows(listify(Strings.escape(oldBody)), listify(Strings.escape(mod.body)));
+				List<DiffRow> rows = generator.generateDiffRows(listify(escape(oldBody)), listify(escape(mod.body)));
 				StringBuilder out = new StringBuilder();
 				out.append("<table><thead><tr><th>original</th><th>new</th></tr></thead><tbody>\n");
 				
@@ -1116,7 +1117,7 @@ public class Accounts {
 		String prevNext = sb.toString();
 		sb.append("<table class=\"fbtable\">");
 		for (FlatUser fu : result) {
-			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\"><a href=/fb/user/" + fu.id + ">"+Strings.escape(fu.author)+"</td>" 
+			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\"><a href=/fb/user/" + fu.id + ">"+escape(fu.author)+"</td>" 
 					+ "<td class=\"fbtable\">" + Dates.simpleDateFormat2(fu.date) + "</td></tr>\n");
 		}
 		sb.append("</table>");
@@ -1126,7 +1127,7 @@ public class Accounts {
 	
 	private static String searchButton(String name, String search, int page) {
 		return "<form class=\"simplebutton\" action=\"/fb/usersearch\" method=\"get\">\n" + 
-				"  <input type=\"hidden\" name=\"q\" value=\""+Strings.escape(search)+"\" />\n" + 
+				"  <input type=\"hidden\" name=\"q\" value=\""+escape(search)+"\" />\n" + 
 				"  <input type=\"hidden\" name=\"page\" value=\""+page+"\" />\n" + 
 				"  <input class=\"simplebutton\" type=\"submit\" value=\""+name+"\" />\n" + 
 				"</form>";
@@ -1157,13 +1158,13 @@ public class Accounts {
 				sb.append("<p>" + a.body + "</p>\n");
 				break;
 			case DBNotification.NEW_CHILD_EPISODE:
-				sb.append("<p><a href=\"/fb/user/" + a.episode.authorId + "\">" + Strings.escape(a.episode.authorName) + "</a> wrote a <a href=\"/fb/story/" + a.episode.generatedId + "\">new child episode</a> of <a href=/fb/story/" + a.parentEpisode.generatedId +">" + Strings.escape(a.parentEpisode.title) + "</a></p>\n");
+				sb.append("<p><a href=\"/fb/user/" + a.episode.authorId + "\">" + escape(a.episode.authorName) + "</a> wrote a <a href=\"/fb/story/" + a.episode.generatedId + "\">new child episode</a> of <a href=/fb/story/" + a.parentEpisode.generatedId +">" + escape(a.parentEpisode.title) + "</a></p>\n");
 				break;
 			case DBNotification.NEW_COMMENT_ON_OWN_EPISODE:
-				sb.append("<a href=\"/fb/user/" + a.comment.user.id + "\">" + Strings.escape(a.comment.user.author) + "</a> left a <a href=\"/fb/story/" + a.comment.episode.generatedId + "#comment" + a.comment.id + "\">comment</a> on " + Strings.escape(a.comment.episode.title));
+				sb.append("<a href=\"/fb/user/" + a.comment.user.id + "\">" + escape(a.comment.user.author) + "</a> left a <a href=\"/fb/story/" + a.comment.episode.generatedId + "#comment" + a.comment.id + "\">comment</a> on " + escape(a.comment.episode.title));
 				break;
 			case DBNotification.MODIFICATION_RESPONSE:
-				sb.append("<a href=\"/fb/user/" + a.sender.id + "\">" + Strings.escape(a.sender.author) + "</a> "+(a.approved?"approved":"rejected")+" your request to modify <a href=\"/fb/story/" + a.episode.generatedId + " \">"+Strings.escape(a.episode.link)+"</a>");
+				sb.append("<a href=\"/fb/user/" + a.sender.id + "\">" + escape(a.sender.author) + "</a> "+(a.approved?"approved":"rejected")+" your request to modify <a href=\"/fb/story/" + a.episode.generatedId + " \">"+escape(a.episode.link)+"</a>");
 				break;
 			}
 			sb.append("<p>(" + Dates.outputDateFormat2(a.date) + ")</p>\n");

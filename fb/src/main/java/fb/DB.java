@@ -82,6 +82,7 @@ import fb.objects.Theme;
 import fb.objects.User;
 import fb.util.Discord;
 import fb.util.Strings;
+import fb.util.Text;
 
 public class DB {
 	
@@ -137,6 +138,7 @@ public class DB {
 		
 		configuration.setProperty("hibernate.search.default.indexBase", InitWebsite.BASE_DIR + "/search-indexes");
 		configuration.setProperty("hibernate.search.default.directory_provider", "filesystem");
+		configuration.setProperty("hibernate.search.lucene.analysis_definition_provider", "fb.db.SearchDefinitionProvider");
 
 		configuration.setProperty("hibernate.connection.driver_class", "org.postgresql.Driver");
 		configuration.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
@@ -402,7 +404,7 @@ public class DB {
 					session.save(note);
 				}
 				if (sendMailNotification && !InitWebsite.DEV_MODE) new Thread(()->
-					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Strings.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Strings.escape(parent.getTitle()) + "</a>")
+					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Text.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Text.escape(parent.getTitle()) + "</a>")
 				).start();
 				
 				session.getTransaction().commit();
@@ -1779,7 +1781,7 @@ public class DB {
 					final long gid = generatedId;
 					new Thread(()-> // send the email
 						Accounts.sendEmail(email, "Someone commented on your episode", 
-								"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + authorid + "\">" + Strings.escape(authorauthor) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + gid + "#comment" + cid + "\">comment</a> on " + Strings.escape(epTitle))
+								"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + authorid + "\">" + Text.escape(authorauthor) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + gid + "#comment" + cid + "\">comment</a> on " + Text.escape(epTitle))
 					).start();
 				}
 				
