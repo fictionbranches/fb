@@ -275,7 +275,7 @@ public class Strings {
 	public static String getFile(String name, FlatUser user) {
 		
 		String account = Accounts.getAccount(user);
-		if (InitWebsite.DEV_MODE) account = "<h3>This site is in dev mode.</h3><p>Any changes you make <em><string>will</strong></em> be deleted.</p>" + account;
+		if (InitWebsite.DEV_MODE) account = "<h3>This site is in dev mode.</h3><p>Any changes you make <strong>will</strong> be deleted.</p>" + account;
 		return filesMap.get(name)
 				.replace("$DONATEBUTTON", Strings.getDONATE_BUTTON())
 				.replace("$ACCOUNT", account)
