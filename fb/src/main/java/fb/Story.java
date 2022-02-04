@@ -480,7 +480,7 @@ public class Story {
 				}
 			}
 			
-			prevNext.append("</div></p><p>");
+			prevNext.append("</div>");
 			
 			if (reverse) prevNext.append("<a href=\"?story=" + root + "\">Recent episodes</a>");
 			else prevNext.append("<a href=\"?story=" + root + "?reverse\">Oldest episodes</a>");
