@@ -1187,7 +1187,7 @@ public class DB {
 	}
 	
 	/**
-	 * Get num most recent episodes of a particular story, or of all stories
+	 * Get 100 (PAGE_SIZE) most recent episodes of a particular story, or of all stories
 	 * @param story root id for story, or 0 to get all stories
 	 * @param num number of episodes to get
 	 * @return

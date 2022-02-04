@@ -30,6 +30,7 @@ import com.rometools.rome.io.SyndFeedOutput;
 import fb.DB;
 import fb.DB.DBException;
 import fb.Story;
+import fb.objects.Comment;
 import fb.objects.FlatEpisode;
 import fb.util.Strings;
 
@@ -80,7 +81,15 @@ public class RssStuff {
 		}
 	}
 	
+	@GET
+	@Path("commentsfeed")
+	@Produces("application/rss+xml")
+	public Response getCommentsFeed() {
+		return Response.ok(commentsFeed).build();
+	}
+
 	
+	private static String commentsFeed;
 	private static HashMap<Long,String> feeds;
 	static {
 		updateFeeds();
@@ -111,6 +120,7 @@ public class RssStuff {
 			feeds = list;
 			LOGGER.info("Updated RSS feeds: " + list.keySet().stream().map(Object::toString).collect(Collectors.joining(" ")));
 		}
+		commentsFeed = generateComments();
 	}
 	
 	private static String generate(long story) {
@@ -149,6 +159,44 @@ public class RssStuff {
 		return feedToString(feed);
 		
 	}
+	
+	private static String generateComments() {
+		final SyndFeed feed = new SyndFeedImpl();
+		feed.setFeedType("rss_2.0");
+		feed.setTitle("Fiction Branches");
+		feed.setLink("https://" + Strings.getDOMAIN());
+		feed.setDescription("Fiction Branches is an online software engine which allows the production of multi-plotted stories.");
+		final ArrayList<SyndEntry> entries = new ArrayList<>();
+		List<Comment> coms;
+		try {
+			coms = DB.getRecentComments(1).comments;
+		} catch (DBException e) {
+			LOGGER.info("Couldn't get recents for RSS");
+			return feedToString(feed);
+		}
+		for (Comment com : coms) {
+			SyndEntry entry = new SyndEntryImpl();
+			entry.setTitle(escape("Comment on " + com.episode.link));
+			entry.setLink("https://" + Strings.getDOMAIN() + "/fb/story/" + com.episode.generatedId + "#comment" + com.id);
+			entry.setPublishedDate(com.date);
+			entry.setAuthor(escape(com.user.author));
+			
+			SyndContent desc = new SyndContentImpl();
+			desc.setType("text/html");
+			StringBuilder body = new StringBuilder();
+			body.append("<h1>" + escape("New comment on '" + com.episode.title + "'") + "</h1>\n");
+			body.append(Story.formatBody(com.text));
+			desc.setValue(body.toString());
+			entry.setDescription(desc);
+			entries.add(entry);
+		}
+
+		feed.setEntries(entries);
+		
+		return feedToString(feed);
+		
+	}
+
 	
 	private static final String emptyFeed;
 	static {
