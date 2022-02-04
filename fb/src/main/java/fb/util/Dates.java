@@ -8,14 +8,14 @@ public class Dates {
 	
 	private Dates() {}
 	
-	private static final ThreadLocal<DateFormat> outputDate = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+	private static final ThreadLocal<DateFormat> outputDate = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX"));
 	/**
 	 * "yyyy-MM-dd HH:mm:ss"
 	 * @param date
 	 * @return
 	 */
 	public static String outputDateFormat2(Date date) {
-		return "<span class=\"output-timestamp\" data-unixtimemillis=" + date.getTime() + ">" + outputDate.get().format(date) + "</span>";
+		return "<time class=\"output-timestamp\" datetime=\"" + outputDate.get().format(date) + "\" data-unixtimemillis=" + date.getTime() + ">" + outputDate.get().format(date) + "</time>";
 	}
 	
 	private static final ThreadLocal<DateFormat> simpleDate = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd"));
@@ -27,7 +27,7 @@ public class Dates {
 	public static String simpleDateFormat2(Date date) {
 		if (date == null)
 			return "since the beforefore times";
-		return "<span class=\"simple-timestamp\" data-unixtimemillis=" + date.getTime() + ">" + simpleDate.get().format(date) + "</span>";
+		return "<time class=\"simple-timestamp\" datetime=\"" + outputDate.get().format(date) + "\" data-unixtimemillis=" + date.getTime() + ">" + simpleDate.get().format(date) + "</time>";
 
 	}
 	

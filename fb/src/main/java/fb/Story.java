@@ -162,7 +162,7 @@ public class Story {
 				"	<p>\n" + 
 				"		<span id=\"addcomment\"></span><textarea id='fbcommenttext' name= \"body\" placeholder=\"Comment\" ></textarea>\n" + 
 				"	</p>\n" + 
-				"	<p><div id='fbcommentformextra' ></div></p>\n" +
+				"	<p><span id='fbcommentformextra' ></span></p>\n" +
 				"	<input id='fbcommentbutton' type= \"submit\" value= \"Submit\"/>\n" +  
 				"</form>";
 		
@@ -172,7 +172,7 @@ public class Story {
 		for (Comment c : ep.comments) {
 			commentHTML.append("<div id='comment" + c.id + "' class=\"fbcomment\">\n");
 			commentHTML.append("<span id=\"comment"+c.id+"\"></span>\n");
-			commentHTML.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p><hr/>");
+			commentHTML.append("<p><span class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</span></p><hr/>");
 			commentHTML.append(((c.user.avatar==null||c.user.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" />"))+" <a href=\"/fb/user/" + c.user.id + "\">" + escape(c.user.author) + "</a><br/>\n");
 			commentHTML.append("<p><a href=\"/fb/story/" + ep.generatedId + "#comment" + c.id + "\">" + (Dates.outputDateFormat2(c.date)) + "</a>");
 			if (user != null) {
