@@ -82,7 +82,7 @@ public class Story {
 			
 			addEp = 
 					Strings.getString("story_add_ep_logged_in").replace("$ID", ""+generatedId) + "&nbsp;&nbsp;&nbsp;" + 
-					(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ""+generatedId)):(Strings.getString("story_downvote").replace("$ID", ""+generatedId))) + "</div>";
+					(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ""+generatedId)):(Strings.getString("story_downvote").replace("$ID", ""+generatedId)));
 			modify += Strings.getString("story_logged_in_extras").replace("$ID", ""+generatedId) + 
 					(InitWebsite.SEARCHING_ALLOWED?(Strings.getString("story_search_from_here").replace("$ID", ""+generatedId)):"") + 
 					"<p>"+(ep.viewerCanUpvote?(Strings.getString("story_upvote").replace("$ID", ""+generatedId)):(Strings.getString("story_downvote").replace("$ID", ""+generatedId))) + " " + 
@@ -121,7 +121,7 @@ public class Story {
 		StringBuilder pathbox = new StringBuilder();
 		for (FlatEpisode pathEp : ep.pathbox) {
 			String link = pathEp.link.substring(0,Integer.min(30,pathEp.link.length()));
-			pathbox.append("<p>" + pathEp.depth + ". <a href=/fb/story/" + pathEp.generatedId + ">" + escape(link) + "</a></p>\n");
+			pathbox.append("<p>" + pathEp.depth + ". <a href=\"/fb/story/" + pathEp.generatedId + "\">" + escape(link) + "</a></p>\n");
 		}
 		
 		StringBuilder childHTML = new StringBuilder();
@@ -160,7 +160,7 @@ public class Story {
 				"<h4>Add a comment</h4>\n" + 
 				"<form id='fbcommentform' action= \"/fb/addcommentpost/"+ep.generatedId+"\" method=\"post\">\n" + 
 				"	<p>\n" + 
-				"		<a name=\"addcomment\" /><textarea id='fbcommenttext' name= \"body\" placeholder=\"Comment\" ></textarea>\n" + 
+				"		<span id=\"addcomment\"></span><textarea id='fbcommenttext' name= \"body\" placeholder=\"Comment\" ></textarea>\n" + 
 				"	</p>\n" + 
 				"	<p><div id='fbcommentformextra' ></div></p>\n" +
 				"	<input id='fbcommentbutton' type= \"submit\" value= \"Submit\"/>\n" +  
@@ -168,17 +168,17 @@ public class Story {
 		
 		StringBuilder commentHTML = new StringBuilder();
 		if (!ep.comments.isEmpty()) commentHTML.append("<h3>Comments</h3>\n");
-		if (!InitWebsite.READ_ONLY_MODE && user != null && !ep.comments.isEmpty()) commentHTML.append("<p><a href=#addcomment>Add comment</a></p>");
+		if (!InitWebsite.READ_ONLY_MODE && user != null && !ep.comments.isEmpty()) commentHTML.append("<p><a href=\"#addcomment\">Add comment</a></p>");
 		for (Comment c : ep.comments) {
 			commentHTML.append("<div id='comment" + c.id + "' class=\"fbcomment\">\n");
-			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
+			commentHTML.append("<span id=\"comment"+c.id+"\"></span>\n");
 			commentHTML.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p><hr/>");
-			commentHTML.append(((c.user.avatar==null||c.user.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a><br/>\n");
-			commentHTML.append("<p><a href=/fb/story/" + ep.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>");
+			commentHTML.append(((c.user.avatar==null||c.user.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" />"))+" <a href=\"/fb/user/" + c.user.id + "\">" + escape(c.user.author) + "</a><br/>\n");
+			commentHTML.append("<p><a href=\"/fb/story/" + ep.generatedId + "#comment" + c.id + "\">" + (Dates.outputDateFormat2(c.date)) + "</a>");
 			if (user != null) {
-				if (c.user.id.equals(user.id)) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete</a>");
-				else if (user.level>=10) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete as mod</a>");
-				else commentHTML.append(" - <a href=/fb/flagcomment/" + c.id + ">Flag</a>");
+				if (c.user.id.equals(user.id)) commentHTML.append(" - <a href=\"/fb/deletecomment/" + c.id + "\">Delete</a>");
+				else if (user.level>=10) commentHTML.append(" - <a href=\"/fb/deletecomment/" + c.id + "\">Delete as mod</a>");
+				else commentHTML.append(" - <a href=\"/fb/flagcomment/" + c.id + "\">Flag</a>");
 			}
 			commentHTML.append("</p></div>\n");
 		}
@@ -226,7 +226,7 @@ public class Story {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table class=\"noborder\">\n");
 		for (FlatEpisode ep : Story.getRootEpisodes()) {
-			sb.append("<h3><a href=/fb/story/" + ep.generatedId + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/rss/" + ep.generatedId + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent?story=" + ep.generatedId + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
+			sb.append("<h3><a href=\"/fb/story/" + ep.generatedId + "\">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=\"/fb/rss/" + ep.generatedId + "\"><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=\"/fb/recent?story=" + ep.generatedId + "\">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
 		}
 		sb.append("</table>");
 		return Strings.getFile("welcome.html", user).replace("$EPISODES", sb.toString());
@@ -313,11 +313,11 @@ public class Story {
 		StringBuilder sb = new StringBuilder("<h1>Announcements</h1>\n<hr/>\n");
 		for (Announcement a : list) {
 			sb.append("<p>" + Story.formatBody(a.body) + "</p>\n");
-			sb.append("<p> - <a href=/fb/user/" + a.authorId + ">" + escape(a.authorName) + "</a> (" + 
+			sb.append("<p> - <a href=\"/fb/user/" + a.authorId + "\">" + escape(a.authorName) + "</a> (" + 
 					Dates.simpleDateFormat2(a.date) + 
 					")</p>\n");
-			if (!a.read) sb.append("<p><a href=/fb/markannouncementread/" + a.id + ">Mark read</a></p>\n");
-			if (user != null && user.level >= 100) sb.append("<p><a href=/fb/admin/deleteannouncement/" + a.id + ">Delete as admin</a></p>\n");
+			if (!a.read) sb.append("<p><a href=\"/fb/markannouncementread/" + a.id + "\">Mark read</a></p>\n");
+			if (user != null && user.level >= 100) sb.append("<p><a href=\"/fb/admin/deleteannouncement/" + a.id + "\">Delete as admin</a></p>\n");
 			sb.append("<hr/>\n");
 		}
 		
@@ -482,8 +482,8 @@ public class Story {
 			
 			prevNext.append("</div></p><p>");
 			
-			if (reverse) prevNext.append("<a href=?story=" + root + ">Recent episodes</a>");
-			else prevNext.append("<a href=?story=" + root + "?reverse>Oldest episodes</a>");
+			if (reverse) prevNext.append("<a href=\"?story=" + root + "\">Recent episodes</a>");
+			else prevNext.append("<a href=\"?story=" + root + "?reverse\">Oldest episodes</a>");
 			pn = prevNext.toString();
 		}
 		 
@@ -550,11 +550,11 @@ public class Story {
 	public static String epToOutlineHTML(long generatedId, String link, String authorUsername, String authorName, int depth, int minDepth) {
 		StringBuilder sb = new StringBuilder();
 		for (int i=minDepth; i<depth; ++i) sb.append("&nbsp;");
-		return sb.toString() + depth + ". <a href=\"/fb/story/" + generatedId + "\" target=\"_blank\" >" + escape(link) + "</a> (<a href='/fb/user/" + authorUsername + "' class='author'>" + escape(authorName) + "</a>)<br/>\n";
+		return sb.toString() + depth + ". <a href=\"/fb/story/" + generatedId + "\" target=\"_blank\" >" + escape(link) + "</a> (<a href=\"/fb/user/" + authorUsername + "\" class=\"author\">" + escape(authorName) + "</a>)<br/>\n";
 	}
 	
 	public static String epLine(FlatEpisode ep) {
-		return "<a href='/fb/story/" + ep.generatedId + "'>" + escape(ep.link) + "</a> (<a href='/fb/user/" + ep.authorId + "' class='author'>" + escape(ep.authorName) + "</a>)<br/>\n";
+		return "<a href=\"/fb/story/" + ep.generatedId + "\">" + escape(ep.link) + "</a> (<a href=\"/fb/user/" + ep.authorId + "\" class=\"author\">" + escape(ep.authorName) + "</a>)<br/>\n";
 	}
 	
 	public static String getPath(Cookie token, long generatedId) {
@@ -601,8 +601,8 @@ public class Story {
 		}
 		StringBuilder sb = new StringBuilder();
 		for (FlatEpisode child : path) if (child != null){ 
-			sb.append("<h1><a href=/fb/story/" + child.generatedId + ">" + escape(child.title) + "</a></h1>");
-			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + escape(child.authorName) + "</a> " + 
+			sb.append("<h1><a href=\"/fb/story/" + child.generatedId + "\">" + escape(child.title) + "</a></h1>");
+			sb.append("<p><a href=\"/fb/user/" + child.authorId + "\">" + escape(child.authorName) + "</a> " + 
 					Dates.simpleDateFormat2(child.date) + "</p>");
 			sb.append("<div class=\"fbepisodebody "+(parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")+"\">" + (parseMarkdown?formatBody(child.body):escape(child.body)) + "</div><hr/>\n");
 		}
@@ -667,7 +667,7 @@ public class Story {
 		if (!result.isEmpty()) {
 			sb.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Author</th><th>Date</th><th>Depth</th></tr>");
 			for (FlatEpisode ep : result) {
-				sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + 
+				sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(escape(ep.title) + "<br/>")) + "<a href=\"/fb/story/" + ep.generatedId + "\">" + escape(ep.link) + "</a></td><td class=\"fbtable\"><a href=\"/fb/user/" + ep.authorId + "\">" + 
 						escape(ep.authorName) + "</a></td><td class=\"fbtable\">" + Dates.simpleDateFormat2(ep.date) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>\n");
 			}
 			sb.append("</table>");
@@ -732,13 +732,13 @@ public class Story {
 	
 	private static String getPopularityTable(List<Episode> arr) {
 		StringBuilder sb = new StringBuilder();
-		sb.append("<table class=\"popular\"><thead><tr><th>Link/Title</th><th><a href=/fb/mosthits>Hits</a></th><th><a href=/fb/mostviews>Views</a></th><th><a href=/fb/mostupvotes>Upvotes</a></th><th>Story</th></tr></thead><tbody>\n");
+		sb.append("<table class=\"popular\"><thead><tr><th>Link/Title</th><th><a href=\"/fb/mosthits\">Hits</a></th><th><a href=\"/fb/mostviews\">Views</a></th><th><a href=\"/fb/mostupvotes\">Upvotes</a></th><th>Story</th></tr></thead><tbody>\n");
 		for (Episode ep : arr) {
 			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
 			String story;
 			if (rootEp == null) story = "";
 			else story = rootEp.link;
-			sb.append("<tr><td>" + (ep.link.toLowerCase().trim().equals(ep.title.toLowerCase().trim())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td>" + ep.hits + "</td><td>" + ep.views + "</td><td>" + ep.upvotes + "</td><td>" + escape(story) + "</td></tr>\n");
+			sb.append("<tr><td>" + (ep.link.toLowerCase().trim().equals(ep.title.toLowerCase().trim())?"":(escape(ep.title) + "<br/>")) + "<a href=\"/fb/story/" + ep.generatedId + "\">" + escape(ep.link) + "</a></td><td>" + ep.hits + "</td><td>" + ep.views + "</td><td>" + ep.upvotes + "</td><td>" + escape(story) + "</td></tr>\n");
 		}
 		sb.append("</tbody></table>\n");
 		return sb.toString();
