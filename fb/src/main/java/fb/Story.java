@@ -156,7 +156,7 @@ public class Story {
 			childHTML.append(Strings.getString(foot));
 		}
 		
-		final String commentFormHTML =
+		String commentFormHTML =
 				"<h4>Add a comment</h4>\n" + 
 				"<form id='fbcommentform' action= \"/fb/addcommentpost/"+ep.generatedId+"\" method=\"post\">\n" + 
 				"	<p>\n" + 
@@ -165,6 +165,24 @@ public class Story {
 				"	<p><div id='fbcommentformextra' ></div></p>\n" +
 				"	<input id='fbcommentbutton' type= \"submit\" value= \"Submit\"/>\n" +  
 				"</form>";
+		if (ep.viewer != null && !ep.viewer.id.equals(ep.authorId)) {
+			if (ep.userIsSubscribedToComments) {
+				// unsubscribe button
+				commentFormHTML += "<form id='fbcommentsubform' action= '/fb/commentsubscribepost/" + ep.generatedId
+						+ "' method=\"post\">\n"
+						+ "	<p>You are currently subscribed to notifications for new comments.<br/>\n"
+						+ "	<input id='fbcommentsubvalue' type= 'hidden' value= 'false'/>\n"
+						+ "	<input id='fbcommentsubbutton' type= 'submit' value= 'Unsubscribe'/>\n" + "</form>";
+			} else {
+				// subscribe button
+				commentFormHTML += "<form id='fbcommentsubform' action= '/fb/commentsubscribepost/" + ep.generatedId
+						+ "' method=\"post\">\n"
+						+ "	<p>You are not currently subscribed to notifications for new comments.<br/>\n"
+						+ "	<input id='fbcommentsubvalue' type= 'hidden' name = 'commentsubvalue' value= 'true'/>\n"
+						+ "	<input id='fbcommentsubbutton' type= 'submit' value= 'Subscribe'/>\n" + "</form>";
+
+			}
+		}
 		
 		StringBuilder commentHTML = new StringBuilder();
 		if (!ep.comments.isEmpty()) commentHTML.append("<h3>Comments</h3>\n");

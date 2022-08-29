@@ -32,6 +32,17 @@ import javax.persistence.Transient;
  *   type
  *   
  *   comment
+ *
+ *   
+ * new_comment_on_subbed_episode:
+ *   id
+ *   date
+ *   user
+ *   read
+ *   type
+ *   
+ *   comment
+ *   
  *   
  * legacy_note:
  *   id
@@ -85,7 +96,21 @@ public class DBNotification {
 	 */
 	@Transient
 	public static final String NEW_COMMENT_ON_OWN_EPISODE="new_comment_on_own_episode";
+
 	
+	/**
+	 * new_comment_on_subbed_episode:
+	 *   id
+	 *   date
+	 *   user
+	 *   read
+	 *   type
+	 *   
+	 *   comment
+	 */
+	@Transient
+	public static final String NEW_COMMENT_ON_SUBBED_EPISODE="new_comment_on_subbed_episode";
+
 	/**
 	 * new_child_episode:
 	 *   id

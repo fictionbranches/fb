@@ -3,7 +3,25 @@ package fb.api;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.Optional;
 
+import org.hibernate.Session;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import fb.Accounts;
+import fb.DB;
+import fb.DB.DBException;
+import fb.InitWebsite;
+import fb.Story;
+import fb.Story.EpisodeException;
+import fb.db.DBCommentSub;
+import fb.db.DBEpisode;
+import fb.db.DBUser;
+import fb.objects.FlatEpisode;
+import fb.objects.FlatUser;
+import fb.util.Strings;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.CookieParam;
 import jakarta.ws.rs.FormParam;
@@ -18,20 +36,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
-import fb.DB;
-import fb.DB.DBException;
-import fb.InitWebsite;
-import fb.Story;
-import fb.Story.EpisodeException;
-import fb.objects.FlatEpisode;
-import fb.util.Strings;
-
 @Path("fb")
 public class AddStuff {
-	
+		
 	//private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	/**
@@ -137,7 +144,61 @@ public class AddStuff {
 		} catch (EpisodeException e) {
 			return Response.ok(e.getMessage()).build();
 		}
+	}
+	
+	@POST
+	@Path("commentsubscribepost/{generatedId}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response commentsubscribepost(@PathParam("generatedId") long generatedId, @FormParam("commentsubvalue") String value,
+			@CookieParam("fbtoken") Cookie fbtoken) {
+		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 		
+		final boolean subscribe = value != null && value.trim().toLowerCase().equals("true");
+		
+		Session session = DB.openSession();
+		try {
+			
+			final String username = Accounts.getUsernameFromCookie(fbtoken).toLowerCase();
+			if (username == null) return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA","You must be logged in to do that")).build();
+			
+			final DBUser dbUser = session.get(DBUser.class, username);
+			if (dbUser == null) return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA","You must be logged in to do that")).build();
+			
+			final DBEpisode episode = session.get(DBEpisode.class, generatedId);
+			if (episode == null) return Response.ok(Strings.getFile("generic.html", new FlatUser(dbUser)).replace("$EXTRA","Not found: " + generatedId)).build();
+			
+			if (episode.getAuthor().getId().equals(dbUser.getId())) Response.ok(Strings.getFile("generic.html", new FlatUser(dbUser)).replace("$EXTRA","You can't subscribe to your own episode.<br/>How did you even get here?")).build();
+
+			final Response ret = Response.seeOther(GetStuff.createURI("/fb/story/" + generatedId + "#comments")).build();
+			
+			Optional<DBCommentSub> opt = session.createQuery("from DBCommentSub ev where ev.episode.generatedId=" + generatedId + " and ev.user.id='" + username + "'", DBCommentSub.class).uniqueResultOptional();
+			
+			boolean userIsSubscribedToComments = opt.isPresent();
+			if (userIsSubscribedToComments == subscribe) {
+				return ret;
+			}
+			
+			session.beginTransaction();
+			if (subscribe) {
+				DBCommentSub cs = new DBCommentSub();
+				cs.setUser(dbUser);
+				cs.setEpisode(episode);
+				cs.setDate(new Date());
+				session.save(cs);
+			} else {
+				session.delete(opt.get());
+			}
+			try {
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				return Response.ok(Strings.getFile("generic.html", new FlatUser(dbUser)).replace("$EXTRA",e.getMessage())).build();
+			}
+			
+			return ret;
+			
+		} finally {
+			DB.closeSession(session);
+		}
 	}
 	
 	@GET

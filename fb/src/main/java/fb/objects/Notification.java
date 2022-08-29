@@ -44,6 +44,7 @@ public class Notification {
 			this.approved = null;
 			break;
 		case DBNotification.NEW_COMMENT_ON_OWN_EPISODE:
+		case DBNotification.NEW_COMMENT_ON_SUBBED_EPISODE:
 			this.comment = note.getComment()==null?null:new Comment(note.getComment());
 			this.episode = null;
 			this.parentEpisode = null;

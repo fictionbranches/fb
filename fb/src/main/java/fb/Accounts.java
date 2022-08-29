@@ -1163,6 +1163,9 @@ public class Accounts {
 			case DBNotification.NEW_COMMENT_ON_OWN_EPISODE:
 				sb.append("<a href=\"/fb/user/" + a.comment.user.id + "\">" + escape(a.comment.user.author) + "</a> left a <a href=\"/fb/story/" + a.comment.episode.generatedId + "#comment" + a.comment.id + "\">comment</a> on " + escape(a.comment.episode.title));
 				break;
+			case DBNotification.NEW_COMMENT_ON_SUBBED_EPISODE:
+				sb.append("<a href=\"/fb/user/" + a.comment.user.id + "\">" + escape(a.comment.user.author) + "</a> left a <a href=\"/fb/story/" + a.comment.episode.generatedId + "#comment" + a.comment.id + "\">comment</a> on " + escape(a.comment.episode.title));
+				break;
 			case DBNotification.MODIFICATION_RESPONSE:
 				sb.append("<a href=\"/fb/user/" + a.sender.id + "\">" + escape(a.sender.author) + "</a> "+(a.approved?"approved":"rejected")+" your request to modify <a href=\"/fb/story/" + a.episode.generatedId + " \">"+escape(a.episode.link)+"</a>");
 				break;

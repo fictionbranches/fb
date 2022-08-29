@@ -29,8 +29,6 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
-import jakarta.ws.rs.core.Cookie;
-import jakarta.ws.rs.core.StreamingOutput;
 
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
@@ -53,6 +51,7 @@ import fb.db.DBAnnouncement;
 import fb.db.DBAnnouncementView;
 import fb.db.DBArchiveToken;
 import fb.db.DBComment;
+import fb.db.DBCommentSub;
 import fb.db.DBEmailChange;
 import fb.db.DBEpisode;
 import fb.db.DBEpisodeView;
@@ -83,6 +82,8 @@ import fb.objects.User;
 import fb.util.Discord;
 import fb.util.Strings;
 import fb.util.Text;
+import jakarta.ws.rs.core.Cookie;
+import jakarta.ws.rs.core.StreamingOutput;
 
 public class DB {
 	
@@ -172,6 +173,7 @@ public class DB {
 		configuration.addAnnotatedClass(DBNotification.class);
 		configuration.addAnnotatedClass(DBTheme.class);
 		configuration.addAnnotatedClass(DBFavEp.class);
+		configuration.addAnnotatedClass(DBCommentSub.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -557,12 +559,25 @@ public class DB {
 					session.createQuery("delete DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBFavEp fe where fe.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBNotification nt where nt.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
+					session.createQuery("delete DBCommentSub x where x.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
+//					session.createQuery("delete DBFlaggedComment x where x.comment.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
+					
 					
 					session.createNativeQuery(
-							"delete from fbflaggedcomments "
-							+ "using fbcomments, fbepisodes "
-							+ "where fbflaggedcomments.comment_id=fbcomments.id and fbcomments.episode_generatedid=fbepisodes.generatedid and "
-							+ "fbepisodes.generatedid=" + ep.getGeneratedId() + ";").executeUpdate();
+							"""
+							delete from fbflaggedcomments 
+							using fbcomments, fbepisodes 
+							where fbflaggedcomments.comment_id=fbcomments.id and fbcomments.episode_generatedid=fbepisodes.generatedid and 
+							fbepisodes.generatedid=
+									""" + ep.getGeneratedId() + ";").executeUpdate();
+
+					session.createNativeQuery(
+							"""
+							delete from fbnotifications 
+							using fbcomments, fbepisodes 
+							where fbnotifications.comment_id=fbcomments.id and fbcomments.episode_generatedid=fbepisodes.generatedid and 
+							fbepisodes.generatedid=""" + ep.getGeneratedId() + ";").executeUpdate();
+
 					
 					session.createQuery("delete DBComment co where co.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 										
@@ -589,7 +604,7 @@ public class DB {
 				} catch (Exception e) {
 					session.getTransaction().rollback();
 					LOGGER.error("deleteEp rollback", e);
-					throw new DBException("Database error", e);
+					throw new DBException("Database error: " + e.getMessage(), e);
 				}
 			} finally {
 				closeSession(session);
@@ -873,12 +888,16 @@ public class DB {
 					" order by ep.id desc";
 			}
 						
-			List<FlatEpisode> pathbox = session
+			final List<FlatEpisode> pathbox = session
 					.createQuery(pathQuery,DBEpisode.class)
 					.stream().map(FlatEpisode::new)
 					.collect(Collectors.toList());
 			
-			return new EpisodeWithChildren(ep, visitorCount, upvotes, user, canUpvote, isFavorite, children, comments, pathbox);
+			boolean userIsSubscribedToComments;
+			if (user == null) userIsSubscribedToComments = false;
+			else userIsSubscribedToComments = session.createQuery("from DBCommentSub ev where ev.episode.generatedId=" + ep.getGeneratedId() + " and ev.user.id='" + username + "'").uniqueResultOptional().isPresent();
+			
+			return new EpisodeWithChildren(ep, visitorCount, upvotes, user, canUpvote, isFavorite, children, comments, pathbox, userIsSubscribedToComments);
 		} finally {
 			closeSession(session);
 		}
@@ -1720,7 +1739,7 @@ public class DB {
 	/**
 	 * Comment on an episode
 	 * @param episodeId
-	 * @param authorId id of user doing the flagging
+	 * @param authorId id of user doing the commenting
 	 * @param commentText
 	 * @return id of newly created comment
 	 * @throws DBException
@@ -1730,10 +1749,10 @@ public class DB {
 		Session session = openSession();
 		try {
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
-			DBUser author = getUserById(session, authorId);
+			DBUser commenter = getUserById(session, authorId);
 
 			if (ep == null) throw new DBException("Episode not found: " + generatedId);
-			if (author == null) throw new DBException("Author does not exist");
+			if (commenter == null) throw new DBException("Author does not exist");
 
 			DBComment comment = new DBComment();
 			
@@ -1741,13 +1760,13 @@ public class DB {
 			comment.setDate(commentDate);
 			comment.setEditDate(commentDate);
 			comment.setEpisode(ep);
-			comment.setUser(author);
-			comment.setEditor(author);
+			comment.setUser(commenter);
+			comment.setEditor(commenter);
 			
 			boolean sendSiteNotification = false;
 			boolean sendMailNotification = false;
 			
-			if (!comment.getEpisode().getAuthor().getId().equals(author.getId())) { // don't sent notification to episode author if they wrote the comment
+			if (!comment.getEpisode().getAuthor().getId().equals(commenter.getId())) { // don't sent notification to episode author if they wrote the comment
 				sendSiteNotification = comment.getEpisode().getAuthor().isCommentSite();
 				sendMailNotification = comment.getEpisode().getAuthor().isCommentMail();
 			}
@@ -1758,7 +1777,7 @@ public class DB {
 				session.beginTransaction();
 				session.save(comment);
 				session.merge(ep);
-				session.merge(author);
+				session.merge(commenter);
 				
 				commentID = comment.getId();
 				
@@ -1774,8 +1793,8 @@ public class DB {
 				
 				if (sendMailNotification && !InitWebsite.DEV_MODE) {
 					final String email = comment.getEpisode().getAuthor().getEmail();
-					final String authorid = author.getId();
-					final String authorauthor = author.getAuthor();
+					final String authorid = commenter.getId();
+					final String authorauthor = commenter.getAuthor();
 					final String epTitle = comment.getEpisode().getTitle();
 					final long cid = comment.getId();
 					final long gid = generatedId;
@@ -1785,10 +1804,35 @@ public class DB {
 					).start();
 				}
 				
+				List<DBCommentSub> list = session.createQuery("from DBCommentSub cs where cs.episode.generatedId=" + ep.getGeneratedId() + " and cs.user.id!='" + commenter.getId()+"' and cs.user.id!='" + ep.getAuthor().getId() + "'", DBCommentSub.class).list();
+				for (DBCommentSub cs : list) {
+					
+					// if the subber is the comment author, skip
+					// if the subber is the episode author, skip
+					
+					DBNotification note = new DBNotification();
+					note.setType(DBNotification.NEW_COMMENT_ON_SUBBED_EPISODE);
+					note.setDate(new Date());
+					note.setRead(false);
+					note.setUser(cs.getUser());
+					note.setComment(comment);
+					session.save(note);
+				}
+				
+				if (!commenter.getId().equals(ep.getAuthor().getId()) && list.stream().noneMatch(dcs->dcs.getUser().getId().equals(commenter.getId()))) {
+					DBCommentSub dcs = new DBCommentSub();
+					dcs.setDate(new Date());
+					dcs.setEpisode(ep);
+					dcs.setUser(commenter);
+					session.save(dcs);
+				}
+				
 				session.getTransaction().commit();
 				
 			} catch (Exception e) {
 				session.getTransaction().rollback();
+				LOGGER.error(e.getMessage());
+				LOGGER.error(e.toString());
 				throw new DBException("Database error");
 			}
 			return commentID;
