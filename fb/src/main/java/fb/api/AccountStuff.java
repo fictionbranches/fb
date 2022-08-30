@@ -27,6 +27,7 @@ import fb.DB;
 import fb.DB.DBException;
 import fb.InitWebsite;
 import fb.db.DBEpisode;
+import fb.db.DBUser;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.util.GoogleRECAPTCHA;
@@ -543,4 +544,37 @@ public class AccountStuff {
 				.replace("$EXTRA", html.toString())
 				).build();
 	}
+	
+	@GET
+	@Path("togglehideimages")
+	@Produces(MediaType.TEXT_HTML)
+	public Response togglehideimages(@CookieParam("fbtoken") Cookie fbtoken) {		
+		Session sesh = DB.openSession();
+		try {
+			final String username = Accounts.getUsernameFromCookie(fbtoken);
+			DBUser user = sesh.get(DBUser.class, username);
+			if (user == null) {
+				return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA","You must be logged in to do that")).build();
+			}
+			
+			try {
+				sesh.beginTransaction();
+				user.setHideImages(!user.isHideImages());
+				sesh.merge(user);
+				sesh.getTransaction().commit();
+			} catch (Exception e) {
+				LOGGER.error(e.toString());
+				LOGGER.error(e.getMessage());
+				return Response.ok(Strings.getFile("generic.html", new FlatUser(user)).replace("$EXTRA","You must be logged in to do that")).build();
+			}
+			
+			return Response.seeOther(GetStuff.createURI("/fb/useraccount")).build();
+			
+		} finally {
+			DB.closeSession(sesh);
+		}
+		
+	}
+
+	
 }

@@ -23,6 +23,8 @@ public class FlatUser {
 	public final boolean childSite;
 	public final boolean childMail;
 	
+	public final boolean hideImages;
+	
 	public final int bodyTextWidth;
 	
 	/**
@@ -44,5 +46,6 @@ public class FlatUser {
 		this.childSite = user.isChildSite();
 		this.childMail = user.isChildMail();
 		this.bodyTextWidth = user.getBodyTextWidth();
+		this.hideImages = user.isHideImages();
 	}
 }

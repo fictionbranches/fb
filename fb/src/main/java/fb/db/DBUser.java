@@ -57,6 +57,9 @@ public class DBUser {
 	private boolean childSite;
 	private boolean childMail;
 	
+	@Column(nullable = false, columnDefinition = "boolean default false")
+	private boolean hideImages;
+	
 	@Column(columnDefinition = "int default 900") 
 	private int bodyTextWidth;
 
@@ -186,6 +189,14 @@ public class DBUser {
 
 	public void setBodyTextWidth(int bodyTextWidth) {
 		this.bodyTextWidth = bodyTextWidth;
+	}
+
+	public boolean isHideImages() {
+		return hideImages;
+	}
+
+	public void setHideImages(boolean hideImages) {
+		this.hideImages = hideImages;
 	}
 
 	public boolean equals(Object o) {

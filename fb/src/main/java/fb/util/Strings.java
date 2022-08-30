@@ -316,6 +316,13 @@ public class Strings {
 		else theme = user.theme.css;
 		if (theme == null) theme = "";
 		
+		if (user.hideImages) {
+			theme += """
+					div.fbepisodebody p img {
+						display: none;
+					}""";
+		}
+		
 		int width = user.bodyTextWidth;
 		
 		if (width <= 0) return 

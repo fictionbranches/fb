@@ -547,6 +547,8 @@ public class Accounts {
 				"<p>(Text will fit to window if window is narrower than selection.)</p>"
 				;
 		
+		final String hideImageButton = "Images are currently " + (user.hideImages ? "hidden" : "shown") + ". <a href='/fb/togglehideimages'>Click here to " + (user.hideImages ? "show" : "hide") + " them.</a>";
+		
 		return Strings.getFile("useraccount.html", user)
 				.replace("$COMMENT_SITE_CHECKED", user.commentSite?checked:"")
 				.replace("$COMMENT_MAIL_CHECKED", user.commentMail?checked:"")
@@ -559,6 +561,7 @@ public class Accounts {
 				.replace("$AVATARURL", escape(user.avatar==null?"":user.avatar))
 				.replace("$EXTRA", error==null||error.length()==0?"":"ERROR: " + error)
 				.replace("$BODYTEXTWIDTHFORM", widthHTML)
+				.replace("$HIDEIMAGEBUTTON", hideImageButton)
 				;
 	}
 	
