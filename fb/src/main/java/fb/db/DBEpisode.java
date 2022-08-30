@@ -8,7 +8,6 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 import org.hibernate.search.annotations.Analyze;
@@ -69,10 +68,7 @@ public class DBEpisode {
 	
 	@ManyToOne
 	private DBEpisode parent;
-	
-	@OneToOne(mappedBy = "episode")
-	private DBModEpisode mod;
-	
+		
 	@Column(columnDefinition = "text")
 	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String body;
@@ -182,14 +178,6 @@ public class DBEpisode {
 		this.parent = parent;
 	}
 	
-	public DBModEpisode getMod() {
-		return mod;
-	}
-
-	public void setMod(DBModEpisode mod) {
-		this.mod = mod;
-	}
-
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(generatedId + ": " + title);

@@ -560,8 +560,8 @@ public class DB {
 					session.createQuery("delete DBFavEp fe where fe.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBNotification nt where nt.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBCommentSub x where x.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
-//					session.createQuery("delete DBFlaggedComment x where x.comment.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
-					
+					session.createQuery("delete DBModEpisode x where x.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
+					session.createQuery("delete DBModEpisode x where x.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					
 					session.createNativeQuery(
 							"""
@@ -580,14 +580,7 @@ public class DB {
 
 					
 					session.createQuery("delete DBComment co where co.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
-										
-					DBModEpisode mod = ep.getMod();
 					
-					if (mod != null) {
-						ep.setMod(null);
-						mod.setEpisode(null);
-						session.delete(mod);
-					}
 					for (DBUser user : mergeUsers) session.merge(user);
 					for (DBFlaggedEpisode flag : deleteFlags) session.delete(flag);
 					session.delete(ep);
@@ -747,7 +740,7 @@ public class DB {
 			newMod.setEpisode(ep);
 			newMod.setLink(link);
 			newMod.setTitle(title);
-			ep.setMod(newMod);
+//			ep.setMod(newMod);
 			try {
 				session.beginTransaction();
 				session.save(newMod);
@@ -779,7 +772,9 @@ public class DB {
 			DBEpisode episode = session.get(DBEpisode.class, generatedId);
 			if (episode == null) throw new DBException("Not found: " + generatedId);
 			
-			if (episode.getMod() != null) return 2;
+			DBModEpisode mod = session.createQuery("from DBModEpisode e where e.episode.generatedid = " + episode.getGeneratedId(), DBModEpisode.class).uniqueResult();
+//			if (episode.getMod() != null) return 2;
+			if (mod != null) return 2;
 			
 			String q = "from DBEpisode ep where ep.author.id != '" + episode.getAuthor().getId() + "' and newMap like '" + episode.getNewMap() + "%'";
 			
@@ -1804,11 +1799,19 @@ public class DB {
 					).start();
 				}
 				
-				List<DBCommentSub> list = session.createQuery("from DBCommentSub cs where cs.episode.generatedId=" + ep.getGeneratedId() + " and cs.user.id!='" + commenter.getId()+"' and cs.user.id!='" + ep.getAuthor().getId() + "'", DBCommentSub.class).list();
+				boolean commenterIsSubscribed = false;
+				
+				List<DBCommentSub> list = session.createQuery("from DBCommentSub cs where cs.episode.generatedId=" + ep.getGeneratedId() + " and cs.user.id!='" + ep.getAuthor().getId() + "'", DBCommentSub.class).list();
 				for (DBCommentSub cs : list) {
 					
-					// if the subber is the comment author, skip
-					// if the subber is the episode author, skip
+					// if the subber is the comment author, skip 
+					// if the subber is the episode author, skip // handled in hql query above
+					
+					if (commenter.getId().equals(cs.getUser().getId())) {
+						// subber is comment auther
+						// therefore commenter is already subscribed
+						commenterIsSubscribed = true;
+					}
 					
 					DBNotification note = new DBNotification();
 					note.setType(DBNotification.NEW_COMMENT_ON_SUBBED_EPISODE);
@@ -1819,7 +1822,7 @@ public class DB {
 					session.save(note);
 				}
 				
-				if (!commenter.getId().equals(ep.getAuthor().getId()) && list.stream().noneMatch(dcs->dcs.getUser().getId().equals(commenter.getId()))) {
+				if (!commenter.getId().equals(ep.getAuthor().getId()) && !commenterIsSubscribed) { 
 					DBCommentSub dcs = new DBCommentSub();
 					dcs.setDate(new Date());
 					dcs.setEpisode(ep);
@@ -1833,7 +1836,8 @@ public class DB {
 				session.getTransaction().rollback();
 				LOGGER.error(e.getMessage());
 				LOGGER.error(e.toString());
-				throw new DBException("Database error");
+				e.printStackTrace();
+				throw new DBException("Database error " + e.getMessage());
 			}
 			return commentID;
 		} finally {
@@ -2154,7 +2158,6 @@ public class DB {
 			DBModEpisode mod = session.get(DBModEpisode.class, id);
 			if (mod == null) throw new DBException("Flag not found: " + id);
 			DBEpisode ep = mod.getEpisode();
-			ep.setMod(null);
 			try {
 				session.beginTransaction();
 				if (accepted) DB.modifyEp(session, ep.getGeneratedId(), mod.getLink(), mod.getTitle(), mod.getBody(), ep.getAuthor().getId());
