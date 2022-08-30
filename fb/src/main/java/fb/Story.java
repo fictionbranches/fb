@@ -191,8 +191,8 @@ public class Story {
 			commentHTML.append("<div id='comment" + c.id + "' class=\"fbcomment\">\n");
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
 			commentHTML.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p><hr/>\n");
-			if (c.modVoice) commentHTML.append("<em>This comment is from a site Moderator</em><hr/>\n");
-			commentHTML.append(((c.user.avatar==null||c.user.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a><br/>\n");
+			if (c.modVoice) commentHTML.append("<span style='border: 1px solid; margin: 2px; padding: 5px;'>This comment is from a site Moderator</span>\n");
+			commentHTML.append("<p>" + ((c.user.avatar==null||c.user.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a></p>\n");			
 			commentHTML.append("<p><a href=/fb/story/" + ep.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>");
 			if (user != null) {
 				if (c.user.id.equals(user.id)) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete</a>");
@@ -205,7 +205,8 @@ public class Story {
 
 				
 			}
-			commentHTML.append("</p></div>\n");
+			commentHTML.append("</p>\n");
+			commentHTML.append("</div>\n");
 		}
 		if (!InitWebsite.READ_ONLY_MODE && user != null) commentHTML.append(commentFormHTML);
 
