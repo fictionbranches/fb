@@ -561,7 +561,6 @@ public class DB {
 					session.createQuery("delete DBNotification nt where nt.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBCommentSub x where x.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBModEpisode x where x.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
-					session.createQuery("delete DBModEpisode x where x.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					
 					session.createNativeQuery(
 							"""
@@ -740,7 +739,6 @@ public class DB {
 			newMod.setEpisode(ep);
 			newMod.setLink(link);
 			newMod.setTitle(title);
-//			ep.setMod(newMod);
 			try {
 				session.beginTransaction();
 				session.save(newMod);
@@ -772,8 +770,7 @@ public class DB {
 			DBEpisode episode = session.get(DBEpisode.class, generatedId);
 			if (episode == null) throw new DBException("Not found: " + generatedId);
 			
-			DBModEpisode mod = session.createQuery("from DBModEpisode e where e.episode.generatedid = " + episode.getGeneratedId(), DBModEpisode.class).uniqueResult();
-//			if (episode.getMod() != null) return 2;
+			DBModEpisode mod = session.createQuery("from DBModEpisode e where e.episode.generatedId=" + episode.getGeneratedId(), DBModEpisode.class).uniqueResult();
 			if (mod != null) return 2;
 			
 			String q = "from DBEpisode ep where ep.author.id != '" + episode.getAuthor().getId() + "' and newMap like '" + episode.getNewMap() + "%'";
