@@ -10,6 +10,25 @@ import java.util.Date;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
+import org.hibernate.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.gson.Gson;
+
+import fb.Accounts;
+import fb.Accounts.FBLoginException;
+import fb.DB;
+import fb.DB.CommentResultList;
+import fb.DB.DBException;
+import fb.InitWebsite;
+import fb.Story;
+import fb.db.DBComment;
+import fb.objects.Comment;
+import fb.objects.FlatEpisode;
+import fb.objects.FlatUser;
+import fb.util.Dates;
+import fb.util.Strings;
 import jakarta.ws.rs.CookieParam;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -25,25 +44,6 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.UriBuilder;
 import jakarta.ws.rs.core.UriInfo;
-
-import org.hibernate.Session;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.gson.Gson;
-
-import fb.Accounts;
-import fb.Accounts.FBLoginException;
-import fb.DB;
-import fb.DB.CommentResultList;
-import fb.DB.DBException;
-import fb.InitWebsite;
-import fb.Story;
-import fb.objects.Comment;
-import fb.objects.FlatEpisode;
-import fb.objects.FlatUser;
-import fb.util.Dates;
-import fb.util.Strings;
 
 @Path("fb")
 public class GetStuff {
@@ -356,8 +356,9 @@ public class GetStuff {
 			html.append("<p>By ");
 			if (!(c.user.avatar==null||c.user.avatar.trim().length()==0)) html.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" /> ");
 			html.append("<a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a> - \n");
-			html.append("<a href=/fb/story/" + c.episode.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a></p>\n");
-			html.append("<p>On " + "<a href=/fb/story/" + c.episode.generatedId + ">" + (escape(c.episode.link)) + "</a></p>\n");
+			html.append("<a href=/fb/story/" + c.episode.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>\n");
+			if (c.modVoice) html.append(" - <em>This comment is from a site Moderator</em>\n");
+			html.append("</p><p>On " + "<a href=/fb/story/" + c.episode.generatedId + ">" + (escape(c.episode.link)) + "</a></p>\n");
 			html.append("<hr/><hr/>\n");
 		}
 		
@@ -504,6 +505,35 @@ public class GetStuff {
 		}
 		if (user.level<10) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","You must be a moderator to do that")).build();
 		return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", Story.formatBody(Strings.getFile("modhelp.md", null)))).build();
+	}
+	
+	@GET
+	@Path("modvoicecomment/{id}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response modvoicecomment(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") long id) {
+		Session sesh = DB.openSession();
+		try {
+			
+			DBComment comment = sesh.get(DBComment.class, id);
+			FlatUser user = new FlatUser(comment.getUser());
+			if (user.level < 10 || !user.id.equals(comment.getEpisode().getAuthor().getId())) {
+				return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","You must be a moderator to do that")).build();
+			}
+			
+			try {
+				sesh.beginTransaction();
+				comment.setModVoice(!comment.isModVoice());
+				sesh.merge(comment);
+				sesh.getTransaction().commit();
+			} catch (Exception e) {
+				return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","Database error: " + e.getMessage())).build();
+			}
+			
+			return Response.seeOther(GetStuff.createURI("/fb/story/" + comment.getEpisode().getGeneratedId() + "#comment" + comment.getId())).build();
+			
+		} finally {
+			DB.closeSession(sesh);
+		}
 	}
 	
 	@GET

@@ -34,6 +34,9 @@ public class DBComment {
 	
 	@ManyToOne
 	private DBUser editor;
+	
+	@Column(nullable = false, columnDefinition = "boolean default false")
+	private boolean modVoice;
 
 	public long getId() {
 		return id;
@@ -89,6 +92,14 @@ public class DBComment {
 
 	public void setEditor(DBUser editor) {
 		this.editor = editor;
+	}
+
+	public boolean isModVoice() {
+		return modVoice;
+	}
+
+	public void setModVoice(boolean modVoice) {
+		this.modVoice = modVoice;
 	}
 
 	public boolean equals(Object o) {

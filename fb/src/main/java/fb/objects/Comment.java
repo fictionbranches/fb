@@ -10,6 +10,7 @@ public class Comment {
 	public final FlatUser user;
 	public final FlatEpisode episode;
 	public final String text;
+	public final boolean modVoice;
 	
 	public Comment(DBComment c) {
 		id = c.getId();
@@ -17,5 +18,6 @@ public class Comment {
 		user = new FlatUser(c.getUser());
 		episode = new FlatEpisode(c.getEpisode());
 		text = c.getText();
+		modVoice = c.isModVoice();
 	}
 }
