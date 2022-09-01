@@ -255,6 +255,7 @@ public class Accounts {
 		}
 		sb.append("</table>");
 		String avatar = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + escape(profileUser.user.avatar) + "\" /> ");
+		String avatarMeta = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"/favicon-192x192.png":escape(profileUser.user.avatar);
 		String bio = profileUser.user.bio==null?"":Story.formatBody(profileUser.user.bio);
 		String pageCount = "";
 		
@@ -268,7 +269,15 @@ public class Accounts {
 		
 		if (page > 1) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page-1) + "\">Previous</a> ";
 		if (profileUser.morePages) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page+1) + "\">Next</a>";
-		return Strings.getFile("profilepage.html", user).replace("$MODERATORSTATUS", moderator).replace("$DATE", date).replace("$PAGECOUNT", pageCount).replace("$AUTHOR", profileUser.user.author).replace("$AVATARURL", avatar).replace("$BODY", bio).replace("$EPISODES", sb.toString());
+		return Strings.getFile("profilepage.html", user)
+				.replace("$MODERATORSTATUS", moderator)
+				.replace("$DATE", date)
+				.replace("$PAGECOUNT", pageCount)
+				.replace("$AUTHOR", profileUser.user.author)
+				.replace("$AVATARURLMETA", avatarMeta)
+				.replace("$AVATARURL", avatar)
+				.replace("$BODY", bio)
+				.replace("$EPISODES", sb.toString());
 	}
 	
 	public static String getMostEpisodes(Cookie token, DB.PopularUserTime time) {
@@ -377,7 +386,10 @@ public class Accounts {
 			sb.append(Story.formatBody(staff.bio) + "\n<hr/>\n");
 		}
 
-		return Strings.getFile("generic.html", user).replace("$EXTRA", sb.toString());
+		return Strings.getFile("generic_meta.html", user)
+				.replace("$TITLE", "Fiction Branches Staff")
+				.replace("$OGDESCRIPTION", "Fiction Branches Staff")
+				.replace("$EXTRA", sb.toString());
 	}
 	
 	/**

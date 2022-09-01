@@ -462,7 +462,10 @@ public class GetStuff {
 	@Path("faq")
 	@Produces(MediaType.TEXT_HTML)
 	public Response faq(@CookieParam("fbtoken") Cookie fbtoken) {
-		return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", Story.formatBody(Strings.getFile("faq.md", null)))).build();
+		return Response.ok(Strings.getFileWithToken("generic_meta.html", fbtoken)
+				.replace("$TITLE", "Fiction Branches FAQ")
+				.replace("$OGDESCRIPTION", "Fiction Branches FAQ")
+				.replace("$EXTRA", Story.formatBody(Strings.getFile("faq.md", null)))).build();
 	}
 	
 	@GET

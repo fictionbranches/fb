@@ -347,7 +347,10 @@ public class Story {
 			sb.append("<hr/>\n");
 		}
 		
-		return Strings.getFile("generic.html", user).replace("$EXTRA", sb.toString());
+		return Strings.getFile("generic_meta.html", user)
+				.replace("$TITLE", "Fiction Branches Announcements")
+				.replace("$OGDESCRIPTION", "Fiction Branches Announcements")
+				.replace("$EXTRA", sb.toString());
 	}
 	
 	public static String getSearchHelp(Cookie token) {
@@ -1143,7 +1146,8 @@ public class Story {
 					"$EDITDATE", "$EDITORID", "$EDITORNAME", "$EPISODES", "$EXTRA", "$HITS", "$ID", "$LINK", 
 					"$MODERATORSTATUS", "$MODIFY", "$NUMPAGES", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
 					"$PATHTOHERE", "$PREVNEXT", "$RAWBODY", "$RECAPTCHASITEKEY", "$SEARCHTERM", "$SORTORDER", 
-					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS", "$OGDESCRIPTION", "$HIDEIMAGEBUTTON")
+					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS", "$OGDESCRIPTION", 
+					"$HIDEIMAGEBUTTON", "$AVATARURLMETA")
 					.collect(Collectors.toSet())));
 	
 	/**

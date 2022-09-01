@@ -52,6 +52,7 @@ public class Strings {
 	private static String DONATE_BUTTON;
 	private static String BACKEND_PORT;
 
+	private static final String ERROR_FILE;
 	static {
 		r = new Random();
 		
@@ -59,6 +60,8 @@ public class Strings {
 
 		filesMap = readInFilesMap();
 		stringsTxtMap = readInStringsMap();
+		
+		ERROR_FILE = filesMap.get("generic.html");
 	}
 	
 	public static void refreshSiteSettings() {
@@ -166,7 +169,6 @@ public class Strings {
 		readSnippetsFile("snippets", "accountconfirmed.html", fileMap);
 		readSnippetsFile("snippets", "addform.html", fileMap);
 		readSnippetsFile("snippets", "adminform.html", fileMap);
-		readSnippetsFile("snippets", "announcements.md", fileMap);
 		readSnippetsFile("snippets", "changeemailform.html", fileMap);
 		readSnippetsFile("snippets", "changepasswordform.html", fileMap);
 		readSnippetsFile("snippets", "commentflagform.html", fileMap);
@@ -185,7 +187,6 @@ public class Strings {
 		readSnippetsFile("snippets", "modhelp.md", fileMap);
 		readSnippetsFile("snippets", "modifyform.html", fileMap);
 		readSnippetsFile("snippets", "newrootform.html", fileMap);
-		readSnippetsFile("snippets", "outline.html", fileMap);
 		readSnippetsFile("snippets", "outlinescroll.html", fileMap);
 		readSnippetsFile("snippets", "passwordresetform.html", fileMap);
 		readSnippetsFile("snippets", "path.html", fileMap);
@@ -276,7 +277,7 @@ public class Strings {
 		
 		String account = Accounts.getAccount(user);
 		if (InitWebsite.DEV_MODE) account = "<h3>This site is in dev mode.</h3><p>Any changes you make <em><string>will</strong></em> be deleted.</p>" + account;
-		return filesMap.get(name)
+		return filesMap.getOrDefault(name, ERROR_FILE)
 				.replace("$DONATEBUTTON", Strings.getDONATE_BUTTON())
 				.replace("$ACCOUNT", account)
 				.replace("$STYLE", themeToCss(user));
