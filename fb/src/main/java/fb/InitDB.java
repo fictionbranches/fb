@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import fb.DB.DBException;
-import fb.db.DBEpisode;
 import fb.db.DBUser;
 
 /**
@@ -50,7 +49,7 @@ public class InitDB {
 				DB.closeSession(session);
 			}
 			
-			String phoenixID = "phoenix";
+			String phoenixID = "ChangeMe";
 			boolean success = false;
 			do {
 				
@@ -88,47 +87,21 @@ public class InitDB {
 				LOGGER.error("*** THIS SHOULD NEVER HAPPEN ***", e);
 				DB.closeSessionFactory();
 				System.exit(24);
+				throw new RuntimeException(e);
 			}
 			
 			session = DB.openSession();
 			try {
 				System.out.println("Adding first episode");
-				Date date = new Date();
 				DBUser author = DB.getUserById(session, phoenixID);
-				if (author == null) throw new DBException("Author does not exist");
-
-				DBEpisode child = new DBEpisode();
+				if (author == null) throw new DBException("Author does not exist");				
 				
+				final String title = "Your First Story Title";
+				final String link = "Your First Story";
+				final String body = "## This is your first story";
 				
-				child.setTitle("Your First Story Title");
-				child.setLink("Your First Story");
-				child.setBody("## This is your first story");
-				child.setAuthor(author);
-				child.setParent(null);
-				child.setDate(date);
-				child.setChildCount(1);
-				child.setEditDate(date);
-				child.setEditor(author);
-
-			
-				try {
-					session.beginTransaction();
-					session.save(child);
-					session.merge(author);
-					session.getTransaction().commit();
-				} catch (Exception e) {
-					session.getTransaction().rollback();
-					throw new DBException("Database error");
-				}
-				try {
-					session.beginTransaction();
-					child.setNewMap(""+child.getGeneratedId());
-					session.merge(child);
-					session.getTransaction().commit();
-				} catch (Exception e) {
-					session.getTransaction().rollback();
-					throw new DBException("Database error");
-				}
+				DB.addRootEp(link, title, body, author.getId(), new Date());
+				
 				System.out.println("First episode added!");
 			} catch (DBException e) {
 				LOGGER.error("*** THIS SHOULD NEVER HAPPEN ***", e);
