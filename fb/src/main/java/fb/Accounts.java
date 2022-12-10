@@ -242,18 +242,18 @@ public class Accounts {
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "User ID " + id + " does not exist");
 		}
-		StringBuilder sb = new StringBuilder();
-		sb.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Date</th><th>Story</th><th>Depth</th></tr>");
+		StringBuilder table = new StringBuilder();
+		table.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Date</th><th>Story</th><th>Depth</th></tr>");
 		for (FlatEpisode ep : profileUser.episodes) {
 			String story;
 			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
 			if (rootEp == null) story = "";
 			else story = rootEp.link;
-			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + 
+			table.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + " title='"+escape(ep.body.substring(0, Integer.min(140, ep.body.length())))+"'>" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + 
 					Dates.simpleDateFormat2(ep.date) + 
 					"</td><td class=\"fbtable\">" + escape(story) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>");
 		}
-		sb.append("</table>");
+		table.append("</table>");
 		String avatar = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + escape(profileUser.user.avatar) + "\" /> ");
 		String avatarMeta = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"/favicon-192x192.png":escape(profileUser.user.avatar);
 		String bio = profileUser.user.bio==null?"":Story.formatBody(profileUser.user.bio);
@@ -277,7 +277,7 @@ public class Accounts {
 				.replace("$AVATARURLMETA", avatarMeta)
 				.replace("$AVATARURL", avatar)
 				.replace("$BODY", bio)
-				.replace("$EPISODES", sb.toString());
+				.replace("$EPISODES", table.toString());
 	}
 	
 	public static String getMostEpisodes(Cookie token, DB.PopularUserTime time) {
