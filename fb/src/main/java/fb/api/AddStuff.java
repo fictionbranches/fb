@@ -33,6 +33,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 
@@ -88,13 +89,16 @@ public class AddStuff {
 	@POST
 	@Path("addpost/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response addpost(@Context UriInfo uriInfo, @PathParam("generatedId") long generatedId, @FormParam("link") String link,
-			@FormParam("title") String title, @FormParam("body") String body, 
-			@CookieParam("fbtoken") Cookie fbtoken) {
+	public Response addpost(@Context UriInfo uriInfo, @PathParam("generatedId") long generatedId,
+			@CookieParam("fbtoken") Cookie fbtoken, MultivaluedMap<String,String> formParams) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 				
+		final String link = formParams.getFirst("link");
+		final String title = formParams.getFirst("title");
+		final String body = formParams.getFirst("body");
+
 		try {
-			long childID = Story.addPost(generatedId, link, title, body, fbtoken);
+			long childID = Story.addPost(generatedId, link, title, body, fbtoken, formParams);
 			return Response.seeOther(GetStuff.createURI("/fb/story/" + childID)).build();
 		} catch (EpisodeException e) {
 			return Response.ok(e.getMessage()).build();
@@ -117,13 +121,16 @@ public class AddStuff {
 	@POST
 	@Path("modifypost/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response modifypost(@PathParam("generatedId") long generatedId, @FormParam("link") String link,
-			@FormParam("title") String title, @FormParam("body") String body, 
-			@CookieParam("fbtoken") Cookie fbtoken) {
+	public Response modifypost(@PathParam("generatedId") long generatedId,
+			@CookieParam("fbtoken") Cookie fbtoken, MultivaluedMap<String,String> formParams) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 
+		final String link = formParams.getFirst("link");
+		final String title = formParams.getFirst("title");
+		final String body = formParams.getFirst("body");
+		
 		try {
-			Story.modifyPost(generatedId, link, title, body, fbtoken);
+			Story.modifyPost(generatedId, link, title, body, fbtoken, formParams);
 			return Response.seeOther(GetStuff.createURI("/fb/story/" + generatedId)).build();
 		} catch (EpisodeException e) {
 			return Response.ok(e.getMessage()).build();

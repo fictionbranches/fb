@@ -1,8 +1,26 @@
 package fb.api;
 
 import java.net.URI;
+import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
 
+import org.hibernate.Session;
+
+import fb.Accounts;
+import fb.Accounts.FBLoginException;
+import fb.DB;
+import fb.DB.DBException;
+import fb.Story;
+import fb.Story.EpisodeException;
+import fb.db.DBSiteSetting;
+import fb.db.DBTag;
+import fb.db.DBUser;
+import fb.objects.FlatUser;
+import fb.objects.Tag;
+import fb.util.Dates;
+import fb.util.Strings;
+import fb.util.Text;
 import jakarta.ws.rs.CookieParam;
 import jakarta.ws.rs.FormParam;
 import jakarta.ws.rs.GET;
@@ -14,20 +32,6 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
-import org.hibernate.Session;
-
-import fb.Accounts;
-import fb.Accounts.FBLoginException;
-import fb.DB;
-import fb.DB.DBException;
-import fb.Story;
-import fb.Story.EpisodeException;
-import fb.db.DBSiteSetting;
-import fb.objects.FlatUser;
-import fb.util.Dates;
-import fb.util.Strings;
-import fb.util.Text;
 
 @Path("fb")
 public class AdminStuff {
@@ -499,20 +503,89 @@ public class AdminStuff {
 		try {
 			user = Accounts.getFlatUser(fbtoken);
 		} catch (FBLoginException e) {
-			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "You are not authorized to do that")).build();
+			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "You are not authorized to do that")).build();
 		}
 		long generatedId;
 		try {
 			generatedId = Long.parseLong(epid);
 		} catch (Exception e) {
-			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Not found: " + epid)).build();
+			return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + epid)).build();
 		}
 		if (user.level < 100) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "You are not authorized to do that")).build();
 		try {
 			DB.moveEpisodeToRoot(generatedId);
 		} catch (DBException e) {
-			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", e.getMessage())).build();
+			return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage())).build();
 		}
 		return Response.seeOther(GetStuff.createURI("/fb/story/" + generatedId)).build();
+	}
+	
+	@GET
+	@Path("modtagedit")
+	@Produces(MediaType.TEXT_HTML)
+	public Response modtagedit(@CookieParam("fbtoken") Cookie fbtoken) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			System.out.println("A");
+			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "You are not authorized to do that")).build();
+		}
+		if (user.level < 10) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", "You are not authorized to do that")).build();
+		
+		final List<Tag> tags = DB.getAllTags();
+		
+		String tagHTML = "\n<table><tr><th>Short</th><th>Long</th><th>Description</th><th>By</th><th>On</th></tr>\n" + tags.stream()
+		.map(tag -> String.format("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n", 
+				tag.shortName, tag.longName, tag.description, tag.createdBy.htmlLink(), Dates.outputDateFormat2(new Date(tag.createdDate))))
+		.collect(Collectors.joining()) + "</table>\n";
+		
+		return Response.ok(Strings.getFile("modtagedit.html", user)
+				.replace("$EXTRA", tagHTML)
+				.replace("$TITLE", "Manage Tags")
+				.replace("$OGDESCRIPTION", "Manage Tags")
+				).build();
+	}
+	
+	@POST
+	@Path("modtagedit")
+	@Produces(MediaType.TEXT_HTML)
+	public Response modtageditpost(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("shortname") String shortname, @FormParam("longname") String longname, @FormParam("description") String description) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			System.out.println("A");
+			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "You are not authorized to do that")).build();
+		}
+		if (user.level < 10) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", "You are not authorized to do that")).build();
+
+		if (shortname == null || shortname.trim().length() == 0 || longname == null || longname.trim().length() == 0 || description == null || description.trim().length() == 0)
+			return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", "Short name, long name, and description cannot be empty")).build();
+		
+		Session sesh = DB.openSession();
+		try {
+			DBUser mod = DB.getUserById(sesh, user.id);
+			DBTag tag = new DBTag();
+			tag.setCreatedBy(mod);
+			tag.setCreatedDate(System.currentTimeMillis());
+			tag.setDescription(description);
+			tag.setLongName(longname);
+			tag.setShortName(shortname);
+			
+			try {
+				sesh.beginTransaction();
+				sesh.save(tag);
+				sesh.getTransaction().commit();
+			} catch (Exception e) {
+				sesh.getTransaction().rollback();
+				return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", "Database error: " + e + " - " + e.getMessage())).build();
+			}
+			
+		} finally {
+			DB.closeSession(sesh);
+		}
+		
+		return Response.seeOther(GetStuff.createURI("/fb/modtagedit")).build();
 	}
 }

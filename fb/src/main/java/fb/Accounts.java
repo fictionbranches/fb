@@ -192,7 +192,7 @@ public class Accounts {
 			if (sizes[1] > 0) response.append("<a href=/fb/modqueue>" + sizes[1] + " episode modification requests</a><br/>");
 			if (sizes[2] > 0) response.append("<a href=/fb/commentflagqueue>" + sizes[2] + " flagged comments</a><br/>");
 			
-			response.append("<a href=/fb/modhelp>Moderator guidelines</a>");
+			response.append("<a href=/fb/modhelp>Moderator guidelines</a><br/><a href=/fb/modtagedit>Manage Tags</a>");
 		}
 		int unreadAnnouncements;
 		try {

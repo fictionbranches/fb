@@ -1,6 +1,7 @@
 package fb.objects;
 
 import java.util.Date;
+import java.util.Objects;
 
 import fb.db.DBUser;
 
@@ -47,5 +48,24 @@ public class FlatUser {
 		this.childMail = user.isChildMail();
 		this.bodyTextWidth = user.getBodyTextWidth();
 		this.hideImages = user.isHideImages();
+	}
+	
+	public String htmlLink() {
+		return String.format("<a href='/fb/user/%s'>%s</a>", this.id, this.author);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(author, avatar, bio, bodyTextWidth, childMail, childSite, commentMail, commentSite, date, email, hashedPassword, hideImages, id, level, theme);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) return true;
+		if (!(obj instanceof FlatUser)) return false;
+		FlatUser other = (FlatUser) obj;
+		return Objects.equals(author, other.author) && Objects.equals(avatar, other.avatar) && Objects.equals(bio, other.bio) && bodyTextWidth == other.bodyTextWidth && childMail == other.childMail && childSite == other.childSite
+				&& commentMail == other.commentMail && commentSite == other.commentSite && Objects.equals(date, other.date) && Objects.equals(email, other.email) && Objects.equals(hashedPassword, other.hashedPassword)
+				&& hideImages == other.hideImages && Objects.equals(id, other.id) && level == other.level && Objects.equals(theme, other.theme);
 	}
 }

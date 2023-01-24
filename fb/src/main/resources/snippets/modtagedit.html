@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+<!-- must replace $EXTRA, $TITLE, and $OGDESCRIPTION -->
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<title>$TITLE</title>
+<link rel="stylesheet" href="/static/css/base20.css" />
+$STYLE
+<link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16" />
+<link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+<link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192 /">
+<link rel="apple-touch-icon" href="/favicon-120x120.png" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src=/static/all_pages7.js></script>
+
+<meta property="og:site_name" content="Fiction Branches" />
+<meta property="og:image" content="https://fictionbranches.net/favicon-192x192.png" />
+
+<meta property="og:title" content="$TITLE" />
+<meta name="description" content="$OGDESCRIPTION" />
+<meta property="og:description" content="$OGDESCRIPTION" />
+
+</head>
+<body>
+<div class="topcorner">
+<a href="/"><img alt="Fiction Branches" src="/images/fblogo.png" class="fblogo" /></a>
+<br/>
+$ACCOUNT
+</div>
+
+
+<h1>Manage Tags</h1>
+
+<hr />
+<h3>Add a tag</h3>
+<form method="post">
+	<label for="shortname">Short name:</label><input type="text" name="shortname" id="shortname"></input><br/>
+	<label for="longname">Long name:</label><input type="text" name="longname" id="longname"></input><br/>
+	<label for="description">Description:</label><input type="text" name="description" id="description"></input><br/>
+	<input type="submit" value="Add">
+</form>
+<hr/>
+<h3>Existing tags</h3>
+$EXTRA
+<hr/>
+<br/><br/><br/>
+$DONATEBUTTON
+</body>
+</html>

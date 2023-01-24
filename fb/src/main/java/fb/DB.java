@@ -15,10 +15,12 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
@@ -38,6 +40,7 @@ import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.automaton.RegExp;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.search.FullTextSession;
@@ -54,6 +57,7 @@ import fb.db.DBComment;
 import fb.db.DBCommentSub;
 import fb.db.DBEmailChange;
 import fb.db.DBEpisode;
+import fb.db.DBEpisodeTag;
 import fb.db.DBEpisodeView;
 import fb.db.DBFavEp;
 import fb.db.DBFlaggedComment;
@@ -63,6 +67,7 @@ import fb.db.DBNotification;
 import fb.db.DBPasswordReset;
 import fb.db.DBPotentialUser;
 import fb.db.DBSiteSetting;
+import fb.db.DBTag;
 import fb.db.DBTheme;
 import fb.db.DBUpvote;
 import fb.db.DBUser;
@@ -77,12 +82,14 @@ import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.objects.ModEpisode;
 import fb.objects.Notification;
+import fb.objects.Tag;
 import fb.objects.Theme;
 import fb.objects.User;
 import fb.util.Discord;
 import fb.util.Strings;
 import fb.util.Text;
 import jakarta.ws.rs.core.Cookie;
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.StreamingOutput;
 
 public class DB {
@@ -174,6 +181,8 @@ public class DB {
 		configuration.addAnnotatedClass(DBTheme.class);
 		configuration.addAnnotatedClass(DBFavEp.class);
 		configuration.addAnnotatedClass(DBCommentSub.class);
+		configuration.addAnnotatedClass(DBTag.class);
+		configuration.addAnnotatedClass(DBEpisodeTag.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -295,7 +304,7 @@ public class DB {
 	 * @param id
 	 * @return
 	 */
-	static DBUser getUserById(Session session, String id) {
+	public static DBUser getUserById(Session session, String id) {
 		if (id==null) return null;
 		return session.get(DBUser.class, id.toLowerCase());
 	}
@@ -691,14 +700,16 @@ public class DB {
 	 * @param id id of episode
 	 * @param title new title of new episode
 	 * @param body new body of new episode
+	 * @param formParams 
 	 * @param author new author of new episode
 	 * @throws DBException if id not found
 	 */
-	public static void modifyEp(long generatedId, String link, String title, String body, String editorId) throws DBException {
+	public static void modifyEp(long generatedId, String link, String title, String body, String editorId, MultivaluedMap<String, String> formParams) throws DBException {
 		Session session = openSession();
 		try {
 			session.beginTransaction();
 			DB.modifyEp(session, generatedId, link, title, body, editorId);
+			DB.updateTags(generatedId, editorId, formParams);
 			session.getTransaction().commit();
 		} catch (Exception e) {
 			session.getTransaction().rollback();
@@ -753,9 +764,7 @@ public class DB {
 			closeSession(session);
 		}
 	}
-	
-	public static final String MOD_KEYWORD = "MOD";
-	
+		
 	/**
 	 * If specified episode already has a mod request submitted, return 2.
 	 * Else if a child episode exists which is not owned by owner of the specified episode, return 1.
@@ -879,7 +888,7 @@ public class DB {
 						.collect(Collectors.joining(" or ")) + 
 					" order by ep.id desc";
 			}
-						
+			
 			final List<FlatEpisode> pathbox = session
 					.createQuery(pathQuery,DBEpisode.class)
 					.stream().map(FlatEpisode::new)
@@ -889,7 +898,13 @@ public class DB {
 			if (user == null) userIsSubscribedToComments = false;
 			else userIsSubscribedToComments = session.createQuery("from DBCommentSub ev where ev.episode.generatedId=" + ep.getGeneratedId() + " and ev.user.id='" + username + "'").uniqueResultOptional().isPresent();
 			
-			return new EpisodeWithChildren(ep, visitorCount, upvotes, user, canUpvote, isFavorite, children, comments, pathbox, userIsSubscribedToComments);
+			final List<Tag> tags = session.createQuery("from DBEpisodeTag e where e.episode.generatedId=" + ep.getGeneratedId(), DBEpisodeTag.class)
+					.stream()
+					.map(dbet -> dbet.getTag())
+					.map(Tag::new)
+					.toList();
+			
+			return new EpisodeWithChildren(ep, visitorCount, upvotes, user, canUpvote, isFavorite, children, comments, pathbox, userIsSubscribedToComments, tags);
 		} finally {
 			closeSession(session);
 		}
@@ -3171,6 +3186,95 @@ public class DB {
 		}
 		return Integer.compare(aList.size(), bList.size());
  	};
+ 	
+ 	public static List<Tag> getAllTags() {
+		Session sesh = DB.openSession();
+		try {
+			return getAllTags(sesh).map(Tag::new).toList();
+		} finally {
+			DB.closeSession(sesh);
+		}
+ 	}
+ 	
+ 	public static Stream<DBTag> getAllTags(Session sesh) {
+		return sesh.createQuery("from DBTag tag order by tag.shortName", DBTag.class).stream();
+ 	}
+ 	
+ 	public static Stream<DBEpisodeTag> getTagsForEpisode(long generatedId, Session sesh) {
+ 		return sesh.createQuery("from DBEpisodeTag tag where tag.episode.id="+generatedId, DBEpisodeTag.class).stream();
+ 	}
+ 	
+ 	public static Map<Tag, Boolean> getTagsForEpisode(long generatedId) throws DBException {
+ 		Session sesh = DB.openSession();
+ 		try {
+ 			DBEpisode ep = sesh.get(DBEpisode.class, generatedId);
+ 			if (ep == null) throw new DBException("Not found: " + generatedId);
+ 			HashSet<DBTag> epTags = sesh
+ 				.createQuery("from DBEpisodeTag tag where tag.episode.id=" + generatedId, DBEpisodeTag.class)
+ 				.stream()
+ 				.map(dbet -> dbet.getTag())
+ 				.collect(Collectors.toCollection(HashSet::new));
+ 			return getAllTags(sesh).collect(Collectors.toMap(Tag::new, tag -> epTags.contains(tag), (a, b) -> a||b, LinkedHashMap::new));
+ 		} finally {
+ 			DB.closeSession(sesh);
+ 		}
+ 	}
+ 	
+ 	/**
+ 	 * Updates the tags on an episode according to the formParams
+ 	 * @param generatedId
+ 	 * @param taggerUsername
+ 	 * @param formParams
+ 	 * @throws DBException
+ 	 */
+ 	public static void updateTags(long generatedId, String taggerUsername, MultivaluedMap<String, String> formParams) throws DBException {
+ 		Session sesh = DB.openSession();
+ 		try {
+ 			DB.updateTags(sesh, generatedId, taggerUsername, formParams); 			
+ 		} finally {
+ 			DB.closeSession(sesh);
+ 		}
+
+ 	}
+ 	
+ 	/**
+ 	 * Updates the tags on an episode according to the formParams
+ 	 * @param generatedId
+ 	 * @param taggerUsername
+ 	 * @param formParams
+ 	 * @throws DBException
+ 	 */
+ 	public static void updateTags(Session sesh, long generatedId, String taggerUsername, MultivaluedMap<String, String> formParams) throws DBException {
+		final DBEpisode ep = sesh.get(DBEpisode.class, generatedId);
+		if (ep == null) throw new DBException("Not found: " + generatedId);
+		final DBUser tagger = sesh.get(DBUser.class, taggerUsername);
+		if (tagger == null) throw new DBException("Not found: " + taggerUsername);
+		
+		if (tagger.getLevel()<10 && !ep.getAuthor().getId().equals(tagger.getId())) throw new DBException("You are not allowed to do that");
+		
+		final List<DBTag> allTags = getAllTags(sesh).toList();
+		
+		final Set<DBEpisodeTag> epTags = getTagsForEpisode(generatedId, sesh).collect(Collectors.toCollection(()->new HashSet<DBEpisodeTag>()));
+		final Set<DBTag> currentTags = epTags.stream().map(tag -> tag.getTag()).collect(Collectors.toCollection(HashSet::new));
+		
+		final Transaction trans = sesh.beginTransaction();
+		try {
+			allTags.stream()
+			.filter(tag -> formParams.containsKey(tag.getShortName()) && !currentTags.contains(tag))
+			.map(tag -> new DBEpisodeTag(ep, tag, tagger))
+			.forEach(tag -> sesh.save(tag));
+			
+			allTags.stream()
+			.filter(tag -> !formParams.containsKey(tag.getShortName()) && currentTags.contains(tag))
+			.map(tag -> epTags.stream().filter(t -> t.getTag().getShortName().equals(tag.getShortName())).findAny().get())
+			.forEach(tag -> sesh.delete(tag));
+			trans.commit();
+			
+		} catch (Exception e) {
+			trans.rollback();
+			throw new DBException(e);
+		}
+ 	}
  	
  	private DB() {}
 }

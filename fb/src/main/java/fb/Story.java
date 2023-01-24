@@ -3,18 +3,18 @@ package fb;
 import static fb.util.Text.escape;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import jakarta.ws.rs.core.Cookie;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +29,12 @@ import fb.objects.Episode;
 import fb.objects.EpisodeWithChildren;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
+import fb.objects.Tag;
 import fb.util.Dates;
 import fb.util.Markdown;
 import fb.util.Strings;
+import jakarta.ws.rs.core.Cookie;
+import jakarta.ws.rs.core.MultivaluedMap;
 
 /**
  * Contains the actual logic that controls how the site works
@@ -806,6 +809,7 @@ public class Story {
 				.replace("$MARKDOWNSTATUS", parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")
 				.replace("$TITLE", parent.title)
 				.replace("$ID", parentId+"")
+				.replace("$EXTRA", getTagsHTML(DB.getAllTags()))
 				.replace("$OLDBODY",parseMarkdown?Story.formatBody(parent.body):escape(parent.body));
 	}
 	
@@ -818,7 +822,7 @@ public class Story {
 	 * @return ID of new episode
 	 * @throws EpisodeException if there's any error, e.getMessage() will contain HTML page for error
 	 */
-	public static long addPost(long generatedId, String link, String title, String body, Cookie token) throws EpisodeException {
+	public static long addPost(long generatedId, String link, String title, String body, Cookie token, MultivaluedMap<String, String> formParams) throws EpisodeException {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -832,7 +836,9 @@ public class Story {
 		String errors = checkEpisode(link, title, body);
 		if (errors != null) throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", errors));
 		try {
-			return DB.addEp(generatedId, link, title, body, user.id, new Date());
+			final long newId = DB.addEp(generatedId, link, title, body, user.id, new Date());
+			DB.updateTags(newId, user.id, formParams);
+			return newId;
 		} catch (DBException e) {
 			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", e.getMessage()));
 		}
@@ -900,18 +906,98 @@ public class Story {
 		}
 		
 		FlatEpisode ep;
+		Map<Tag, Boolean> tags;
 		try {
 			ep = DB.getFlatEp(generatedId);
+			tags = DB.getTagsForEpisode(generatedId);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId);
 		}
 		if (!user.id.equals(ep.authorId) && user.level<10) return Strings.getFile("generic.html",user).replace("$EXTRA", "You can only edit episodes that you wrote");
+				
 		return Strings.getFile("modifyform.html", user)
 				.replace("$TITLE", escape(ep.title))
 				.replace("$BODY", escape(ep.body))
 				.replace("$LINK", escape(ep.link))
+				.replace("$EXTRA", getTagsHTML(tags))
 				.replace("$ID", ""+generatedId);
-	}	
+	}
+	
+	/**
+	 * Modifies an episode of the story
+	 * @param id id of episode
+	 * @param title title of new episode
+	 * @param body body of new episode
+	 * @param author author of new episode
+	 * @return id of modified episode
+	 * @throws EpisodeException if error occurs, e.getMessage() will contain HTML page with error
+	 */
+	public static void modifyPost(long generatedId, String link, String title, String body, Cookie token, MultivaluedMap<String,String> formParams) throws EpisodeException {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(token);
+		} catch (FBLoginException e) {
+			throw new EpisodeException(Strings.getFile("generic.html",null).replace("$EXTRA", Strings.getString("must_be_logged_in")));
+		}
+		
+		FlatEpisode ep;
+		try {
+			ep = DB.getFlatEp(generatedId);
+		} catch (DBException e1) {
+			throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId));
+		}
+
+		if (!user.id.equals(ep.authorId) && user.level<10) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "You can only edit episodes that you wrote"));
+		
+		link = link.trim();
+		title = title.trim();
+		body = body.trim();
+		
+		String errors = checkEpisode(link, title, body);
+		if (errors != null) throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", errors));
+		
+		if (ep.link.equals(link) && ep.title.equals(title) && ep.body.equals(body)) {
+			try {
+				DB.updateTags(generatedId, user.id, formParams);
+			} catch (DBException e) {
+				throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage()));
+			}
+		}
+		
+		try {
+			if (user.level > 1) DB.modifyEp(generatedId, link, title, body, user.id, formParams);
+			else {
+				int result = DB.checkIfEpisodeCanBeModified(generatedId);
+				if (result == 0) DB.modifyEp(generatedId, link, title, body, user.id, formParams);
+				else if (result == 2) throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "You have already submitted a modification for this episode. <br/>Please wait for the moderation team to either accept or reject your previous modification before submitting another one."));
+				else { // result == 1
+					DB.newEpisodeMod(generatedId, link, title, body);
+					DB.updateTags(generatedId, user.id, formParams);
+					throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Because you do not own a child episode, your modification has been submitted for approval by the moderation team. Please be patient."));
+				}
+			}
+		} catch (DBException e) {
+			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", "Not found: " + generatedId));
+		}	
+	}
+	
+	private static String getTagsHTML(Map<Tag, Boolean> tags) {
+		return tags.entrySet().stream()
+				.map(e -> String.format(
+					"<input type='checkbox' id='%s' name='%s' value='%s' %s><label for='%s' title='%s'> %s</label><br>", 
+					escape(e.getKey().shortName), 
+					escape(e.getKey().shortName), 
+					escape(e.getKey().shortName), 
+					e.getValue() ? "checked" : "",
+					escape(e.getKey().shortName), 
+					escape(e.getKey().description),
+					escape(e.getKey().shortName + " - " + e.getKey().longName)))
+				.collect(Collectors.joining(System.lineSeparator()));
+	}
+	
+	private static String getTagsHTML(Collection<Tag> tags) {
+		return getTagsHTML(tags.stream().collect(Collectors.toMap(e->e, e->false, (a,b)->a||b, LinkedHashMap::new)));
+	}
 	
 	public static String commentForm(long generatedId, Cookie token) {
 		FlatUser user;
@@ -1058,58 +1144,7 @@ public class Story {
 			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", e.getMessage()));
 		}
 		
-	}
-	
-	/**
-	 * Modifies an episode of the story
-	 * @param id id of episode
-	 * @param title title of new episode
-	 * @param body body of new episode
-	 * @param author author of new episode
-	 * @return id of modified episode
-	 * @throws EpisodeException if error occurs, e.getMessage() will contain HTML page with error
-	 */
-	public static void modifyPost(long generatedId, String link, String title, String body, Cookie token) throws EpisodeException {
-		FlatUser user;
-		try {
-			user = Accounts.getFlatUser(token);
-		} catch (FBLoginException e) {
-			throw new EpisodeException(Strings.getFile("generic.html",null).replace("$EXTRA", Strings.getString("must_be_logged_in")));
-		}
-		
-		FlatEpisode ep;
-		try {
-			ep = DB.getFlatEp(generatedId);
-		} catch (DBException e1) {
-			throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId));
-		}
-
-		if (!user.id.equals(ep.authorId) && user.level<10) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "You can only edit episodes that you wrote"));
-		
-		link = link.trim();
-		title = title.trim();
-		body = body.trim();
-		
-		String errors = checkEpisode(link, title, body);
-		if (errors != null) throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", errors));
-				
-		try {
-			if (user.level > 1) DB.modifyEp(generatedId, link, title, body, user.id);
-			else {
-				int result = DB.checkIfEpisodeCanBeModified(generatedId);
-				if (result == 0) DB.modifyEp(generatedId, link, title, body, user.id);
-				else if (result == 2) throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "You have already submitted a modification for this episode. <br/>Please wait for the moderation team to either accept or reject your previous modification before submitting another one."));
-				else { // result == 1
-					DB.newEpisodeMod(generatedId, link, title, body);
-					throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Because you do not own a child episode, your modification has been submitted for approval by the moderation team. Please be patient."));
-				}
-			}
-		} catch (DBException e) {
-			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", "Not found: " + generatedId));
-		}	
-	}
-	
-	
+	}	
 	
 	/////////////////////////////////////// utility functions \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	

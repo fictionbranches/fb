@@ -204,6 +204,7 @@ public class Strings {
 		readSnippetsFile("snippets", "welcome.html", fileMap);
 		readSnippetsFile("snippets", "stats.html", fileMap);
 		readSnippetsFile("snippets", "favoritespage.html", fileMap);
+		readSnippetsFile("snippets", "modtagedit.html", fileMap);
 		
 		return Collections.unmodifiableMap(fileMap);
 	}
