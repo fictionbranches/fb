@@ -1,5 +1,7 @@
 package fb.api;
 
+import static fb.util.Text.escape;
+
 import java.net.URI;
 import java.util.Date;
 import java.util.List;
@@ -535,9 +537,15 @@ public class AdminStuff {
 		
 		final List<Tag> tags = DB.getAllTags();
 		
-		String tagHTML = "\n<table><tr><th>Short</th><th>Long</th><th>Description</th><th>By</th><th>On</th></tr>\n" + tags.stream()
-		.map(tag -> String.format("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n", 
-				tag.shortName, tag.longName, tag.description, tag.createdBy.htmlLink(), Dates.outputDateFormat2(new Date(tag.createdDate))))
+		String tagHTML = "\n<table><tr><th>Short</th><th>Long</th><th>Description</th><th>By</th><th>On</th><th></th></tr>\n" + tags.stream()
+		.map(tag -> String.format("""
+				<tr id='row_%s'><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
+				<td id='container_%s'><button id="delete_btn_%s" onclick="deleteTag('%s')">Delete</button><span id='span_%s'></span></td></tr>
+				""", 
+				escape(tag.shortName), escape(tag.shortName), escape(tag.longName), escape(tag.description), tag.createdBy.htmlLink(), 
+				Dates.outputDateFormat2(new Date(tag.createdDate)),
+				escape(tag.shortName), escape(tag.shortName), escape(tag.shortName), escape(tag.shortName)
+				))
 		.collect(Collectors.joining()) + "</table>\n";
 		
 		return Response.ok(Strings.getFile("modtagedit.html", user)
@@ -548,6 +556,45 @@ public class AdminStuff {
 	}
 	
 	@POST
+	@Path("modtagdelete")
+	@Produces(MediaType.TEXT_HTML)
+	public Response modtagdelete(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("shortname") String shortname) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok("You are not authorized to do that").build();
+		}
+		if (user.level < 10) return Response.ok("You are not authorized to do that").build();
+
+		if (shortname == null || shortname.trim().length() == 0)
+			return Response.ok("shortName cannot be empty").build();
+				
+		final Session sesh = DB.openSession();
+		try {
+			
+			final DBTag tag = sesh.createQuery("from DBTag tag where tag.shortName=:name", DBTag.class)
+				.setParameter("name", shortname)
+				.getSingleResult();
+			if (tag == null) return Response.ok("Not found: " + shortname).build();
+			try {
+				sesh.beginTransaction();
+				sesh.createQuery("delete from DBEpisodeTag et where et.tag.id=" + tag.getId()).executeUpdate();
+				sesh.delete(tag);
+				sesh.getTransaction().commit();
+			} catch (Exception e) {
+				sesh.getTransaction().rollback();
+				return Response.ok("Database error: " + e + " - " + e.getMessage()).build();
+			}
+			
+		} finally {
+			DB.closeSession(sesh);
+		}
+		
+		return Response.ok("done").build();
+	}
+	
+	@POST
 	@Path("modtagedit")
 	@Produces(MediaType.TEXT_HTML)
 	public Response modtageditpost(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("shortname") String shortname, @FormParam("longname") String longname, @FormParam("description") String description) {
@@ -555,7 +602,6 @@ public class AdminStuff {
 		try {
 			user = Accounts.getFlatUser(fbtoken);
 		} catch (FBLoginException e) {
-			System.out.println("A");
 			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "You are not authorized to do that")).build();
 		}
 		if (user.level < 10) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", "You are not authorized to do that")).build();

@@ -996,7 +996,7 @@ public class Story {
 	}
 	
 	private static String getTagsHTML(Collection<Tag> tags) {
-		return getTagsHTML(tags.stream().collect(Collectors.toMap(e->e, e->false, (a,b)->a||b, LinkedHashMap::new)));
+		return getTagsHTML((Map<Tag, Boolean>) tags.stream().collect(Collectors.toMap(e->e, e->false, (a,b)->a||b, LinkedHashMap::new)));
 	}
 	
 	public static String commentForm(long generatedId, Cookie token) {

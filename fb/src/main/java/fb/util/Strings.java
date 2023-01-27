@@ -211,12 +211,6 @@ public class Strings {
 	
 	private static void readSnippetsFile(String dir, String filename, HashMap<String,String> fileMap) {
 		LOGGER.info("Reading " + dir + "/" + filename);
-		/*try (Scanner scan = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream(dir + "/" + filename))) { 
-			StringBuilder sb = new StringBuilder(); 
-			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
-			fileMap.put(filename, sb.toString());
-		}*/
-		
 		fileMap.put(filename, readRawFileFromJar(dir + "/" + filename)); 
 	}
 	
@@ -278,7 +272,18 @@ public class Strings {
 		
 		String account = Accounts.getAccount(user);
 		if (InitWebsite.DEV_MODE) account = "<h3>This site is in dev mode.</h3><p>Any changes you make <em><string>will</strong></em> be deleted.</p>" + account;
-		return filesMap.getOrDefault(name, ERROR_FILE)
+		
+		String html;
+		if (InitWebsite.DEV_MODE) {
+			try {
+				html = readRawFileFromJar("snippets/" + name);
+			} catch (Exception e) {
+				html = ERROR_FILE;
+			}
+		}
+		else html = filesMap.getOrDefault(name, ERROR_FILE);
+		
+		return html
 				.replace("$DONATEBUTTON", Strings.getDONATE_BUTTON())
 				.replace("$ACCOUNT", account)
 				.replace("$STYLE", themeToCss(user));

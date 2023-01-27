@@ -1,5 +1,7 @@
 package fb.objects;
 
+import static fb.util.Text.escape;
+
 import java.util.Date;
 import java.util.Objects;
 
@@ -51,7 +53,7 @@ public class FlatUser {
 	}
 	
 	public String htmlLink() {
-		return String.format("<a href='/fb/user/%s'>%s</a>", this.id, this.author);
+		return String.format("<a href='/fb/user/%s'>%s</a>", this.id, escape(this.author));
 	}
 
 	@Override
