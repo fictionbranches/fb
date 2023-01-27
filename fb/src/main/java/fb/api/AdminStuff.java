@@ -540,11 +540,11 @@ public class AdminStuff {
 		String tagHTML = "\n<table><tr><th>Short</th><th>Long</th><th>Description</th><th>By</th><th>On</th><th></th></tr>\n" + tags.stream()
 		.map(tag -> String.format("""
 				<tr id='row_%s'><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
-				<td id='container_%s'><button id="delete_btn_%s" onclick="deleteTag('%s')">Delete</button><span id='span_%s'></span></td></tr>
+				<td id='container_%s'><button id="delete_btn_%s" class="delete_btn"">Delete</button><span id='span_%s'></span></td></tr>
 				""", 
 				escape(tag.shortName), escape(tag.shortName), escape(tag.longName), escape(tag.description), tag.createdBy.htmlLink(), 
 				Dates.outputDateFormat2(new Date(tag.createdDate)),
-				escape(tag.shortName), escape(tag.shortName), escape(tag.shortName), escape(tag.shortName)
+				escape(tag.shortName), escape(tag.shortName), escape(tag.shortName)
 				))
 		.collect(Collectors.joining()) + "</table>\n";
 		
