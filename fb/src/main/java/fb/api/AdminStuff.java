@@ -580,8 +580,7 @@ public class AdminStuff {
 		if (tagid == null) return Response.ok("tagid cannot be empty").build();
 		
 		if (shortname == null || shortname.trim().length() == 0 || 
-				longname == null || longname.trim().length() == 0 || 
-				description == null || description.trim().length() == 0)
+				longname == null || longname.trim().length() == 0)
 			return Response.ok("Short name, long name, and description cannot be empty.").build();
 
 		final Session sesh = DB.openSession();
@@ -667,8 +666,7 @@ public class AdminStuff {
 		if (user.level < 10) return Response.ok("You are not authorized to do that").build();
 
 		if (shortname == null || shortname.trim().length() == 0 || 
-				longname == null || longname.trim().length() == 0 || 
-				description == null || description.trim().length() == 0)
+				longname == null || longname.trim().length() == 0)
 			return Response.ok("Short name, long name, and description cannot be empty.").build();
 		
 		Session sesh = DB.openSession();

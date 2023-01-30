@@ -118,8 +118,8 @@ function editTag(tagid) {
 			return;
 		}
 
-		if (newShort.length == 0 || newLong.length == 0 || newDesc.length == 0) {
-			infoSpan.html("Short name, long name, and description cannot be empty.");
+		if (newShort.length == 0 || newLong.length == 0) {
+			infoSpan.html("Short/long names cannot be empty.");
 			return;
 		}
 
@@ -154,8 +154,8 @@ function addTag() {
 	const long = $('#longname').val();
 	const desc = $('#description').val();
 
-	if (short.length == 0 || long.length == 0 || desc.length == 0) {
-		$('#add_span').html("Short name, long name, and description cannot be empty.<br/>");
+	if (short.length == 0 || long.length == 0) {
+		$('#add_span').html("Short/long names cannot be empty.<br/>");
 		return;
 	}
 	
