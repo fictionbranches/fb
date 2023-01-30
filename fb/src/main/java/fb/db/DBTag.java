@@ -30,7 +30,12 @@ public class DBTag {
 	@ManyToOne
 	private DBUser createdBy;
 	
-	private long createdDate;
+	private Long createdDate;
+
+	@ManyToOne
+	private DBUser editedBy;
+	
+	private long editedDate;
 
 	public long getId() {
 		return id;
@@ -80,9 +85,25 @@ public class DBTag {
 		this.createdDate = createdDate;
 	}
 
+	public DBUser getEditedBy() {
+		return editedBy;
+	}
+
+	public void setEditedBy(DBUser editedBy) {
+		this.editedBy = editedBy;
+	}
+
+	public long getEditedDate() {
+		return editedDate;
+	}
+
+	public void setEditedDate(long editedDate) {
+		this.editedDate = editedDate;
+	}
+
 	@Override
 	public int hashCode() {
-		return Objects.hash(createdBy, createdDate, description, id, longName, shortName);
+		return Objects.hash(createdBy, createdDate, description, id, longName, shortName, editedBy, editedDate);
 	}
 
 	@Override
@@ -93,6 +114,8 @@ public class DBTag {
 		return 
 				Objects.equals(createdBy, other.createdBy) && 
 				createdDate == other.createdDate && 
+				Objects.equals(editedBy, other.editedBy) && 
+				editedDate == other.editedDate && 
 				Objects.equals(description, other.description) && 
 				id == other.id && 
 				Objects.equals(longName, other.longName) && 

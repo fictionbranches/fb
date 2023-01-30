@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head> 
-<!-- must replace $EXTRA, $TITLE, and $OGDESCRIPTION -->
+<!-- must replace @EXTRA, @TITLE, and @OGDESCRIPTION -->
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 <title>$TITLE</title>
 <link rel="stylesheet" href="/static/css/base20.css" />
@@ -36,18 +36,16 @@ $ACCOUNT
 
 <hr />
 <h3>Add a tag</h3>
-<form method="post">
-	<label for="shortname">Short name:</label><input type="text" name="shortname" id="shortname"></input><br/>
-	<label for="longname">Long name:</label><input type="text" name="longname" id="longname"></input><br/>
-	<label for="description">Description:</label><input type="text" name="description" id="description"></input><br/>
-	<input type="submit" value="Add">
-</form>
+<label for="shortname">Short name:</label><input type="text" name="shortname" id="shortname"></input><br/>
+<label for="longname">Long name:</label><input type="text" name="longname" id="longname"></input><br/>
+<label for="description">Description:</label><input type="text" name="description" id="description"></input><br/>
+<span id="add_span"></span>
+<button id="add_button">Add</button>
 <hr/>
 <h3>Existing tags</h3>
 $EXTRA
 <hr/>
 <br/><br/><br/>
 $DONATEBUTTON
-
 </body>
 </html>

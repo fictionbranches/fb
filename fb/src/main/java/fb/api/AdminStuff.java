@@ -7,6 +7,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.hibernate.Session;
 
 import fb.Accounts;
@@ -533,19 +534,29 @@ public class AdminStuff {
 			System.out.println("A");
 			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "You are not authorized to do that")).build();
 		}
-		if (user.level < 10) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", "You are not authorized to do that")).build();
+		if (user.level < 10) 
+			return Response.ok(Strings.getFile("generic.html", user)
+				.replace("$EXTRA", "You are not authorized to do that")).build();
 		
 		final List<Tag> tags = DB.getAllTags();
 		
 		String tagHTML = "\n<table><tr><th>Short</th><th>Long</th><th>Description</th><th>By</th><th>On</th><th></th></tr>\n" + tags.stream()
-		.map(tag -> String.format("""
-				<tr id='row_%s'><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
-				<td id='container_%s'><button id="delete_btn_%s" class="delete_btn"">Delete</button><span id='span_%s'></span></td></tr>
-				""", 
-				escape(tag.shortName), escape(tag.shortName), escape(tag.longName), escape(tag.description), tag.createdBy.htmlLink(), 
-				Dates.outputDateFormat2(new Date(tag.createdDate)),
-				escape(tag.shortName), escape(tag.shortName), escape(tag.shortName)
-				))
+		.map(tag -> """
+				<tr id='row_$TAGID'> <!-- z -->
+				<td id='td_short_$TAGID'><span id='span_short_$TAGID'>$SHORTNAME</span></td><td id='td_long_$TAGID'><span id='span_long_$TAGID'>$LONGNAME</span></td> <!-- a --> 
+				<td id='td_desc_$TAGID'><span id='span_desc_$TAGID'>$DESCRIPTION</span></td><td>$CREATEDBY</td><td>$CREATEDDATE</td> <!-- b --> 
+				<td id='container_$TAGID'> <!-- c --> 
+				<button id="edit_btn_$TAGID" class="edit_btn"">Edit</button> <!-- d --> 
+				<button id="delete_btn_$TAGID" class="delete_btn"">Delete</button> <!-- e --> 
+				<span id='span_$TAGID'></span></td></tr> <!-- f --> 
+				"""
+				.replace("$TAGID", Long.toString(tag.id))
+				.replace("$SHORTNAME", escape(tag.shortName))
+				.replace("$LONGNAME", escape(tag.longName))
+				.replace("$DESCRIPTION", escape(tag.description))
+				.replace("$CREATEDBY", tag.createdBy.htmlLink())
+				.replace("$CREATEDDATE", Dates.outputDateFormat2(new Date(tag.createdDate)))
+				)
 		.collect(Collectors.joining()) + "</table>\n";
 		
 		return Response.ok(Strings.getFile("modtagedit.html", user)
@@ -556,9 +567,60 @@ public class AdminStuff {
 	}
 	
 	@POST
-	@Path("modtagdelete")
+	@Path("modtagedit_edit")
 	@Produces(MediaType.TEXT_HTML)
-	public Response modtagdelete(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("shortname") String shortname) {
+	public Response modtagedit_edit(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("tagid") Long tagid, @FormParam("shortname") String shortname, @FormParam("longname") String longname, @FormParam("description") String description) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok("You are not authorized to do that").build();
+		}
+		if (user.level < 10) return Response.ok("You are not authorized to do that").build();
+		if (tagid == null) return Response.ok("tagid cannot be empty").build();
+		
+		if (shortname == null || shortname.trim().length() == 0 || 
+				longname == null || longname.trim().length() == 0 || 
+				description == null || description.trim().length() == 0)
+			return Response.ok("Short name, long name, and description cannot be empty.").build();
+
+		final Session sesh = DB.openSession();
+		try {
+						
+			final DBTag tag = sesh.get(DBTag.class, tagid);
+			if (tag == null) return Response.ok("Not found: " + tagid).build();
+			try {
+				sesh.beginTransaction();
+				
+				tag.setShortName(shortname);
+				tag.setLongName(longname);
+				tag.setDescription(description);
+				
+				tag.setEditedBy(DB.getUserById(sesh, user.id));
+				tag.setEditedDate(System.currentTimeMillis());
+				
+				sesh.merge(tag);
+				sesh.getTransaction().commit();
+			} catch (Exception e) {
+				sesh.getTransaction().rollback();
+				final String msg = ExceptionUtils.getRootCause(e).getMessage().toLowerCase();
+				if (msg.contains("duplicate") && msg.contains("unique constraint")) {
+					return Response.ok("Short name must be unique: " + shortname).build();
+				}
+				return Response.ok("Database error: " + e.toString() + " - " + e.getMessage()).build();
+			}
+			
+		} finally {
+			DB.closeSession(sesh);
+		}
+		
+		return Response.ok("done").build();
+	}
+	
+	@POST
+	@Path("modtagedit_delete")
+	@Produces(MediaType.TEXT_HTML)
+	public Response modtagedit_delete(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("tagid") Long tagid) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(fbtoken);
@@ -567,16 +629,14 @@ public class AdminStuff {
 		}
 		if (user.level < 10) return Response.ok("You are not authorized to do that").build();
 
-		if (shortname == null || shortname.trim().length() == 0)
-			return Response.ok("shortName cannot be empty").build();
+		if (tagid == null)
+			return Response.ok("tagid cannot be empty").build();
 				
 		final Session sesh = DB.openSession();
 		try {
 			
-			final DBTag tag = sesh.createQuery("from DBTag tag where tag.shortName=:name", DBTag.class)
-				.setParameter("name", shortname)
-				.getSingleResult();
-			if (tag == null) return Response.ok("Not found: " + shortname).build();
+			final DBTag tag = sesh.get(DBTag.class, tagid);
+			if (tag == null) return Response.ok("Not found: " + tagid).build();
 			try {
 				sesh.beginTransaction();
 				sesh.createQuery("delete from DBEpisodeTag et where et.tag.id=" + tag.getId()).executeUpdate();
@@ -595,19 +655,21 @@ public class AdminStuff {
 	}
 	
 	@POST
-	@Path("modtagedit")
+	@Path("modtagedit_add")
 	@Produces(MediaType.TEXT_HTML)
-	public Response modtageditpost(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("shortname") String shortname, @FormParam("longname") String longname, @FormParam("description") String description) {
+	public Response modtagedit_add(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("shortname") String shortname, @FormParam("longname") String longname, @FormParam("description") String description) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(fbtoken);
 		} catch (FBLoginException e) {
-			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "You are not authorized to do that")).build();
+			return Response.ok("You are not authorized to do that").build();
 		}
-		if (user.level < 10) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", "You are not authorized to do that")).build();
+		if (user.level < 10) return Response.ok("You are not authorized to do that").build();
 
-		if (shortname == null || shortname.trim().length() == 0 || longname == null || longname.trim().length() == 0 || description == null || description.trim().length() == 0)
-			return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", "Short name, long name, and description cannot be empty")).build();
+		if (shortname == null || shortname.trim().length() == 0 || 
+				longname == null || longname.trim().length() == 0 || 
+				description == null || description.trim().length() == 0)
+			return Response.ok("Short name, long name, and description cannot be empty.").build();
 		
 		Session sesh = DB.openSession();
 		try {
@@ -625,13 +687,17 @@ public class AdminStuff {
 				sesh.getTransaction().commit();
 			} catch (Exception e) {
 				sesh.getTransaction().rollback();
-				return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", "Database error: " + e + " - " + e.getMessage())).build();
+				final String msg = ExceptionUtils.getRootCause(e).getMessage().toLowerCase();
+				if (msg.contains("duplicate") && msg.contains("unique constraint")) {
+					return Response.ok("Short name must be unique: " + shortname).build();
+				}
+				return Response.ok("Database error: " + e.toString() + " - " + e.getMessage()).build();
 			}
 			
 		} finally {
 			DB.closeSession(sesh);
 		}
 		
-		return Response.seeOther(GetStuff.createURI("/fb/modtagedit")).build();
+		return Response.ok("done").build();
 	}
 }
