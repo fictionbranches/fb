@@ -538,13 +538,13 @@ public class AdminStuff {
 			return Response.ok(Strings.getFile("generic.html", user)
 				.replace("$EXTRA", "You are not authorized to do that")).build();
 		
-		final List<Tag> tags = DB.getAllTags();
+		final List<Tag> tags = DB.getAllTagsWithCounts();
 		
-		String tagHTML = "\n<table><tr><th>Short</th><th>Long</th><th>Description</th><th>By</th><th>On</th><th></th></tr>\n" + tags.stream()
+		String tagHTML = "\n<table><tr><th>Short</th><th>Long</th><th>Description</th><th>Count</th><th>By</th><th>On</th><th></th></tr>\n" + tags.stream()
 		.map(tag -> """
 				<tr id='row_$TAGID'> <!-- z -->
 				<td id='td_short_$TAGID'><span id='span_short_$TAGID'>$SHORTNAME</span></td><td id='td_long_$TAGID'><span id='span_long_$TAGID'>$LONGNAME</span></td> <!-- a --> 
-				<td id='td_desc_$TAGID'><span id='span_desc_$TAGID'>$DESCRIPTION</span></td><td>$CREATEDBY</td><td>$CREATEDDATE</td> <!-- b --> 
+				<td id='td_desc_$TAGID'><span id='span_desc_$TAGID'>$DESCRIPTION</span></td><td>$COUNT</td><td>$CREATEDBY</td><td>$CREATEDDATE</td> <!-- b --> 
 				<td id='container_$TAGID'> <!-- c --> 
 				<button id="edit_btn_$TAGID" class="edit_btn"">Edit</button> <!-- d --> 
 				<button id="delete_btn_$TAGID" class="delete_btn"">Delete</button> <!-- e --> 
@@ -554,7 +554,8 @@ public class AdminStuff {
 				.replace("$SHORTNAME", escape(tag.shortName))
 				.replace("$LONGNAME", escape(tag.longName))
 				.replace("$DESCRIPTION", escape(tag.description))
-				.replace("$CREATEDBY", tag.createdBy.htmlLink())
+				.replace("$COUNT", Long.toString(tag.count==null ? 0l : tag.count))
+				.replace("$CREATEDBY", FlatUser.htmlLink(tag.createdById, tag.createdByAuthor))
 				.replace("$CREATEDDATE", Dates.outputDateFormat2(new Date(tag.createdDate)))
 				)
 		.collect(Collectors.joining()) + "</table>\n";

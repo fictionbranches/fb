@@ -154,7 +154,9 @@ public class Story {
 					.replace("$CHILDCOUNT", Long.toString(child.childCount))
 					.replace("$HITS", Long.toString(child.hits))
 					.replace("$VIEWS", Long.toString(child.views))
-					.replace("$UPVOTES", Long.toString(child.upvotes)) + "\n");
+					.replace("$UPVOTES", Long.toString(child.upvotes))
+					.replace("$TAGS", tagsToHTML(child.tags))
+					);
 			}
 			childHTML.append(Strings.getString(foot));
 		}
@@ -221,7 +223,7 @@ public class Story {
 				.replace("$EDITORID", ep.editorId)
 				.replace("$EDITORNAME", escape(ep.editorName))
 				.replace("$EDITDATE", (Dates.outputDateFormat2(ep.editDate)));
-
+				
 		return Strings.getFile("story.html", user)
 				.replace("$TITLE", escape(ep.title))
 				.replace("$BODY", parseMarkdown?formatBody(ep.body):escape(ep.body))
@@ -241,7 +243,16 @@ public class Story {
 				.replace("$UPVOTES", Long.toString(ep.upvotes))
 				.replace("$COMMENTS", commentHTML.toString())
 				.replace("$PATHTOHERE", pathbox.toString())
-				.replace("$CHILDREN", childHTML.toString());
+				.replace("$CHILDREN", childHTML.toString())
+				.replace("$TAGS", tagsToHTML(ep.tags));
+	}
+	
+	private static String tagsToHTML(List<Tag> tags) {
+		if (tags == null || tags.size() == 0) return "";
+		return tags.stream()
+				.sorted(Comparator.comparing(tag -> tag.shortName))
+				.map(tag -> String.format("<span class='fbtag' title='%s'>%s</span>", escape(tag.longName + " - " + tag.description), escape(tag.shortName)))
+				.collect(Collectors.joining(" "));
 	}
 	
 	public static String getWelcome(Cookie token) {
@@ -1188,7 +1199,7 @@ public class Story {
 					"$MODERATORSTATUS", "$MODIFY", "$NUMPAGES", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
 					"$PATHTOHERE", "$PREVNEXT", "$RAWBODY", "$RECAPTCHASITEKEY", "$SEARCHTERM", "$SORTORDER", 
 					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS", "$OGDESCRIPTION", 
-					"$HIDEIMAGEBUTTON", "$AVATARURLMETA")
+					"$HIDEIMAGEBUTTON", "$AVATARURLMETA", "$TAGS")
 					.collect(Collectors.toSet())));
 	
 	/**

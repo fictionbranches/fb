@@ -1,6 +1,7 @@
 package fb.objects;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * Immutable episode object. Contains hits/views/upvotes, and minimal fields. Used for special cases. 
@@ -17,8 +18,9 @@ public class Episode {
 	public final long upvotes;
 	public final String authorId;
 	public final String authorName;
+	public final List<Tag> tags;
 	
-	public Episode(long generatedId, String newMap, String link, String title, Date date, int childCount, long hits, long views, long upvotes, String authorId, String authorName) {
+	public Episode(long generatedId, String newMap, String link, String title, Date date, int childCount, long hits, long views, long upvotes, String authorId, String authorName, List<Tag> tags) {
 		this.generatedId = generatedId;
 		this.newMap = newMap;
 		this.link = link;
@@ -30,5 +32,6 @@ public class Episode {
 		this.childCount = childCount;
 		this.authorId = authorId;
 		this.authorName = authorName;
+		this.tags = tags;
 	}
 }

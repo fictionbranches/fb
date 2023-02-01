@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -796,7 +797,6 @@ public class DB {
 	 * @return 
 	 * @throws DBException if episode id does not exist
 	 */
-	@SuppressWarnings("unchecked")
 	public static EpisodeWithChildren getFullEp(long generatedId, String username) throws DBException {
 		boolean canUpvote = false;
 		boolean isFavorite = false;
@@ -857,23 +857,21 @@ public class DB {
 			
 			String query = CHILD_QUERY + ep.getGeneratedId() + CHILD_QUERY_POST;
 			
+			@SuppressWarnings("unchecked")
 			Stream<Object> stream = session.createNativeQuery(query).stream(); // TODO this is extremely slow, multiple seconds sometimes
 			
-			ArrayList<Episode> children = stream.map(x->{
-				Object[] arr = (Object[])x;
-				long childGeneratedId = ((BigInteger)arr[1]).longValue();
-				String newMap = (String)arr[2];
-				String link = (String)arr[3];
-				String title = (String)arr[4];
-				Date date = (Date)arr[5];
-				int childcount = (int) arr[6];
-				long hits = ((BigInteger)arr[7]).longValue();
-				long views = ((BigInteger)arr[8]).longValue();
-				long childUpvotes = ((BigInteger)arr[9]).longValue();
-				String authorId = (String)arr[10];
-				String authorName = (String)arr[11];
-				return new Episode(childGeneratedId,newMap,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName);
-			}).collect(Collectors.toCollection(ArrayList::new));
+			ArrayList<Episode> children = stream.map(DB::asdf).collect(Collectors.toCollection(ArrayList::new));
+			
+			HashMap<Long, Episode> map = new HashMap<>();
+			for (Episode child : children) {
+				map.merge(child.generatedId, child, (childA, childB) -> {
+					if (childA.tags == null) return childB;
+					if (childB.tags == null) return childA;
+					List<Tag> newTags = Stream.concat(childA.tags.stream(), childB.tags.stream()).toList();
+					return new Episode(childA.generatedId,childA.newMap,childA.link,childA.title,childA.date,childA.childCount,childA.hits,childA.views,childA.upvotes,childA.authorId,childA.authorName, newTags);
+				});
+			}
+			children = map.values().stream().collect(Collectors.toCollection(ArrayList::new));
 			
 			String pathQuery;
 			{
@@ -910,23 +908,63 @@ public class DB {
 		}
 	}
 	
-	private static final String CHILD_QUERY = "select parent_generatedid,generatedid,newmap,link,title,episodedate,childcount, max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes, author_id, fbusers.author as author_name\n" + 
-			"from (\n" + 
-			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.newmap as newmap,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, count(*) as viewscount, 0 as upvotescount\n" + 
-			"        from fbepisodes, fbepisodeviews\n" + 
-			"        where fbepisodes.generatedid=fbepisodeviews.episode_generatedid\n" + 
-			"        group by fbepisodes.generatedid)\n" + 
-			"    union\n" + 
-			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.newmap as newmap,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, count(*) as upvotescount\n" + 
-			"        from fbepisodes,fbupvotes\n" + 
-			"        where fbepisodes.generatedid=fbupvotes.episode_generatedid\n" + 
-			"        group by fbepisodes.generatedid)\n" + 
-			"    union\n" + 
-			"    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.newmap as newmap,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, 0 as upvotescount\n" + 
-			"    from fbepisodes)\n" + 
-			"    ) as countstuff, fbusers\n" + 
-			"where fbusers.id=countstuff.author_id and countstuff.parent_generatedid=";
-	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,newmap,link,title,episodedate,childcount,author_id,author_name";
+	private static Episode asdf(Object x) {
+		Object[] arr = (Object[])x;
+		long childGeneratedId = ((BigInteger)arr[1]).longValue();
+		String newMap = (String)arr[2];
+		String link = (String)arr[3];
+		String title = (String)arr[4];
+		Date date = (Date)arr[5];
+		int childcount = (int) arr[6];
+		long hits = ((BigInteger)arr[7]).longValue();
+		long views = ((BigInteger)arr[8]).longValue();
+		long childUpvotes = ((BigInteger)arr[9]).longValue();
+		String authorId = (String)arr[10];
+		String authorName = (String)arr[11];
+		
+		List<Tag> tags;
+		
+		if (arr[12] == null) {
+			tags = null;
+		} else {
+			long tagId = ((BigInteger) arr[12]).longValue();
+			String tagShort = (String)arr[13];
+			String tagLong = (String) arr[14];
+			String tagDesc = (String) arr[15];
+			tags = List.of(new Tag(tagId, tagShort, tagLong, tagDesc, null, null, 0l, null));
+		}
+		
+		return new Episode(childGeneratedId,newMap,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName, tags);
+	}
+	
+	private static final String CHILD_QUERY = """
+			select parent_generatedid,generatedid,newmap,link,title,episodedate,childcount, max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes, author_id, fbusers.author as author_name,fbtags.id,fbtags.shortname,fbtags.longname,fbtags.description
+			from (
+
+			    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.newmap as newmap,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, count(*) as viewscount, 0 as upvotescount
+			        from fbepisodes, fbepisodeviews
+			        where fbepisodes.generatedid=fbepisodeviews.episode_generatedid
+			        group by fbepisodes.generatedid)
+
+			    union
+
+			    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.newmap as newmap,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, count(*) as upvotescount
+			        from fbepisodes,fbupvotes
+			        where fbepisodes.generatedid=fbupvotes.episode_generatedid
+			        group by fbepisodes.generatedid)
+
+			    union
+
+			    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.newmap as newmap,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, 0 as viewscount, 0 as upvotescount
+			    from fbepisodes)
+
+			    ) as countstuff
+			LEFT JOIN fbusers ON fbusers.id=countstuff.author_id
+			LEFT JOIN fbepisodetags ON countstuff.generatedid=fbepisodetags.episode_generatedid
+			LEFT JOIN fbtags ON fbtags.id=fbepisodetags.tag_id
+			where countstuff.parent_generatedid=""";
+	
+	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,newmap,link,title,episodedate,childcount,author_id,author_name,fbtags.id,fbtags.shortname,fbtags.longname,fbtags.description";
 	
 	public static void upvote(long generatedId, String username) throws DBException {
 		Session session = openSession();
@@ -2719,7 +2757,7 @@ public class DB {
 				long hits = ((BigInteger)x[6]).longValue();
 				long views = ((BigInteger)x[7]).longValue();
 				long upvotes = ((BigInteger)x[8]).longValue();
-				return (new Episode(generatedId,newMap,link,title,date,childCount,hits,views,upvotes, null, null /*TODO*/));
+				return (new Episode(generatedId,newMap,link,title,date,childCount,hits,views,upvotes, null, null, null /*TODO*/));
 			}).collect(Collectors.toCollection(ArrayList::new));
 		} finally {
 			closeSession(session);
@@ -3194,6 +3232,49 @@ public class DB {
 		} finally {
 			DB.closeSession(sesh);
 		}
+ 	}
+ 	
+ 	public static List<Tag> getAllTagsWithCounts() {
+		Session sesh = DB.openSession();
+		try {
+			
+			final String query = 
+					"""
+					SELECT fbtags.id,shortname,longname,description,createdby_id,createddate,editedby_id,editeddate,fbusers.author,
+					COUNT(fbepisodetags.episode_generatedid) AS ct 
+					FROM fbtags 
+					LEFT JOIN fbepisodetags ON fbepisodetags.tag_id=fbtags.id 
+					LEFT JOIN fbusers ON fbusers.id=fbtags.createdby_id 
+					GROUP BY fbtags.id,shortname,longname,description,createdby_id,createddate,editedby_id,editeddate,fbusers.author
+					ORDER BY shortname ASC, longname ASC, createddate ASC
+					;		
+					""";
+			
+			@SuppressWarnings("unchecked")
+			Stream<Object> stream = sesh.createNativeQuery(query).stream();
+			
+			return stream.map(DB::mapper).toList();
+			
+		} finally {
+			DB.closeSession(sesh);
+		}
+ 	}
+ 	
+ 	private static Tag mapper(Object x) {
+		Object[] arr = (Object[])x;
+		
+		long id = ((BigInteger)arr[0]).longValue();
+		String shortname = (String)arr[1];
+		String longname = (String)arr[2];
+		String description = (String)arr[3];
+		String createdby_id = (String)arr[4];
+		long createddate = ((BigInteger)arr[5]).longValue();
+//		String editedby_id = (String)arr[6];
+//		long editeddate = ((BigInteger)arr[7]).longValue();
+		String author = (String)arr[8];
+		long count = ((BigInteger)arr[9]).longValue();
+						
+		return new Tag(id, shortname, longname, description, createdby_id, author, createddate, count);
  	}
  	
  	public static Stream<DBTag> getAllTags(Session sesh) {

@@ -1,0 +1,150 @@
+body {
+	font-family: 'Helvetica', 'Arial', sans-serif;
+	word-wrap: break-word;
+	background-color: #4e98fc;
+	color: #000000;
+	margin: 5px;
+	padding: 5px;
+}
+
+div.fbepisodebody img {
+	max-width: 600px;
+	max-height: 600px;
+}
+
+div.fbepisodecomment img {
+	max-width: 300px;
+	max-height: 300px;
+}
+
+div.fbcomment {
+	margin: 5px;
+	padding: 5px;
+	border: 1px solid;
+}
+
+div.fboutline {
+	white-space: nowrap;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table, th, td {
+	border: 1px solid;
+	padding: 5px;
+}
+
+table.fbtable, th.fbtable, td.fbtable {
+	text-align: left;
+}
+
+.textalignright {
+	text-align: right;
+}
+
+.fbchildtable, .fbchildtablenumeric {
+	border: none;
+	white-space: nowrap;
+	word-break: break-all;
+	text-align: left;
+}
+
+.fbchildtablenumeric {
+	text-align: right;
+}
+
+table.fbchildtable {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+.leftcolumn {
+	word-wrap: break-word;
+	white-space: normal;
+}
+
+table.sortable th:not(.sorttable_sorted):not(.sorttable_sorted_reverse):not(.sorttable_nosort):after
+	{
+	content: " \25B4\25BE"
+}
+
+.topcorner {
+	float: right;
+	text-align: center;
+	margin: 2px;
+	padding: 2px;
+	max-width: 40%;
+}
+
+.pathbox {
+	border: solid 2px;
+	margin: 2px;
+	padding: 2px;
+	text-align: left;
+}
+
+img.fblogo {
+	max-width: 100%;
+}
+
+textarea {
+	font-family: 'Helvetica', 'Arial', sans-serif;
+	width: 100%;
+}
+
+.loginstuff {
+	border: solid 2px;
+}
+
+.boxedin {
+	border: solid 2px;
+	margin: 2px;
+	padding: 2px;
+	display: inline-block;
+}
+
+.livechat {
+	border: solid 2px;
+}
+
+img.avatarimg {
+	max-width: 100px;
+	max-height: 100px;
+}
+
+img.avatarsmall {
+	max-width: 40px;
+	max-height: 40px;
+}
+
+.simplebutton {
+	display: inline-block;
+}
+
+.logintext {
+	padding: 5px;
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.noborder {
+	border: none;
+}
+
+.onehundred {
+	width: 100%;
+}
+
+.fbtag {
+	background: #aaa;
+	border-radius: 3px;
+	color: #111;
+	display: inline-block;
+	height: 20px;
+	line-height: 20px;
+	padding: 1px 5px 1px 5px;
+	position: relative;
+	margin: 0 2px 0 2px;
+}

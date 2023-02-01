@@ -53,7 +53,11 @@ public class FlatUser {
 	}
 	
 	public String htmlLink() {
-		return String.format("<a href='/fb/user/%s'>%s</a>", this.id, escape(this.author));
+		return htmlLink(this.id, this.author);
+	}
+	
+	public static String htmlLink(String id, String author) {
+		return String.format("<a href='/fb/user/%s'>%s</a>", id, escape(author));
 	}
 
 	@Override
