@@ -29,96 +29,90 @@ import fb.objects.FlatUser;
 import jakarta.ws.rs.core.Cookie;
 
 public class Strings {
-	
+
 	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
-	
+
 	/**
 	 * use for any random numbers needed anywhere
 	 */
-	public static final Random r; 
-	
-	private static final Map<String,String> filesMap;
-	private static final Map<String,String> stringsTxtMap;
-		
+	public static final Random r;
+
+	private static final Map<String, String> filesMap;
+	private static final Map<String, String> stringsTxtMap;
+
 	private static String DOMAIN;
 	private static String SMTP_SERVER;
 	private static String SMTP_EMAIL;
 	private static String SMTP_PASSWORD;
 	private static String RECAPTCHA_SECRET;
 	private static String RECAPTCHA_SITEKEY;
-	private static String DISCORD_TOKEN;
-	private static String DISCORD_ERROR_CHANNEL;
 	private static String DISCORD_NEW_EPISODE_HOOK;
+	private static String DISCORD_ERROR_HOOK;
 	private static String DONATE_BUTTON;
 	private static String BACKEND_PORT;
 
 	private static final String ERROR_FILE;
 	static {
 		r = new Random();
-		
+
 		refreshSiteSettings();
 
 		filesMap = readInFilesMap();
 		stringsTxtMap = readInStringsMap();
-		
+
 		ERROR_FILE = filesMap.get("generic.html");
 	}
-	
+
 	public static void refreshSiteSettings() {
 		Session session = DB.openSession();
 		try {
 			DBSiteSetting setting;
-			
+
 			setting = session.get(DBSiteSetting.class, "donate_button");
 			if (setting != null) DONATE_BUTTON = setting.getValue();
 			else DONATE_BUTTON = "";
-			
+
 			setting = session.get(DBSiteSetting.class, "domain_name");
 			if (setting != null) DOMAIN = setting.getValue();
 			else DOMAIN = "localhost";
-			
+
 			setting = session.get(DBSiteSetting.class, "smtp_email");
 			if (setting != null) SMTP_EMAIL = setting.getValue();
 			else SMTP_EMAIL = null;
-			
+
 			setting = session.get(DBSiteSetting.class, "smtp_server");
 			if (setting != null) SMTP_SERVER = setting.getValue();
 			else SMTP_SERVER = null;
-			
+
 			setting = session.get(DBSiteSetting.class, "smtp_password");
 			if (setting != null) SMTP_PASSWORD = setting.getValue();
 			else SMTP_PASSWORD = null;
-			
+
 			setting = session.get(DBSiteSetting.class, "recaptcha_secret");
 			if (setting != null) RECAPTCHA_SECRET = setting.getValue();
 			else RECAPTCHA_SECRET = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe";
-			
+
 			setting = session.get(DBSiteSetting.class, "recaptcha_sitekey");
 			if (setting != null) RECAPTCHA_SITEKEY = setting.getValue();
 			else RECAPTCHA_SITEKEY = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
-			
-			setting = session.get(DBSiteSetting.class, "discord_token");
-			if (setting != null) DISCORD_TOKEN = setting.getValue();
-			else DISCORD_TOKEN = "";
-			
-			setting = session.get(DBSiteSetting.class, "discord_channel");
-			if (setting != null) DISCORD_ERROR_CHANNEL = setting.getValue();
-			else DISCORD_ERROR_CHANNEL = "";
-			
+
+			setting = session.get(DBSiteSetting.class, "discord_error_hook");
+			if (setting != null) DISCORD_ERROR_HOOK = setting.getValue();
+			else DISCORD_ERROR_HOOK = "";
+
 			setting = session.get(DBSiteSetting.class, "discord_new_episode_hook");
 			if (setting != null) DISCORD_NEW_EPISODE_HOOK = setting.getValue();
 			else DISCORD_NEW_EPISODE_HOOK = "";
-			
+
 			setting = session.get(DBSiteSetting.class, "backend_port");
 			if (setting != null) BACKEND_PORT = setting.getValue();
 			else BACKEND_PORT = "8080";
-			
-			
+
 		} finally {
 			DB.closeSession(session);
 		}
 	}
-	
+
 	public static String getDOMAIN() {
 		return DOMAIN;
 	}
@@ -143,29 +137,25 @@ public class Strings {
 		return RECAPTCHA_SITEKEY;
 	}
 
-	public static String getDISCORD_TOKEN() {
-		return DISCORD_TOKEN;
+	public static String getDISCORD_ERROR_HOOK() {
+		return DISCORD_ERROR_HOOK;
 	}
 
-	public static String getDISCORD_ERROR_CHANNEL() {
-		return DISCORD_ERROR_CHANNEL;
-	}
-	
 	public static String getDISCORD_NEW_EPISODE_HOOK() {
 		return DISCORD_NEW_EPISODE_HOOK;
 	}
-	
+
 	public static String getDONATE_BUTTON() {
 		return DONATE_BUTTON;
 	}
-	
+
 	public static String getBACKEND_PORT() {
 		return BACKEND_PORT;
 	}
 
-	private static Map<String,String> readInFilesMap() {
-		HashMap<String,String> fileMap = new HashMap<>();
-		
+	private static Map<String, String> readInFilesMap() {
+		HashMap<String, String> fileMap = new HashMap<>();
+
 		readSnippetsFile("snippets", "accountconfirmed.html", fileMap);
 		readSnippetsFile("snippets", "addform.html", fileMap);
 		readSnippetsFile("snippets", "adminform.html", fileMap);
@@ -205,18 +195,18 @@ public class Strings {
 		readSnippetsFile("snippets", "stats.html", fileMap);
 		readSnippetsFile("snippets", "favoritespage.html", fileMap);
 		readSnippetsFile("snippets", "modtagedit.html", fileMap);
-		
+
 		return Collections.unmodifiableMap(fileMap);
 	}
-	
-	private static void readSnippetsFile(String dir, String filename, HashMap<String,String> fileMap) {
+
+	private static void readSnippetsFile(String dir, String filename, HashMap<String, String> fileMap) {
 		LOGGER.info("Reading " + dir + "/" + filename);
-		fileMap.put(filename, readRawFileFromJar(dir + "/" + filename)); 
+		fileMap.put(filename, readRawFileFromJar(dir + "/" + filename));
 	}
-	
+
 	public static String readRawFileFromJar(String filepath) {
-		try (Scanner scan = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath))) { 
-			StringBuilder sb = new StringBuilder(); 
+		try (Scanner scan = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath))) {
+			StringBuilder sb = new StringBuilder();
 			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
 			return sb.toString();
 		}

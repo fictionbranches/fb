@@ -5,8 +5,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Scanner;
 
 import org.slf4j.Logger;
@@ -21,38 +19,12 @@ public class Discord {
 	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	public static synchronized void notifyError(String message) {
-		try {
-			if (message.length() > 2000) message = message.substring(0,2000);
-			URL url = new URL("https://discordapp.com/api/channels/" + Strings.getDISCORD_ERROR_CHANNEL() + "/messages");
-			Map<String, String> jsonMap = new LinkedHashMap<>();
-			jsonMap.put("content", message);
-
-			String postData = new Gson().toJson(jsonMap);
-			byte[] postDataBytes = postData.getBytes("UTF-8");
-
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-			conn.setRequestMethod("POST");
-
-			conn.setRequestProperty("Content-Type", "application/json");
-			conn.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
-			conn.setRequestProperty("Authorization", "Bot " + Strings.getDISCORD_TOKEN());
-			conn.setRequestProperty("User-Agent", "Fiction Branches Discord Notifier https://fictionbranches.net");
-
-			conn.setDoOutput(true);
-			conn.getOutputStream().write(postDataBytes);
-
-			Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-			StringBuilder result = new StringBuilder();
-			for (int c; (c = in.read()) >= 0;) result.append((char) c);
-
-
-		} catch (Exception e) {
-			LOGGER.error(e.getMessage(),e);
-		}
+		if (message.length() > 2000) message = message.substring(0,2000);
+		HookMessage form = new HookMessage("FB Errors", message);
+		Discord.sendToDiscordHook(Strings.getDISCORD_NEW_EPISODE_HOOK(), form);
 	}
 	
-	public static void notifyHook(FlatEpisode ep, FlatEpisode root) {
+	public static void notifyNewEpisode(FlatEpisode ep, FlatEpisode root) {
 		StringBuilder sb = new StringBuilder();
 		try (Scanner scan = new Scanner(root.link)) {
 			while (scan.hasNext()) {
@@ -85,14 +57,15 @@ public class Discord {
 				avatar,
 				new HookEmbed[]{embed}
 			);
-		
+		sendToDiscordHook(Strings.getDISCORD_NEW_EPISODE_HOOK(), form);
+	}
+	
+	private static void sendToDiscordHook(String hookURL, Object data) {
 		try {
-			String postData = new Gson().toJson(form);
-			byte[] postDataBytes = postData.getBytes("UTF-8");
+			final String postData = new Gson().toJson(data);
+			final byte[] postDataBytes = postData.getBytes("UTF-8");
 			
-			URL url = new URL(Strings.getDISCORD_NEW_EPISODE_HOOK());
-
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			final HttpURLConnection conn = (HttpURLConnection) new URL(hookURL).openConnection();
 
 			conn.setRequestMethod("POST");
 
@@ -103,13 +76,22 @@ public class Discord {
 			conn.setDoOutput(true);
 			conn.getOutputStream().write(postDataBytes);
 
-			Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-			StringBuilder result = new StringBuilder();
-			for (int c; (c = in.read()) >= 0;) result.append((char) c);
-
-
+			try (Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
+				while (in.read() >= 0);
+			}
 		} catch (Exception e) {
 			LOGGER.error(e.getMessage(), e);
+		}
+	}
+	
+	@SuppressWarnings("unused")
+	private static class HookMessage {
+		public final String username;
+		public final boolean tts = false;
+		public final String content;
+		public HookMessage(String username, String content) {
+			this.username = username;
+			this.content = content;
 		}
 	}
 	

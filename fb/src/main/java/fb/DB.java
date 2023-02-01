@@ -421,12 +421,12 @@ public class DB {
 				
 				session.getTransaction().commit();
 				
-				if (Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
+				if (Strings.getDISCORD_NEW_EPISODE_HOOK() != null && Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
 					DBEpisode root = session.get(DBEpisode.class, DB.newMapToIdList(child.getNewMap()).findFirst().get());				
 					final FlatEpisode flatEp = new FlatEpisode(child);
 					final FlatEpisode flatRoot = new FlatEpisode(root);
 					
-					new Thread(()->Discord.notifyHook(flatEp, flatRoot)).start();
+					new Thread(()->Discord.notifyNewEpisode(flatEp, flatRoot)).start();
 				}
 			} catch (Exception e) {
 				session.getTransaction().rollback();
@@ -860,7 +860,34 @@ public class DB {
 			@SuppressWarnings("unchecked")
 			Stream<Object> stream = session.createNativeQuery(query).stream(); // TODO this is extremely slow, multiple seconds sometimes
 			
-			ArrayList<Episode> children = stream.map(DB::asdf).collect(Collectors.toCollection(ArrayList::new));
+			ArrayList<Episode> children = stream.map(x -> {
+				Object[] arr = (Object[])x;
+				long childGeneratedId = ((BigInteger)arr[1]).longValue();
+				String newMap = (String)arr[2];
+				String link = (String)arr[3];
+				String title = (String)arr[4];
+				Date date = (Date)arr[5];
+				int childcount = (int) arr[6];
+				long hits = ((BigInteger)arr[7]).longValue();
+				long views = ((BigInteger)arr[8]).longValue();
+				long childUpvotes = ((BigInteger)arr[9]).longValue();
+				String authorId = (String)arr[10];
+				String authorName = (String)arr[11];
+				
+				List<Tag> tags;
+				
+				if (arr[12] == null) {
+					tags = null;
+				} else {
+					long tagId = ((BigInteger) arr[12]).longValue();
+					String tagShort = (String)arr[13];
+					String tagLong = (String) arr[14];
+					String tagDesc = (String) arr[15];
+					tags = List.of(new Tag(tagId, tagShort, tagLong, tagDesc, null, null, 0l, null));
+				}
+				
+				return new Episode(childGeneratedId,newMap,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName, tags);
+			}).collect(Collectors.toCollection(ArrayList::new));
 			
 			HashMap<Long, Episode> map = new HashMap<>();
 			for (Episode child : children) {
@@ -906,35 +933,6 @@ public class DB {
 		} finally {
 			closeSession(session);
 		}
-	}
-	
-	private static Episode asdf(Object x) {
-		Object[] arr = (Object[])x;
-		long childGeneratedId = ((BigInteger)arr[1]).longValue();
-		String newMap = (String)arr[2];
-		String link = (String)arr[3];
-		String title = (String)arr[4];
-		Date date = (Date)arr[5];
-		int childcount = (int) arr[6];
-		long hits = ((BigInteger)arr[7]).longValue();
-		long views = ((BigInteger)arr[8]).longValue();
-		long childUpvotes = ((BigInteger)arr[9]).longValue();
-		String authorId = (String)arr[10];
-		String authorName = (String)arr[11];
-		
-		List<Tag> tags;
-		
-		if (arr[12] == null) {
-			tags = null;
-		} else {
-			long tagId = ((BigInteger) arr[12]).longValue();
-			String tagShort = (String)arr[13];
-			String tagLong = (String) arr[14];
-			String tagDesc = (String) arr[15];
-			tags = List.of(new Tag(tagId, tagShort, tagLong, tagDesc, null, null, 0l, null));
-		}
-		
-		return new Episode(childGeneratedId,newMap,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName, tags);
 	}
 	
 	private static final String CHILD_QUERY = """

@@ -51,8 +51,8 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 		if (exception != null) LOGGER.warn(String.format("Error page exceptn\t%s", exception.getMessage()));
 		else LOGGER.warn(String.format("Error page exceptn\t%s", "null"));
 		
-		
-		if (exception != null) new Thread(()->notifyDiscord(request, status, reasonPhrase, description, exception)).start();
+		final String requestURL = request.getRequestURL().toString();
+		if (exception != null) new Thread(()->notifyDiscord(requestURL, status, reasonPhrase, description, exception)).start();
 		
 		try (StringWriter sw = new StringWriter()) {
 			 try (PrintWriter pw = new PrintWriter(sw)) {
@@ -74,7 +74,7 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 	
 	private static AtomicLong lastError = new AtomicLong(0l);
 	
-	private static synchronized void notifyDiscord(Request request, int status, String reasonPhrase, String description, Throwable exception) {
+	private static synchronized void notifyDiscord(String requestURL, int status, String reasonPhrase, String description, Throwable exception) {
 		if (System.currentTimeMillis() - lastError.get() < (10000l /*1 minute*/)) {
 			LOGGER.warn("Skipping Discord notification, less than 1 minute since last request", exception);
 			return;
@@ -83,9 +83,13 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 			LOGGER.warn("Skipping Discord notification, dev mode", exception);
 			return;
 		}
+		if (Strings.getDISCORD_ERROR_HOOK() == null || Strings.getDISCORD_ERROR_HOOK().length()==0) {
+			LOGGER.warn("Skipping Discord notification, no hook", exception);
+			return;
+		}
 		try {
 			StringBuilder message = new StringBuilder();
-			message.append("Error on page " + request.getRequestURL() + "\n");
+			message.append("Error on page " + requestURL + "\n");
 			message.append("Status: " + status + "\n");
 			if (reasonPhrase != null) message.append("Reason: " + reasonPhrase + "\n");
 			if (description != null) message.append("Description: " + description + "\n");
