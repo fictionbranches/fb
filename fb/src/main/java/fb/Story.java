@@ -23,6 +23,7 @@ import fb.Accounts.FBLoginException;
 import fb.DB.DBException;
 import fb.DB.DeleteCommentConfirmation;
 import fb.DB.EpisodeResultList;
+import fb.DB.RecentsResultList;
 import fb.objects.Announcement;
 import fb.objects.Comment;
 import fb.objects.Episode;
@@ -155,7 +156,7 @@ public class Story {
 					.replace("$HITS", Long.toString(child.hits))
 					.replace("$VIEWS", Long.toString(child.views))
 					.replace("$UPVOTES", Long.toString(child.upvotes))
-					.replace("$TAGS", tagsToHTML(child.tags))
+					.replace("$TAGS", tagsHtmlView(child.tags))
 					);
 			}
 			childHTML.append(Strings.getString(foot));
@@ -244,13 +245,13 @@ public class Story {
 				.replace("$COMMENTS", commentHTML.toString())
 				.replace("$PATHTOHERE", pathbox.toString())
 				.replace("$CHILDREN", childHTML.toString())
-				.replace("$TAGS", tagsToHTML(ep.tags));
+				.replace("$TAGS", tagsHtmlView(ep.tags));
 	}
 	
-	private static String tagsToHTML(List<Tag> tags) {
+	private static String tagsHtmlView(Set<Tag> tags) {
 		if (tags == null || tags.size() == 0) return "";
 		return tags.stream()
-				.sorted(Comparator.comparing(tag -> tag.shortName))
+				.sorted()
 				.map(tag -> String.format("<span class='fbtag' title='%s'>%s</span>", escape(tag.longName + " - " + tag.description), escape(tag.shortName)))
 				.collect(Collectors.joining(" "));
 	}
@@ -386,86 +387,6 @@ public class Story {
 	}
 	
 	/**
-	 * Generate HTML recents table
-	 * @param recents
-	 * @param root
-	 * @return
-	 */
-	private static String getRecentsTable(List<FlatEpisode> recents, int root) {
-		StringBuilder sb = new StringBuilder(Strings.getString("recents_table_head" + (root==0?"_story_head":"")));
-		for (FlatEpisode child : recents) if (child != null){
-			long rootId = DB.newMapToIdList(child.newMap).findFirst().get();
-			String story;
-			FlatEpisode rootEp;
-			if (root==0){
-				rootEp = Story.getRootEpisodeById(rootId);
-				if (rootEp == null) story = "";
-				else story = Strings.getString("recents_table_head_story_column").replace("$TITLE", rootEp.link);
-			} else story = "";
-			
-			String row;
-			if (child.title.toLowerCase().trim().equals(child.link.toLowerCase().trim())) row = Strings.getString("recents_table_row_same_linktitle");
-			else row = Strings.getString("recents_table_row_different_linktitle");
-			
-			row = row.replace("$ID", ""+child.generatedId)
-					.replace("$TITLE", escape(child.title))
-					.replace("$AUTHORID", child.authorId)
-					.replace("$AUTHORNAME", escape(child.authorName))
-					.replace("$DATE", Dates.simpleDateFormat2(child.date))
-					.replace("$STORY", story)
-					.replace("$EPISODEDEPTH",""+child.depth)
-					.replace("$LINK", escape(child.link))
-					.replace("$BODY", escape(child.body.substring(0, Integer.min(140, child.body.length()))));
-			sb.append(row);
-		}
-		sb.append("</table>");
-		return sb.toString();
-	}
-	
-	/**
-	 * Get just the HTML for the recents table (not the entire page)
-	 * @param rootId
-	 * @param page
-	 * @param reverse
-	 * @return empty string if parameters are wrong
-	 */
-	public static String getRecentsTable(String rootId, int page, boolean reverse) {
-		int root = getRecentsRoot(rootId);
-		List<FlatEpisode> episodes;
-		try {
-			episodes = DB.getRecentsPage(root, page, reverse); 
-		} catch (DBException e) {
-			return "";
-		}
-		
-		return getRecentsTable(episodes, root);
-	}
-	
-	/**
-	 * get the rootId of an episode id
-	 * @param rootId
-	 * @return
-	 */
-	private static int getRecentsRoot(String rootId) {
-		int root = -1;
-		{ // Check rootId is actually a root Id
-			if (rootId == null || rootId.length() == 0) root = 0;
-			else {
-				for (char c : rootId.toCharArray()) if (c<'0' || c>'9') {
-					root = 0;
-					break;
-				}
-			}
-			if (root == -1) try {
-				root = Integer.parseInt(rootId);
-			} catch (NumberFormatException e) {
-				root = 0;
-			}
-		}
-		return root;
-	}
-	
-	/**
 	 * Return the complete HTML page of the recents table, including data
 	 * 
 	 * @return HTML recents
@@ -473,14 +394,14 @@ public class Story {
 	public static String getRecents(Cookie token, String rootId, int page, boolean reverse) {
 		int root = getRecentsRoot(rootId);
 		
-		List<FlatEpisode> recents;
+		Map<FlatEpisode, Set<Tag>> recents;
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
 		} catch (FBLoginException e) {
 			user = null;
 		}
-		EpisodeResultList prof;
+		RecentsResultList prof;
 		try {
 			prof = DB.getRecents(root, page, reverse);
 		} catch (DBException e) {
@@ -488,7 +409,7 @@ public class Story {
 		}
 		recents = prof.episodes;
 			
-		String theActualTable = getRecentsTable(recents, root);
+		String theActualTable = getRecentsTableImpl(recents, root);
 		String pn; {
 			StringBuilder prevNext = new StringBuilder();
 			prevNext.append("<div id=recentcontainer>");
@@ -538,6 +459,88 @@ public class Story {
 				.replace("$TITLE", reverse?"Oldest":"Recent");
 	}
 	
+	/**
+	 * Generate HTML recents table
+	 * @param recents
+	 * @param root
+	 * @return
+	 */
+	private static String getRecentsTableImpl(Map<FlatEpisode, Set<Tag>> recents, int root) {
+		StringBuilder sb = new StringBuilder(Strings.getString("recents_table_head" + (root==0?"_story_head":"")));
+		for (Map.Entry<FlatEpisode, Set<Tag>> entry : recents.entrySet()) if (entry.getKey() != null){
+			FlatEpisode child = entry.getKey();
+			long rootId = DB.newMapToIdList(child.newMap).findFirst().get();
+			String story;
+			FlatEpisode rootEp;
+			if (root==0){
+				rootEp = Story.getRootEpisodeById(rootId);
+				if (rootEp == null) story = "";
+				else story = Strings.getString("recents_table_head_story_column").replace("$TITLE", rootEp.link);
+			} else story = "";
+			
+			String row;
+			if (child.title.toLowerCase().trim().equals(child.link.toLowerCase().trim())) row = Strings.getString("recents_table_row_same_linktitle");
+			else row = Strings.getString("recents_table_row_different_linktitle");
+			
+			row = row.replace("$ID", ""+child.generatedId)
+					.replace("$TAGS", tagsHtmlView(entry.getValue()))
+					.replace("$TITLE", escape(child.title))
+					.replace("$AUTHORID", child.authorId)
+					.replace("$AUTHORNAME", escape(child.authorName))
+					.replace("$DATE", Dates.simpleDateFormat2(child.date))
+					.replace("$STORY", story)
+					.replace("$EPISODEDEPTH",""+child.depth)
+					.replace("$LINK", escape(child.link))
+					.replace("$BODY", escape(child.body.substring(0, Integer.min(140, child.body.length()))));
+			sb.append(row);
+		}
+		sb.append("</table>");
+		return sb.toString();
+	}
+	
+	/**
+	 * Get just the HTML for the recents table (not the entire page)
+	 * @param rootId
+	 * @param page
+	 * @param reverse
+	 * @return empty string if parameters are wrong
+	 */
+	public static String getRecentsTable(String rootId, int page, boolean reverse) {
+		int root = getRecentsRoot(rootId);
+		Map<FlatEpisode, Set<Tag>> episodes;
+		try {
+			episodes = DB.getRecentsPage(root, page, reverse); 
+		} catch (DBException e) {
+			return "";
+		}
+		
+		return getRecentsTableImpl(episodes, root);
+	}
+	
+	/**
+	 * get the rootId of an episode id
+	 * @param rootId
+	 * @return
+	 */
+	private static int getRecentsRoot(String rootId) {
+		int root = -1;
+		{ // Check rootId is actually a root Id
+			if (rootId == null || rootId.length() == 0) root = 0;
+			else {
+				for (char c : rootId.toCharArray()) if (c<'0' || c>'9') {
+					root = 0;
+					break;
+				}
+			}
+			if (root == -1) try {
+				root = Integer.parseInt(rootId);
+			} catch (NumberFormatException e) {
+				root = 0;
+			}
+		}
+		return root;
+	}
+		
 	private static Object rootEpisodesCacheLock = new Object();
 	private static LinkedHashMap<Long,FlatEpisode> rootEpisodesCache2 = new LinkedHashMap<>();
 	static {
@@ -781,13 +784,13 @@ public class Story {
 	
 	private static String getPopularityTable(List<Episode> arr) {
 		StringBuilder sb = new StringBuilder();
-		sb.append("<table class=\"popular\"><thead><tr><th>Link/Title</th><th><a href=/fb/mosthits>Hits</a></th><th><a href=/fb/mostviews>Views</a></th><th><a href=/fb/mostupvotes>Upvotes</a></th><th>Story</th></tr></thead><tbody>\n");
+		sb.append("<table class=\"popular\"><thead><tr><th>Link/Title</th><th><a href=/fb/mosthits>Hits</a></th><th><a href=/fb/mostviews>Views</a></th><th><a href=/fb/mostupvotes>Upvotes</a></th><th>Story</th><th>Tags</th></tr></thead><tbody>\n");
 		for (Episode ep : arr) {
 			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
 			String story;
 			if (rootEp == null) story = "";
 			else story = rootEp.link;
-			sb.append("<tr><td>" + (ep.link.toLowerCase().trim().equals(ep.title.toLowerCase().trim())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td>" + ep.hits + "</td><td>" + ep.views + "</td><td>" + ep.upvotes + "</td><td>" + escape(story) + "</td></tr>\n");
+			sb.append("<tr><td>" + (ep.link.toLowerCase().trim().equals(ep.title.toLowerCase().trim())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + ">" + escape(ep.link) + "</a></td><td>" + ep.hits + "</td><td>" + ep.views + "</td><td>" + ep.upvotes + "</td><td>" + escape(story) + "</td><td>"+Story.tagsHtmlView(ep.tags)+"</td></tr>\n");
 		}
 		sb.append("</tbody></table>\n");
 		return sb.toString();
@@ -820,7 +823,7 @@ public class Story {
 				.replace("$MARKDOWNSTATUS", parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")
 				.replace("$TITLE", parent.title)
 				.replace("$ID", parentId+"")
-				.replace("$EXTRA", getTagsHTML(DB.getAllTags()))
+				.replace("$EXTRA", tagsHtmlForm(DB.getAllTags()))
 				.replace("$OLDBODY",parseMarkdown?Story.formatBody(parent.body):escape(parent.body));
 	}
 	
@@ -930,7 +933,7 @@ public class Story {
 				.replace("$TITLE", escape(ep.title))
 				.replace("$BODY", escape(ep.body))
 				.replace("$LINK", escape(ep.link))
-				.replace("$EXTRA", getTagsHTML(tags))
+				.replace("$EXTRA", tagsHtmlForm(tags))
 				.replace("$ID", ""+generatedId);
 	}
 	
@@ -955,6 +958,7 @@ public class Story {
 		try {
 			ep = DB.getFlatEp(generatedId);
 		} catch (DBException e1) {
+			e1.printStackTrace();
 			throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId));
 		}
 
@@ -992,8 +996,9 @@ public class Story {
 		}	
 	}
 	
-	private static String getTagsHTML(Map<Tag, Boolean> tags) {
+	private static String tagsHtmlForm(Map<Tag, Boolean> tags) {
 		return tags.entrySet().stream()
+				.sorted(Comparator.comparing(e -> e.getKey()))
 				.map(e -> String.format(
 					"<input type='checkbox' id='%s' name='%s' value='%s' %s><label for='%s' title='%s'> %s</label><br>", 
 					escape(e.getKey().shortName), 
@@ -1006,8 +1011,8 @@ public class Story {
 				.collect(Collectors.joining(System.lineSeparator()));
 	}
 	
-	private static String getTagsHTML(Collection<Tag> tags) {
-		return getTagsHTML((Map<Tag, Boolean>) tags.stream().collect(Collectors.toMap(e->e, e->false, (a,b)->a||b, LinkedHashMap::new)));
+	private static String tagsHtmlForm(Collection<Tag> tags) {
+		return tagsHtmlForm((Map<Tag, Boolean>) tags.stream().collect(Collectors.toMap(e->e, e->false, (a,b)->a||b, LinkedHashMap::new)));
 	}
 	
 	public static String commentForm(long generatedId, Cookie token) {

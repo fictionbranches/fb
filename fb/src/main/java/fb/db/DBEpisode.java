@@ -74,7 +74,7 @@ public class DBEpisode {
 	private String body;
 	
 	public int episodeDepthFromNewMap() {
-		return (int)DB.newMapToIdList(newMap).count();
+		return DBEpisode.episodeDepthFromNewMap(this.newMap);
 	}
 	
 	public long getGeneratedId() {
@@ -194,4 +194,9 @@ public class DBEpisode {
 	public int hashCode() {
 		return Long.hashCode(generatedId);
 	}
+	
+	public static int episodeDepthFromNewMap(String newMap) {
+		return (int)DB.newMapToIdList(newMap).count();
+	}
+
 }

@@ -7,13 +7,8 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
-
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.Response;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +28,11 @@ import fb.Story;
 import fb.objects.Comment;
 import fb.objects.FlatEpisode;
 import fb.util.Strings;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Response;
 
 @Path("fb")
 public class RssStuff {
@@ -130,9 +130,9 @@ public class RssStuff {
 		feed.setLink("https://" + Strings.getDOMAIN());
 		feed.setDescription("Fiction Branches is an online software engine which allows the production of multi-plotted stories.");
 		final ArrayList<SyndEntry> entries = new ArrayList<>();
-		List<FlatEpisode> eps;
+		Set<FlatEpisode> eps;
 		try {
-			eps = DB.getRecents(story, 1, false).episodes;
+			eps = DB.getRecents(story, 1, false).episodes.keySet();
 		} catch (DBException e) {
 			LOGGER.info("Couldn't get recents for RSS");
 			return feedToString(feed);

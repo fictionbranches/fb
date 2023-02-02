@@ -2,6 +2,7 @@ package fb.objects;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import fb.db.DBEpisode;
 import fb.db.DBUser;
@@ -37,13 +38,13 @@ public class EpisodeWithChildren {
 	public final List<Comment> comments;
 	public final List<FlatEpisode> pathbox;
 	public final boolean userIsSubscribedToComments;
-	public final List<Tag> tags;
+	public final Set<Tag> tags;
 	
 	/**
 	 * Construct a complete Episode from a DBEpisode database object
 	 * @param ep
 	 */
-	public EpisodeWithChildren(DBEpisode ep, long views, long upvotes, DBUser viewer, boolean viewerCanUpvote, boolean isFavorite, List<Episode> children, List<Comment> comments, List<FlatEpisode> pathbox, boolean userIsSubscribedToComments, List<Tag> tags) {
+	public EpisodeWithChildren(DBEpisode ep, long views, long upvotes, DBUser viewer, boolean viewerCanUpvote, boolean isFavorite, List<Episode> children, List<Comment> comments, List<FlatEpisode> pathbox, boolean userIsSubscribedToComments, Set<Tag> tags) {
 		this.generatedId = ep.getGeneratedId();
 		this.newMap = ep.getNewMap();
 		this.oldMap = ep.getOldMap();

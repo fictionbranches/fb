@@ -236,6 +236,12 @@ public class GetStuff {
 		return sb.toString();
 	}
 
+	/**
+	 * Redirects to new URL
+	 * @param fbtoken
+	 * @param generatedId
+	 * @return
+	 */
 	@GET
 	@Path("recent/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
@@ -243,6 +249,14 @@ public class GetStuff {
 		return Response.seeOther(GetStuff.createURI("/fb/recent?story=" + generatedId)).build();
 	}
 	
+	/**
+	 * Redirects to new URL
+	 * @param fbtoken
+	 * @param generatedId
+	 * @param page
+	 * @param reverseString
+	 * @return
+	 */
 	@GET
 	@Path("recent/{generatedId}/{page}")
 	@Produces(MediaType.TEXT_HTML)

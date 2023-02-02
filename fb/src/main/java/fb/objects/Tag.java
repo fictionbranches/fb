@@ -4,7 +4,7 @@ import java.util.Objects;
 
 import fb.db.DBTag;
 
-public class Tag {
+public class Tag implements Comparable<Tag> {
 	public final long id;	
 	public final String shortName;
 	public final String longName;
@@ -49,6 +49,10 @@ public class Tag {
 		return Objects.equals(count, other.count) && Objects.equals(createdByAuthor, other.createdByAuthor) && Objects.equals(createdById, other.createdById) && createdDate == other.createdDate
 				&& Objects.equals(description, other.description) && id == other.id && Objects.equals(longName, other.longName) && Objects.equals(shortName, other.shortName);
 	}
-	
+
+	@Override
+	public int compareTo(Tag that) {
+		return this.shortName.compareTo(that.shortName);
+	}
 	
 }

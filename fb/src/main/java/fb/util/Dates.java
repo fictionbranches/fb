@@ -3,10 +3,17 @@ package fb.util;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 public class Dates {
 	
 	private Dates() {}
+	
+	private static final ThreadLocal<DateFormat> mouseoverDate = ThreadLocal.withInitial(()->{
+		final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		df.setTimeZone(TimeZone.getTimeZone("UTC"));
+		return df;
+	});
 	
 	private static final ThreadLocal<DateFormat> outputDate = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
 	/**
@@ -15,7 +22,7 @@ public class Dates {
 	 * @return
 	 */
 	public static String outputDateFormat2(Date date) {
-		return "<span class=\"output-timestamp\" data-unixtimemillis=" + date.getTime() + ">" + outputDate.get().format(date) + "</span>";
+		return "<span class=\"output-timestamp\" title='"+mouseoverDate.get().format(date)+" UTC' data-unixtimemillis=" + date.getTime() + ">" + outputDate.get().format(date) + "</span>";
 	}
 	
 	private static final ThreadLocal<DateFormat> simpleDate = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd"));
@@ -27,7 +34,7 @@ public class Dates {
 	public static String simpleDateFormat2(Date date) {
 		if (date == null)
 			return "since the beforefore times";
-		return "<span class=\"simple-timestamp\" data-unixtimemillis=" + date.getTime() + ">" + simpleDate.get().format(date) + "</span>";
+		return "<span class=\"simple-timestamp\" title='"+mouseoverDate.get().format(date)+" UTC' data-unixtimemillis=" + date.getTime() + ">" + simpleDate.get().format(date) + "</span>";
 
 	}
 	

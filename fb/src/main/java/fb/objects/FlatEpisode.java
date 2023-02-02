@@ -1,6 +1,7 @@
 package fb.objects;
 
 import java.util.Date;
+import java.util.Objects;
 
 import fb.db.DBEpisode;
 
@@ -47,7 +48,45 @@ public class FlatEpisode {
 		this.childCount = ep.getChildCount();
 		this.hits = ep.getViewCount();
 		this.parentId = (ep.getParent() == null) ? null : ep.getParent().getGeneratedId();
-		
 		this.depth = ep.episodeDepthFromNewMap();
 	}
+
+	// used by DB.getRecentsPage
+	public FlatEpisode(long generatedId, String oldMap, String newMap, String title, String link, String authorId, String authorName, String authorAvatar, String body, Date date, Date editDate, String editorId, String editorName,
+			int childCount, Long parentId, long hits) {
+		this.generatedId = generatedId;
+		this.oldMap = oldMap;
+		this.newMap = newMap;
+		this.title = title;
+		this.link = link;
+		this.authorId = authorId;
+		this.authorName = authorName;
+		this.authorAvatar = authorAvatar;
+		this.body = body;
+		this.date = date;
+		this.editDate = editDate;
+		this.editorId = editorId;
+		this.editorName = editorName;
+		this.childCount = childCount;
+		this.depth = DBEpisode.episodeDepthFromNewMap(newMap);
+		this.parentId = parentId;
+		this.hits = hits;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(authorAvatar, authorId, authorName, body, childCount, date, depth, editDate, editorId, editorName, generatedId, hits, link, newMap, oldMap, parentId, title);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) return true;
+		if (!(obj instanceof FlatEpisode)) return false;
+		FlatEpisode other = (FlatEpisode) obj;
+		return Objects.equals(authorAvatar, other.authorAvatar) && Objects.equals(authorId, other.authorId) && Objects.equals(authorName, other.authorName) && Objects.equals(body, other.body) && childCount == other.childCount
+				&& Objects.equals(date, other.date) && depth == other.depth && Objects.equals(editDate, other.editDate) && Objects.equals(editorId, other.editorId) && Objects.equals(editorName, other.editorName)
+				&& generatedId == other.generatedId && hits == other.hits && Objects.equals(link, other.link) && Objects.equals(newMap, other.newMap) && Objects.equals(oldMap, other.oldMap) && Objects.equals(parentId, other.parentId)
+				&& Objects.equals(title, other.title);
+	}
+	
 }
