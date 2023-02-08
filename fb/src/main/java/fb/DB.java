@@ -44,6 +44,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.search.FullTextQuery;
 import org.hibernate.search.FullTextSession;
 import org.hibernate.search.Search;
 import org.hibernate.search.query.dsl.QueryBuilder;
@@ -1076,35 +1077,35 @@ public class DB {
 		}
 	}
 	
-	public static EpisodeResultList search(long generatedId, String search, int page, String sort) throws DBException {
-		LOGGER.info(String.format("Searching \"%s\" on page %d (page number %d", search, generatedId, page));
+	public static SearchResultList search(long generatedId, String search, int page, String sort) throws DBException {
 		Session session = openSession();
 		page-=1;
 		try {
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			FullTextSession sesh = Search.getFullTextSession(session);
-			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class)
-					.get();
-						
+			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class).get();
+			
+			qb.spatial();
+			
 			RegexpQuery idQuery = new RegexpQuery(new Term("newMap", (ep.getNewMap()+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
 			
 			Query searchQuery = qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery();
-			Query combinedQuery = qb.bool().must(searchQuery).must(idQuery).createQuery();
+			Query combinedQuery = qb.bool()
+					.must(searchQuery)
+					.must(idQuery)
+					.createQuery();
+			
 			
 			try {
 				
-				Sort sorter = null;
-				switch (sort) {
-				case "newest":
-					sorter = new Sort(new SortField("date", SortField.Type.LONG, true));
-					break;
-				case "oldest":
-					sorter = new Sort(new SortField("date", SortField.Type.LONG, false));
-					break;
-				}
+				Sort sorter = switch (sort) {
+					case "newest" -> new Sort(new SortField("date", SortField.Type.LONG, true));
+					case "oldest" -> new Sort(new SortField("date", SortField.Type.LONG, false));
+					default -> null;
+				};
 				
-				var q = sesh.createFullTextQuery(combinedQuery, DBEpisode.class);
+				FullTextQuery q = sesh.createFullTextQuery(combinedQuery, DBEpisode.class);
 				if (sorter != null) q.setSort(sorter);
 				q.setFirstResult(PAGE_SIZE*page);
 				q.setMaxResults(PAGE_SIZE+1);
@@ -1116,7 +1117,7 @@ public class DB {
 					.map(e->new FlatEpisode((DBEpisode)e))
 					.collect(Collectors.toCollection(ArrayList::new));
 				boolean hasNext = list.size() > PAGE_SIZE;
-				return new EpisodeResultList(null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
+				return new SearchResultList(null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext);
 			} catch (Exception e) {
 				throw new RuntimeException("Search exception on id " + generatedId + " with search query \"" + search + "\" -- "  + e + " -- " + e.getMessage(), e);
 			}
@@ -1762,7 +1763,7 @@ public class DB {
 	}
 	
 	private static final int PAGE_SIZE = 100;
-	public static EpisodeResultList getUserProfile(String userId, int page) throws DBException {
+	public static AuthorProfileResult getUserProfile(String userId, int page) throws DBException {
 		page-=1;
 		userId = userId.toLowerCase();
 		Session session = openSession();
@@ -1784,29 +1785,38 @@ public class DB {
 					.map(FlatEpisode::new)
 					.collect(Collectors.toCollection(ArrayList::new));
 			boolean hasNext = list.size() > PAGE_SIZE;
-			return new EpisodeResultList(new FlatUser(user), hasNext?list.subList(0, PAGE_SIZE):list, hasNext, -1 /* TODO */);
+			return new AuthorProfileResult(new FlatUser(user), hasNext?list.subList(0, PAGE_SIZE):list, hasNext);
 		} finally {
 			closeSession(session);
 		}
 	}
 	
-	/**
-	 * List of FlatEpisodes, along with a FlatUser and boolean.
-	 * Serves multiple purposes
-	 */
-	public static class EpisodeResultList {
+	public static class AuthorProfileResult {
 		public final FlatUser user;
 		public final List<FlatEpisode> episodes;
 		public final boolean morePages;
-		public final int numPages;
-		public EpisodeResultList(FlatUser user, List<FlatEpisode> episodes, boolean morePages, int numPages) {
+		public AuthorProfileResult(FlatUser user, List<FlatEpisode> episodes, boolean morePages) {
 			this.user = user;
 			this.episodes = episodes;
 			this.morePages = morePages;
-			this.numPages = numPages;
 		}
 	}
-	
+
+	/**
+	 * List of FlatEpisodes, along with a FlatUser and boolean.
+	 * Used by DB.search()
+	 */
+	public static class SearchResultList {
+		public final FlatUser user;
+		public final List<FlatEpisode> episodes;
+		public final boolean morePages;
+		public SearchResultList(FlatUser user, List<FlatEpisode> episodes, boolean morePages) {
+			this.user = user;
+			this.episodes = episodes;
+			this.morePages = morePages;
+		}
+	}
+
 	public static class CommentResultList {
 		public final List<Comment> comments;
 		public final int numPages;

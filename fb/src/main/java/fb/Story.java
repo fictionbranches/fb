@@ -22,8 +22,8 @@ import org.slf4j.LoggerFactory;
 import fb.Accounts.FBLoginException;
 import fb.DB.DBException;
 import fb.DB.DeleteCommentConfirmation;
-import fb.DB.EpisodeResultList;
 import fb.DB.RecentsResultList;
+import fb.DB.SearchResultList;
 import fb.objects.Announcement;
 import fb.objects.Comment;
 import fb.objects.Episode;
@@ -695,7 +695,7 @@ public class Story {
 		} catch (NumberFormatException e) {
 			pageNum = 1;
 		}
-		EpisodeResultList results;
+		SearchResultList results;
 		try {
 			results = DB.search(generatedId, search, pageNum, sort==null?"":sort);
 		} catch (DBException e) {

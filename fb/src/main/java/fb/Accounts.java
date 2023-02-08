@@ -33,9 +33,9 @@ import com.github.difflib.text.DiffRow;
 import com.github.difflib.text.DiffRowGenerator;
 import com.google.gson.Gson;
 
+import fb.DB.AuthorProfileResult;
 import fb.DB.AuthorSearchResult;
 import fb.DB.DBException;
-import fb.DB.EpisodeResultList;
 import fb.DB.PasswordResetException;
 import fb.db.DBNotification;
 import fb.objects.Comment;
@@ -236,7 +236,7 @@ public class Accounts {
 		}
 		if (id == null || id.length() == 0) return Strings.getFile("generic.html", user).replace("$EXTRA", "User ID " + id + " does not exist");
 		id = id.toLowerCase();
-		EpisodeResultList profileUser;
+		AuthorProfileResult profileUser;
 		try {
 			profileUser = DB.getUserProfile(id, page);
 		} catch (DBException e) {
