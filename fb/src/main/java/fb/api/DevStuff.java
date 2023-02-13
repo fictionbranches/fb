@@ -1,9 +1,18 @@
 package fb.api;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.util.Scanner;
+import java.io.InputStreamReader;
+import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
+
+import fb.Accounts;
+import fb.Accounts.FBLoginException;
+import fb.DB;
+import fb.DB.DBException;
+import fb.objects.FlatUser;
+import fb.util.Strings;
 import jakarta.ws.rs.CookieParam;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -12,13 +21,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
-import fb.Accounts;
-import fb.Accounts.FBLoginException;
-import fb.DB;
-import fb.DB.DBException;
-import fb.objects.FlatUser;
-import fb.util.Strings;
 
 @Path("")
 public class DevStuff {	
@@ -142,10 +144,8 @@ public class DevStuff {
 	}
 	
 	private static Response readTextResource(String filename) {
-		try (Scanner in = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream(filename))) {
-			StringBuilder sb = new StringBuilder();
-			while (in.hasNextLine()) sb.append(in.nextLine() + "\n");
-			return Response.ok(sb.toString()).build();
+		try (BufferedReader in = new BufferedReader(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(filename)))) {
+			return Response.ok(in.lines().collect(Collectors.joining(System.lineSeparator()))).build();
 		} catch (Exception e) {
 			return notFound(filename);
 		}

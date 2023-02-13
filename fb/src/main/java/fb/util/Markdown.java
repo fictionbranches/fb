@@ -1,7 +1,10 @@
 package fb.util;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.Reader;
+import java.net.URL;
+import java.util.stream.Collectors;
 
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
@@ -12,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Markdown {
+	
+	private static final String MARKDOWN_IT_URL = "https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js";
 	
 	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
@@ -42,7 +47,8 @@ public class Markdown {
 			}
 			try {
 				LOGGER.info("Got js engine in " + (((double) (System.nanoTime() - start)) / 1000000000.0));
-				engine.eval(getJsReaderFromJar("static_html/static/markdown-it.js"));
+//				engine.eval(getJsReaderFromJar("static_html/static/markdown-it.js"));
+				engine.eval(getMarkdownIt());
 				engine.eval(getJsReaderFromJar("static_html/static/markdown.js"));
 				LOGGER.info("js engine init in " + (((double) (System.nanoTime() - start)) / 1000000000.0));
 			} catch (ScriptException e) {
@@ -50,33 +56,20 @@ public class Markdown {
 			}
 		}
 	}
-	
-	/**
-	 * Escape body text and convert markdown/formatting to HTML
-	 * @param body unformatted markdown body
-	 * @return HTML formatted body
-	 */
-	/*public static String formatBodyOld(String body) {
-		return renderer.render(parser.parse((escape(body))));
+
+	private String getMarkdownIt() {
+		try (final BufferedReader scan = new BufferedReader(new InputStreamReader(new URL(MARKDOWN_IT_URL).openStream()))) {
+			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
+		} catch (IOException e) {
+			throw new RuntimeException("Unable to download markdown-it.js", e);
+		}
 	}
 	
-	private static final Parser parser;
-	private static final HtmlRenderer renderer;
-	
-	static {
-		MutableDataSet options = new MutableDataSet();
-		options.set(Parser.EXTENSIONS,Stream.of(TablesExtension.create(), StrikethroughExtension.create(), AutolinkExtension.create(), SuperscriptExtension.create()).collect(Collectors.toList()));
-		options.set(HtmlRenderer.SOFT_BREAK, "<br />\n");
-		options.set(Parser.FENCED_CODE_BLOCK_PARSER, false);
-		options.set(Parser.INDENTED_CODE_BLOCK_PARSER, false);
-		options.set(Parser.HTML_BLOCK_PARSER, false);
-		options.set(Parser.BLOCK_QUOTE_PARSER, false);
-				
-		parser = Parser.builder(options).build();
-		renderer = HtmlRenderer.builder(options).build();
-	}*/
-	
-	public static Reader getJsReaderFromJar(String filepath) {
-		return new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath));
+	public static String getJsReaderFromJar(String filepath) {
+		try (final BufferedReader scan = new BufferedReader(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath)))) {
+			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
+		} catch (IOException e) {
+			throw new RuntimeException("Unable to open file " + filepath, e);
+		}
 	}
 }

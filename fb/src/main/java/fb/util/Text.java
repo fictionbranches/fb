@@ -1,13 +1,14 @@
 package fb.util;
 
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,11 +28,9 @@ public class Text {
 			try (PrintWriter writer = new PrintWriter(sw)) {
 				e.printStackTrace(writer);
 			}
-			ArrayList<String> lines = new ArrayList<>();
-			try (Scanner s = new Scanner(sw.getBuffer().toString())) {
-				while (s.hasNext()) lines.add(s.nextLine());
+			try (BufferedReader s = new BufferedReader(new StringReader(sw.getBuffer().toString()))) {
+				return s.lines().toList();
 			}
-			return lines;
 		} catch (IOException ioe) {
 			LOGGER.error("Trouble logging previous exception's stack trace: ", ioe);
 			return new ArrayList<>();
@@ -43,13 +42,12 @@ public class Text {
 	}
 	
 	public static String readTextFile(File file) {
-		StringBuilder sb = new StringBuilder();
-		try (Scanner scan = new Scanner(file)) {
-			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
-		} catch (FileNotFoundException e) {
+		try (BufferedReader scan = new BufferedReader(new FileReader(file))) {
+			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
+		} catch (IOException e) {
 			LOGGER.warn("Not found: " + file, e);
+			throw new RuntimeException(e);
 		}
-		return sb.toString();
 	}
 	
 	public static String escape(String string) {

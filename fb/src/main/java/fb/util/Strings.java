@@ -1,5 +1,6 @@
 package fb.util;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 import org.hibernate.Session;
 import org.slf4j.Logger;
@@ -205,10 +207,11 @@ public class Strings {
 	}
 
 	public static String readRawFileFromJar(String filepath) {
-		try (Scanner scan = new Scanner(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath))) {
-			StringBuilder sb = new StringBuilder();
-			while (scan.hasNext()) sb.append(scan.nextLine() + "\n");
-			return sb.toString();
+		try (BufferedReader scan = new BufferedReader(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath)))) {
+			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
+		} catch (IOException e) {
+			LOGGER.warn("Not found: " + filepath, e);
+			throw new RuntimeException(e);
 		}
 	}
 	
