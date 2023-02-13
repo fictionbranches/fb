@@ -1,9 +1,7 @@
 package fb.util;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
-import java.util.stream.Collectors;
 
 import org.hibernate.Session;
 import org.slf4j.Logger;
@@ -203,21 +200,13 @@ public class Strings {
 
 	private static void readSnippetsFile(String dir, String filename, HashMap<String, String> fileMap) {
 		LOGGER.info("Reading " + dir + "/" + filename);
-		fileMap.put(filename, readRawFileFromJar(dir + "/" + filename));
-	}
-
-	public static String readRawFileFromJar(String filepath) {
-		try (BufferedReader scan = new BufferedReader(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath)))) {
-			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
-		} catch (IOException e) {
-			LOGGER.warn("Not found: " + filepath, e);
-			throw new RuntimeException(e);
-		}
+		fileMap.put(filename, Text.readFileFromJar(dir + "/" + filename));
 	}
 	
 	private static Map<String,String> readInStringsMap() {
 		HashMap<String,String> stringsMap = new HashMap<>();
-		try (Scanner scan = new Scanner(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream("strings.txt")))) {
+		final String rawStrings = Text.readFileFromJar("strings.txt");
+		try (Scanner scan = new Scanner(rawStrings)) {
 			while (scan.hasNextLine()) {
 				String line = scan.nextLine();
 				if (line.trim().length() == 0 || line.trim().startsWith("#")) continue;
@@ -269,7 +258,7 @@ public class Strings {
 		String html;
 		if (InitWebsite.DEV_MODE) {
 			try {
-				html = readRawFileFromJar("snippets/" + name);
+				html = Text.readFileFromJar("snippets/" + name);
 			} catch (Exception e) {
 				html = ERROR_FILE;
 			}

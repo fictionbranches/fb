@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -34,6 +35,15 @@ public class Text {
 		} catch (IOException ioe) {
 			LOGGER.error("Trouble logging previous exception's stack trace: ", ioe);
 			return new ArrayList<>();
+		}
+	}
+	
+	public static String readFileFromJar(String filepath) {
+		try (BufferedReader scan = new BufferedReader(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath)))) {
+			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
+		} catch (IOException e) {
+			LOGGER.warn("Not found: " + filepath, e);
+			throw new RuntimeException(e);
 		}
 	}
 	

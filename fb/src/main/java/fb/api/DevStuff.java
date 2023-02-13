@@ -1,9 +1,6 @@
 package fb.api;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStreamReader;
-import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 
@@ -13,6 +10,7 @@ import fb.DB;
 import fb.DB.DBException;
 import fb.objects.FlatUser;
 import fb.util.Strings;
+import fb.util.Text;
 import jakarta.ws.rs.CookieParam;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -144,10 +142,6 @@ public class DevStuff {
 	}
 	
 	private static Response readTextResource(String filename) {
-		try (BufferedReader in = new BufferedReader(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(filename)))) {
-			return Response.ok(in.lines().collect(Collectors.joining(System.lineSeparator()))).build();
-		} catch (Exception e) {
-			return notFound(filename);
-		}
+		return Response.ok(Text.readFileFromJar(filename)).build();
 	}
 }

@@ -47,9 +47,8 @@ public class Markdown {
 			}
 			try {
 				LOGGER.info("Got js engine in " + (((double) (System.nanoTime() - start)) / 1000000000.0));
-//				engine.eval(getJsReaderFromJar("static_html/static/markdown-it.js"));
 				engine.eval(getMarkdownIt());
-				engine.eval(getJsReaderFromJar("static_html/static/markdown.js"));
+				engine.eval(Text.readFileFromJar("static_html/static/markdown.js"));
 				LOGGER.info("js engine init in " + (((double) (System.nanoTime() - start)) / 1000000000.0));
 			} catch (ScriptException e) {
 				throw new RuntimeException(e);
@@ -62,14 +61,6 @@ public class Markdown {
 			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
 		} catch (IOException e) {
 			throw new RuntimeException("Unable to download markdown-it.js", e);
-		}
-	}
-	
-	public static String getJsReaderFromJar(String filepath) {
-		try (final BufferedReader scan = new BufferedReader(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(filepath)))) {
-			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
-		} catch (IOException e) {
-			throw new RuntimeException("Unable to open file " + filepath, e);
 		}
 	}
 }
