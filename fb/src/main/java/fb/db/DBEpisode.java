@@ -1,12 +1,15 @@
 package fb.db;
 
 import java.util.Date;
+import java.util.Set;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
@@ -73,6 +76,17 @@ public class DBEpisode {
 	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String body;
 	
+	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+	private Set<DBTag> tags;
+	
+	public Set<DBTag> getTags() {
+		return tags;
+	}
+
+	public void setTags(Set<DBTag> tags) {
+		this.tags = tags;
+	}
+
 	public int episodeDepthFromNewMap() {
 		return DBEpisode.episodeDepthFromNewMap(this.newMap);
 	}

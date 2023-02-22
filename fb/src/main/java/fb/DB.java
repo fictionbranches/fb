@@ -41,7 +41,6 @@ import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.automaton.RegExp;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.search.FullTextQuery;
@@ -59,7 +58,6 @@ import fb.db.DBComment;
 import fb.db.DBCommentSub;
 import fb.db.DBEmailChange;
 import fb.db.DBEpisode;
-import fb.db.DBEpisodeTag;
 import fb.db.DBEpisodeView;
 import fb.db.DBFavEp;
 import fb.db.DBFlaggedComment;
@@ -95,6 +93,41 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.StreamingOutput;
 
 public class DB {
+	
+//	public static void main(String[] args) {
+//		Random r = new Random();
+//		Session sesh = DB.openSession();
+//		try {
+//
+//			var eps = sesh.createQuery("from DBEpisode", DBEpisode.class).list();
+//			var tags = sesh.createQuery("from DBTag", DBTag.class).list();
+//
+//			sesh.beginTransaction();
+//			try {
+//				for (int i = 0; i < eps.size(); ++i) {
+//					var ep = eps.get(i);
+//					boolean changed = false;
+//					for (var tag : tags) {
+//						if (r.nextDouble() < 0.25) {
+//							ep.getTags().add(tag);
+//							changed = true;
+//						}
+//					}
+//					if (changed) sesh.merge(ep);
+//					
+//					System.out.println(((double)i) / ((double)eps.size()));
+//					
+//				}
+//				sesh.getTransaction().commit();
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//				sesh.getTransaction().rollback();
+//			}
+//
+//		} finally {
+//			DB.closeSession(sesh);
+//		}
+//	}
 	
 	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
@@ -184,7 +217,6 @@ public class DB {
 		configuration.addAnnotatedClass(DBFavEp.class);
 		configuration.addAnnotatedClass(DBCommentSub.class);
 		configuration.addAnnotatedClass(DBTag.class);
-		configuration.addAnnotatedClass(DBEpisodeTag.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -792,6 +824,10 @@ public class DB {
 		}
 	}
 	
+	private static double time(long start, long stop) {
+		return (((double)stop) - ((double)start)) / 1000000000.0;
+	}
+	
 	/**
 	 * Retrieves an episode from the db by id and updates its viewCount
 	 * @param id
@@ -809,7 +845,7 @@ public class DB {
 			
 			long visitorCount = (Long)session.createQuery("select count(*) from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId()).uniqueResult();
 			long upvotes = (Long)session.createQuery("select count(*) from DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId()).uniqueResult();
-						
+			
 			ArrayList<Comment> comments = session.createQuery("from DBComment c where c.episode.generatedId=" + ep.getGeneratedId() + " order by c.date", DBComment.class)
 					.setMaxResults(PAGE_SIZE)
 					.stream()
@@ -925,9 +961,8 @@ public class DB {
 			if (user == null) userIsSubscribedToComments = false;
 			else userIsSubscribedToComments = session.createQuery("from DBCommentSub ev where ev.episode.generatedId=" + ep.getGeneratedId() + " and ev.user.id='" + username + "'").uniqueResultOptional().isPresent();
 			
-			final Set<Tag> tags = session.createQuery("from DBEpisodeTag e where e.episode.generatedId=" + ep.getGeneratedId(), DBEpisodeTag.class)
+			final Set<Tag> tags = DB.getTagsForEp(session, ep.getGeneratedId())
 					.stream()
-					.map(dbet -> dbet.getTag())
 					.map(Tag::new)
 					.collect(Collectors.toCollection(HashSet::new));
 			
@@ -935,6 +970,15 @@ public class DB {
 		} finally {
 			closeSession(session);
 		}
+	}
+	
+	private static Set<DBTag> getTagsForEp(Session sesh, long generatedId) {
+		return new HashSet<>(sesh.createNativeQuery("""
+				SELECT * FROM fbtags
+				INNER JOIN fbepisodes_fbtags ON tags_id=fbtags.id
+				INNER JOIN fbepisodes ON taggedepisodes_generatedid=fbepisodes.generatedid
+				WHERE taggedepisodes_generatedid=
+				""" + generatedId, DBTag.class).list());
 	}
 	
 	private static final String CHILD_QUERY = """
@@ -960,8 +1004,8 @@ public class DB {
 
 			    ) as countstuff
 			LEFT JOIN fbusers ON fbusers.id=countstuff.author_id
-			LEFT JOIN fbepisodetags ON countstuff.generatedid=fbepisodetags.episode_generatedid
-			LEFT JOIN fbtags ON fbtags.id=fbepisodetags.tag_id
+			LEFT JOIN fbepisodes_fbtags ON countstuff.generatedid=fbepisodes_fbtags.taggedepisodes_generatedid
+			LEFT JOIN fbtags ON fbtags.id=fbepisodes_fbtags.tags_id
 			where countstuff.parent_generatedid=""";
 	
 	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,newmap,link,title,episodedate,childcount,author_id,author_name,fbtags.id,fbtags.shortname,fbtags.longname,fbtags.description";
@@ -1253,8 +1297,8 @@ public class DB {
 					fbtags.description
 				FROM fbepisodes
 				LEFT JOIN fbusers ON fbusers.id=fbepisodes.author_id
-				LEFT JOIN fbepisodetags ON fbepisodetags.episode_generatedid=fbepisodes.generatedid
-				LEFT JOIN fbtags ON fbtags.id=fbepisodetags.tag_id
+				LEFT JOIN fbepisodes_fbtags ON fbepisodes_fbtags.taggedepisodes_generatedid=fbepisodes.generatedid
+				LEFT JOIN fbtags ON fbtags.id=fbepisodes_fbtags.tags_id
 				$WHERECLAUSE
 				ORDER BY date $ORDER
 				OFFSET $PAGE_OFFSET
@@ -2866,8 +2910,8 @@ public class DB {
 			      WHERE fbepisodes.generatedid=fbupvotes.episode_generatedid
 			    GROUP BY fbepisodes.generatedid)
 			) AS countstuff
-			LEFT JOIN fbepisodetags ON fbepisodetags.episode_generatedid=countstuff.generatedid
-			LEFT JOIN fbtags ON fbtags.id=fbepisodetags.tag_id
+			LEFT JOIN fbepisodes_fbtags ON fbepisodes_fbtags.taggedepisodes_generatedid=countstuff.generatedid
+			LEFT JOIN fbtags ON fbtags.id=fbepisodes_fbtags.tags_id
 			GROUP BY generatedid,newmap,link,title,date,fbtags.id,fbtags.shortname,fbtags.longname,fbtags.description
 			""";
 	
@@ -3426,9 +3470,9 @@ public class DB {
 			final String query = 
 					"""
 					SELECT fbtags.id,shortname,longname,description,createdby_id,createddate,editedby_id,editeddate,fbusers.author,
-					COUNT(fbepisodetags.episode_generatedid) AS ct 
+					COUNT(fbepisodes_fbtags.taggedepisodes_generatedid) AS ct 
 					FROM fbtags 
-					LEFT JOIN fbepisodetags ON fbepisodetags.tag_id=fbtags.id 
+					LEFT JOIN fbepisodes_fbtags ON fbepisodes_fbtags.tags_id=fbtags.id 
 					LEFT JOIN fbusers ON fbusers.id=fbtags.createdby_id 
 					GROUP BY fbtags.id,shortname,longname,description,createdby_id,createddate,editedby_id,editeddate,fbusers.author
 					ORDER BY shortname ASC, longname ASC, createddate ASC
@@ -3468,17 +3512,7 @@ public class DB {
  	public static Stream<DBTag> getAllTags(Session sesh) {
 		return sesh.createQuery("from DBTag tag order by tag.shortName", DBTag.class).stream();
  	}
- 	
- 	/**
- 	 * Get all tags in sorted order for a given episode
- 	 * @param generatedId
- 	 * @param sesh
- 	 * @return
- 	 */
- 	public static Stream<DBEpisodeTag> getTagsForEpisode(long generatedId, Session sesh) {
- 		return sesh.createQuery("from DBEpisodeTag dbet where dbet.episode.id="+generatedId+" order by dbet.tag.shortName", DBEpisodeTag.class).stream();
- 	}
- 	
+ 	 	
  	/**
 	 * Get a list of all available tags in sorted order, with each tag mapped to a
 	 * boolean value, true meaning the supplied episode has that tag
@@ -3492,12 +3526,9 @@ public class DB {
  		try {
  			DBEpisode ep = sesh.get(DBEpisode.class, generatedId);
  			if (ep == null) throw new DBException("Not found: " + generatedId);
- 			HashSet<DBTag> epTags = sesh
- 				.createQuery("from DBEpisodeTag tag where tag.episode.id=" + generatedId, DBEpisodeTag.class)
- 				.stream()
- 				.map(dbet -> dbet.getTag())
- 				.collect(Collectors.toCollection(HashSet::new));
- 			return getAllTags(sesh).collect(Collectors.toMap(Tag::new, tag -> epTags.contains(tag), (a, b) -> a||b, LinkedHashMap::new));
+ 			Set<DBTag> epTags = DB.getTagsForEp(sesh, ep.getGeneratedId());
+ 			List<DBTag> allTags = getAllTags(sesh).toList();
+ 			return allTags.stream().collect(Collectors.toMap(Tag::new, tag -> epTags.contains(tag), (a, b) -> a||b, LinkedHashMap::new));
  		} finally {
  			DB.closeSession(sesh);
  		}
@@ -3537,24 +3568,30 @@ public class DB {
 		
 		final List<DBTag> allTags = getAllTags(sesh).toList();
 		
-		final Set<DBEpisodeTag> epTags = getTagsForEpisode(generatedId, sesh).collect(Collectors.toCollection(()->new HashSet<DBEpisodeTag>()));
-		final Set<DBTag> currentTags = epTags.stream().map(tag -> tag.getTag()).collect(Collectors.toCollection(HashSet::new));
+		final Set<DBTag> currentTags = ep.getTags();
 		
-		final Transaction trans = sesh.beginTransaction();
+		sesh.beginTransaction();
 		try {
-			allTags.stream()
-			.filter(tag -> formParams.containsKey(tag.getShortName()) && !currentTags.contains(tag))
-			.map(tag -> new DBEpisodeTag(ep, tag, tagger))
-			.forEach(tag -> sesh.save(tag));
 			
-			allTags.stream()
-			.filter(tag -> !formParams.containsKey(tag.getShortName()) && currentTags.contains(tag))
-			.map(tag -> epTags.stream().filter(t -> t.getTag().getShortName().equals(tag.getShortName())).findAny().get())
-			.forEach(tag -> sesh.delete(tag));
-			trans.commit();
+			List<DBTag> addTags = new ArrayList<>();
+			List<DBTag> delTags = new ArrayList<>();
+			
+			for (DBTag tag : allTags) {
+				if (formParams.containsKey(tag.getShortName()) && !currentTags.contains(tag)) {
+					addTags.add(tag);
+				} else if (!formParams.containsKey(tag.getShortName()) && currentTags.contains(tag)) {
+					delTags.add(tag);
+				}
+			}
+			
+			currentTags.removeAll(delTags);
+			currentTags.addAll(addTags);
+			sesh.merge(ep);
+			
+			sesh.getTransaction().commit();
 			
 		} catch (Exception e) {
-			trans.rollback();
+			sesh.getTransaction().rollback();
 			throw new DBException(e);
 		}
  	}
