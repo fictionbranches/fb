@@ -94,41 +94,6 @@ import jakarta.ws.rs.core.StreamingOutput;
 
 public class DB {
 	
-//	public static void main(String[] args) {
-//		Random r = new Random();
-//		Session sesh = DB.openSession();
-//		try {
-//
-//			var eps = sesh.createQuery("from DBEpisode", DBEpisode.class).list();
-//			var tags = sesh.createQuery("from DBTag", DBTag.class).list();
-//
-//			sesh.beginTransaction();
-//			try {
-//				for (int i = 0; i < eps.size(); ++i) {
-//					var ep = eps.get(i);
-//					boolean changed = false;
-//					for (var tag : tags) {
-//						if (r.nextDouble() < 0.25) {
-//							ep.getTags().add(tag);
-//							changed = true;
-//						}
-//					}
-//					if (changed) sesh.merge(ep);
-//					
-//					System.out.println(((double)i) / ((double)eps.size()));
-//					
-//				}
-//				sesh.getTransaction().commit();
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//				sesh.getTransaction().rollback();
-//			}
-//
-//		} finally {
-//			DB.closeSession(sesh);
-//		}
-//	}
-	
 	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	public static final String ROOT_ID = "fbadministrator1";
@@ -824,10 +789,6 @@ public class DB {
 		}
 	}
 	
-	private static double time(long start, long stop) {
-		return (((double)stop) - ((double)start)) / 1000000000.0;
-	}
-	
 	/**
 	 * Retrieves an episode from the db by id and updates its viewCount
 	 * @param id
@@ -960,25 +921,36 @@ public class DB {
 			boolean userIsSubscribedToComments;
 			if (user == null) userIsSubscribedToComments = false;
 			else userIsSubscribedToComments = session.createQuery("from DBCommentSub ev where ev.episode.generatedId=" + ep.getGeneratedId() + " and ev.user.id='" + username + "'").uniqueResultOptional().isPresent();
-			
-			final Set<Tag> tags = DB.getTagsForEp(session, ep.getGeneratedId())
-					.stream()
-					.map(Tag::new)
-					.collect(Collectors.toCollection(HashSet::new));
-			
+
+			final Set<Tag> tags = DB.getTagsForEp(session, ep);
 			return new EpisodeWithChildren(ep, visitorCount, upvotes, user, canUpvote, isFavorite, children, comments, pathbox, userIsSubscribedToComments, tags);
 		} finally {
 			closeSession(session);
 		}
 	}
 	
-	private static Set<DBTag> getTagsForEp(Session sesh, long generatedId) {
-		return new HashSet<>(sesh.createNativeQuery("""
-				SELECT * FROM fbtags
-				INNER JOIN fbepisodes_fbtags ON tags_id=fbtags.id
-				INNER JOIN fbepisodes ON taggedepisodes_generatedid=fbepisodes.generatedid
+	@SuppressWarnings("unchecked")
+	private static Set<Tag> getTagsForEp(Session sesh, DBEpisode ep) {
+		String query = """
+				SELECT fbtags.id, fbtags.shortname, fbtags.longname, fbtags.description,
+				fbusers.id AS userid, fbusers.author, fbtags.createddate
+				FROM fbtags
+				INNER JOIN fbepisodes_fbtags ON fbepisodes_fbtags.tags_id=fbtags.id
+				LEFT JOIN fbusers ON fbtags.createdby_id=fbusers.id
 				WHERE taggedepisodes_generatedid=
-				""" + generatedId, DBTag.class).list());
+				""" + ep.getGeneratedId();
+		return ((Stream<Object>)sesh.createNativeQuery(query).stream()).map(x -> {
+			Object[] arr = (Object[])x;
+			int i = 0;
+			long id = ((BigInteger)arr[i++]).longValue();
+			String shortname = (String)arr[i++];
+			String longname = (String)arr[i++];
+			String description = (String)arr[i++];
+			String createdbyid = (String)arr[i++];
+			String createdbyauthor = (String)arr[i++];
+			long createddate = ((BigInteger)arr[i++]).longValue();
+			return new Tag(id, shortname, longname, description, createdbyid, createdbyauthor, createddate, null);
+		}).collect(Collectors.toCollection(HashSet::new));
 	}
 	
 	private static final String CHILD_QUERY = """
@@ -3526,9 +3498,9 @@ public class DB {
  		try {
  			DBEpisode ep = sesh.get(DBEpisode.class, generatedId);
  			if (ep == null) throw new DBException("Not found: " + generatedId);
- 			Set<DBTag> epTags = DB.getTagsForEp(sesh, ep.getGeneratedId());
- 			List<DBTag> allTags = getAllTags(sesh).toList();
- 			return allTags.stream().collect(Collectors.toMap(Tag::new, tag -> epTags.contains(tag), (a, b) -> a||b, LinkedHashMap::new));
+ 			Set<Tag> epTags = DB.getTagsForEp(sesh, ep);
+ 			List<Tag> allTags = getAllTags(sesh).map(Tag::new).toList();
+ 			return allTags.stream().collect(Collectors.toMap(tag -> tag, tag -> epTags.contains(tag), (a, b) -> a||b, LinkedHashMap::new));
  		} finally {
  			DB.closeSession(sesh);
  		}
@@ -3566,33 +3538,42 @@ public class DB {
 		
 		if (tagger.getLevel()<10 && !ep.getAuthor().getId().equals(tagger.getId())) throw new DBException("You are not allowed to do that");
 		
-		final List<DBTag> allTags = getAllTags(sesh).toList();
-		
-		final Set<DBTag> currentTags = ep.getTags();
-		
-		sesh.beginTransaction();
-		try {
-			
-			List<DBTag> addTags = new ArrayList<>();
-			List<DBTag> delTags = new ArrayList<>();
-			
-			for (DBTag tag : allTags) {
-				if (formParams.containsKey(tag.getShortName()) && !currentTags.contains(tag)) {
-					addTags.add(tag);
-				} else if (!formParams.containsKey(tag.getShortName()) && currentTags.contains(tag)) {
-					delTags.add(tag);
-				}
+		final Set<Tag> allTags = getAllTags(sesh).map(Tag::new).collect(Collectors.toCollection(HashSet::new));
+		final Set<Tag> currentTags = DB.getTagsForEp(sesh, ep);
+
+		List<Tag> addTags = new ArrayList<>();
+		List<Tag> delTags = new ArrayList<>();
+					
+		for (Tag tag : allTags) {
+			if (formParams.containsKey(tag.shortName) && !currentTags.contains(tag)) {
+				addTags.add(tag);
+			} else if (!formParams.containsKey(tag.shortName) && currentTags.contains(tag)) {
+				delTags.add(tag);
 			}
-			
-			currentTags.removeAll(delTags);
-			currentTags.addAll(addTags);
-			sesh.merge(ep);
-			
-			sesh.getTransaction().commit();
-			
-		} catch (Exception e) {
-			sesh.getTransaction().rollback();
-			throw new DBException(e);
+		}
+		
+		if (addTags.size() > 0 || delTags.size() > 0) {
+			sesh.beginTransaction();
+			try {
+				if (addTags.size() > 0) {
+					String insert = """
+							INSERT INTO fbepisodes_fbtags (taggedepisodes_generatedid, tags_id)
+							VALUES
+							""" + addTags.stream().map(tag -> "(" + ep.getGeneratedId() + ", " + tag.id + ")").collect(Collectors.joining(", ")) + ";";
+					sesh.createNativeQuery(insert).executeUpdate();
+				}
+				if (delTags.size() > 0) {
+					String delete = """
+							DELETE FROM fbepisodes_fbtags
+							WHERE taggedepisodes_generatedid=
+							""" + ep.getGeneratedId() + " AND (" + delTags.stream().map(tag -> "tags_id=" + tag.id).collect(Collectors.joining(" OR ")) + ")";
+					sesh.createNativeQuery(delete).executeUpdate();
+				}
+				sesh.getTransaction().commit();
+			} catch (Exception e) {
+				sesh.getTransaction().rollback();
+				throw new DBException(e);
+			}
 		}
  	}
  	

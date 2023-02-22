@@ -639,7 +639,7 @@ public class AdminStuff {
 			if (tag == null) return Response.ok("Not found: " + tagid).build();
 			try {
 				sesh.beginTransaction();
-				sesh.createQuery("delete from DBEpisodeTag et where et.tag.id=" + tag.getId()).executeUpdate();
+				sesh.createNativeQuery("DELETE FROM fbepisodes_fbtags WHERE tags_id=" + tag.getId()).executeUpdate();
 				sesh.delete(tag);
 				sesh.getTransaction().commit();
 			} catch (Exception e) {
