@@ -12,8 +12,15 @@ import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
+import org.hibernate.search.annotations.Analyze;
+import org.hibernate.search.annotations.Field;
+import org.hibernate.search.annotations.Index;
+import org.hibernate.search.annotations.Indexed;
+import org.hibernate.search.annotations.Store;
+
 @Entity
 @Table(name="fbtags")
+@Indexed
 public class DBTag {
 	
 	@Id
@@ -21,12 +28,15 @@ public class DBTag {
 	private long id;	
 	
 	@Column(columnDefinition = "text", unique = true, nullable = false)
+	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES)
 	private String shortName;
 	
-	@Column(columnDefinition = "text") 
+	@Column(columnDefinition = "text")
+	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES)
 	private String longName;
 	
-	@Column(columnDefinition = "text") 
+	@Column(columnDefinition = "text")
+	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES)
 	private String description;
 	
 	@ManyToOne

@@ -701,7 +701,7 @@ public class Story {
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
 		} 
-		List<FlatEpisode> result = results.episodes;
+		Map<FlatEpisode, Set<Tag>> result = results.episodes;
 		
 		StringBuilder sb = new StringBuilder();
 		if (pageNum > 1) sb.append(searchButton(generatedId,"Prev", search, pageNum-1, sort));
@@ -712,12 +712,15 @@ public class Story {
 		}
 		String prevNext = sb.toString();
 		if (!result.isEmpty()) {
-			sb.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Author</th><th>Date</th><th>Depth</th></tr>");
-			for (FlatEpisode ep : result) {
+			sb.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Tags</th><th>Author</th><th>Date</th><th>Depth</th></tr>");
+			for (Map.Entry<FlatEpisode, Set<Tag>> e : result.entrySet()) {
+				final FlatEpisode ep = e.getKey();
+				final Set<Tag> tags = e.getValue();
 				final String row = 
 						"<tr class=\"fbtable\">" + 
 							"<td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(escape(ep.title) + "<br/>")) + 
 								"<a href=/fb/story/" + ep.generatedId + " title='" + escape(ep.body.substring(0, Integer.min(140, ep.body.length()))) + "'>" + escape(ep.link) + "</a></td>" + 
+							"<td class='fbtable'>" + Story.tagsHtmlView(tags) + "</td>" + 
 							"<td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + escape(ep.authorName) + "</a></td>" + 
 							"<td class=\"fbtable\">" + Dates.simpleDateFormat2(ep.date) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>\n";
 				sb.append(row);

@@ -1101,15 +1101,15 @@ public class DB {
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			FullTextSession sesh = Search.getFullTextSession(session);
 			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class).get();
-			
-			qb.spatial();
-			
+						
 			RegexpQuery idQuery = new RegexpQuery(new Term("newMap", (ep.getNewMap()+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
 			
+			Query tagQuery = qb.keyword().onField("tags.shortName").matching("MtF").createQuery();
 			Query searchQuery = qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery();
 			Query combinedQuery = qb.bool()
 					.must(searchQuery)
 					.must(idQuery)
+					.must(tagQuery)
 					.createQuery();
 			
 			
@@ -1129,11 +1129,24 @@ public class DB {
 				@SuppressWarnings("unchecked")
 				Stream<Object> stream = q.stream();
 				
-				ArrayList<FlatEpisode> list = stream
+				List<FlatEpisode> list = stream
 					.map(e->new FlatEpisode((DBEpisode)e))
-					.collect(Collectors.toCollection(ArrayList::new));
-				boolean hasNext = list.size() > PAGE_SIZE;
-				return new SearchResultList(null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext);
+					.collect(Collectors.toCollection(ArrayList::new));				
+				
+				final boolean hasNext = list.size() > PAGE_SIZE;
+				if (hasNext) {
+					list = list.subList(0, PAGE_SIZE);
+				}
+				
+				Map<Long, Set<Tag>> tags = DB.getTagsForEpisodes(sesh, list.stream().map(e -> e.generatedId).collect(Collectors.toSet()));
+				
+				Map<FlatEpisode, Set<Tag>> map = new LinkedHashMap<>();
+				
+				for (FlatEpisode e : list) {
+					map.put(e, tags.get(e.generatedId));
+				}
+				
+				return new SearchResultList(map, hasNext);
 			} catch (Exception e) {
 				throw new RuntimeException("Search exception on id " + generatedId + " with search query \"" + search + "\" -- "  + e + " -- " + e.getMessage(), e);
 			}
@@ -1141,6 +1154,61 @@ public class DB {
 			closeSession(session);
 		}
 	}
+	
+	public static Map<Long, Set<Tag>> getTagsForEpisodes(Session sesh, Set<Long> generatedIds) {
+		String query = """
+				SELECT fbtags.id, fbtags.shortname, fbtags.longname, fbtags.description,
+				fbusers.id AS userid, fbusers.author, fbtags.createddate, fbepisodes_fbtags.taggedepisodes_generatedid
+				FROM fbtags
+				INNER JOIN fbepisodes_fbtags ON fbepisodes_fbtags.tags_id=fbtags.id
+				LEFT JOIN fbusers ON fbtags.createdby_id=fbusers.id
+				WHERE 
+				""" + 
+				generatedIds.stream()
+					.map(generatedId -> "taggedepisodes_generatedid=" + generatedId)
+					.collect(Collectors.joining(" OR "));
+		
+		Map<Long, Set<Tag>> ret = new HashMap<>();
+		
+		for (Object x : sesh.createNativeQuery(query).list()) {
+			Object[] arr = (Object[])x;
+			int i = 0;
+			long id = ((BigInteger)arr[i++]).longValue();
+			String shortname = (String)arr[i++];
+			String longname = (String)arr[i++];
+			String description = (String)arr[i++];
+			String createdbyid = (String)arr[i++];
+			String createdbyauthor = (String)arr[i++];
+			long createddate = ((BigInteger)arr[i++]).longValue();
+			long generatedId = ((BigInteger)arr[i++]).longValue();
+			Tag tag = new Tag(id, shortname, longname, description, createdbyid, createdbyauthor, createddate, null);
+			
+			Set<Tag> set = ret.get(generatedId);
+			if (set == null) {
+				set = new HashSet<Tag>();
+				ret.put(generatedId, set);
+			}
+			set.add(tag);
+			
+		}
+		
+		return ret;
+
+	}
+	
+	/**
+	 * List of FlatEpisodes, along with a FlatUser and boolean.
+	 * Used by DB.search()
+	 */
+	public static class SearchResultList {
+		public final Map<FlatEpisode, Set<Tag>> episodes;
+		public final boolean morePages;
+		public SearchResultList(Map<FlatEpisode, Set<Tag>> episodes, boolean morePages) {
+			this.episodes = episodes;
+			this.morePages = morePages;
+		}
+	}
+
 	
 	public static AuthorSearchResult searchUser(String search, int page) {
 		Session session = openSession();
@@ -1812,21 +1880,6 @@ public class DB {
 		public final List<FlatEpisode> episodes;
 		public final boolean morePages;
 		public AuthorProfileResult(FlatUser user, List<FlatEpisode> episodes, boolean morePages) {
-			this.user = user;
-			this.episodes = episodes;
-			this.morePages = morePages;
-		}
-	}
-
-	/**
-	 * List of FlatEpisodes, along with a FlatUser and boolean.
-	 * Used by DB.search()
-	 */
-	public static class SearchResultList {
-		public final FlatUser user;
-		public final List<FlatEpisode> episodes;
-		public final boolean morePages;
-		public SearchResultList(FlatUser user, List<FlatEpisode> episodes, boolean morePages) {
 			this.user = user;
 			this.episodes = episodes;
 			this.morePages = morePages;
