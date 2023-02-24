@@ -46,6 +46,7 @@ import org.hibernate.cfg.Configuration;
 import org.hibernate.search.FullTextQuery;
 import org.hibernate.search.FullTextSession;
 import org.hibernate.search.Search;
+import org.hibernate.search.query.dsl.MustJunction;
 import org.hibernate.search.query.dsl.QueryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -930,7 +931,7 @@ public class DB {
 	}
 	
 	private static Set<Tag> getTagsForEp(Session sesh, DBEpisode ep) {		
-		return DB.getTagsForEpisodes(sesh, Stream.of(ep.getGeneratedId())).get(ep.getGeneratedId());
+		return DB.getTagsForEpisodes(sesh, Set.of(ep.getGeneratedId())).get(ep.getGeneratedId());
 	}
 	
 	private static final String CHILD_QUERY = """
@@ -1073,7 +1074,17 @@ public class DB {
 		}
 	}
 	
-	public static SearchResultList search(long generatedId, String search, int page, String sort) throws DBException {
+	/**
+	 * 
+	 * @param generatedId
+	 * @param search
+	 * @param page
+	 * @param sort
+	 * @param tagsShortNames these are NOT checked against the DB. Ensure they are valid before passing them in
+	 * @return
+	 * @throws DBException
+	 */
+	public static SearchResultList search(long generatedId, String search, int page, String sort, Set<String> tagsShortNames) throws DBException {
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1083,16 +1094,17 @@ public class DB {
 			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class).get();
 						
 			RegexpQuery idQuery = new RegexpQuery(new Term("newMap", (ep.getNewMap()+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
-			
-			Query tagQuery = qb.keyword().onField("tags.shortName").matching("MtF").createQuery();
 			Query searchQuery = qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery();
-			Query combinedQuery = qb.bool()
+						
+			MustJunction combinedQueryBuilder = qb.bool()
 					.must(searchQuery)
-					.must(idQuery)
-					.must(tagQuery)
-					.createQuery();
+					.must(idQuery);
 			
-			
+			for (String shortName : tagsShortNames) {
+				Query tagQuery = qb.keyword().onField("tags.shortName").matching(shortName).createQuery();
+				combinedQueryBuilder = combinedQueryBuilder.must(tagQuery);
+			}
+									
 			try {
 				
 				Sort sorter = switch (sort) {
@@ -1101,7 +1113,7 @@ public class DB {
 					default -> null;
 				};
 				
-				FullTextQuery q = sesh.createFullTextQuery(combinedQuery, DBEpisode.class);
+				FullTextQuery q = sesh.createFullTextQuery(combinedQueryBuilder.createQuery(), DBEpisode.class);
 				if (sorter != null) q.setSort(sorter);
 				q.setFirstResult(PAGE_SIZE*page);
 				q.setMaxResults(PAGE_SIZE+1);
@@ -1118,7 +1130,7 @@ public class DB {
 					list = list.subList(0, PAGE_SIZE);
 				}
 				
-				Map<Long, Set<Tag>> tags = DB.getTagsForEpisodes(sesh, list.stream().map(e -> e.generatedId));
+				Map<Long, Set<Tag>> tags = DB.getTagsForEpisodes(sesh, list.stream().map(e -> e.generatedId).collect(Collectors.toSet()));
 				
 				Map<FlatEpisode, Set<Tag>> map = new LinkedHashMap<>();
 				
@@ -1135,7 +1147,10 @@ public class DB {
 		}
 	}
 		
-	public static Map<Long, Set<Tag>> getTagsForEpisodes(Session sesh, Stream<Long> generatedIds) {
+	public static Map<Long, Set<Tag>> getTagsForEpisodes(Session sesh, Set<Long> generatedIds) {
+		
+		if (generatedIds.size() == 0) return Map.of();
+		
 		String query = """
 				SELECT fbtags.id, fbtags.shortname, fbtags.longname, fbtags.description,
 				fbusers.id AS userid, fbusers.author, fbtags.createddate, fbepisodes_fbtags.taggedepisodes_generatedid
@@ -1144,7 +1159,7 @@ public class DB {
 				LEFT JOIN fbusers ON fbtags.createdby_id=fbusers.id
 				WHERE 
 				""" + 
-				generatedIds
+				generatedIds.stream()
 					.map(generatedId -> "taggedepisodes_generatedid=" + generatedId)
 					.collect(Collectors.joining(" OR "));
 		
@@ -1170,6 +1185,37 @@ public class DB {
 			}
 			set.add(tag);
 			
+		}
+		
+		return ret;
+
+	}
+
+	public static Set<Tag> getTagsFromShortNames(Session sesh, Stream<String> shortNames) {
+		String query = """
+				SELECT fbtags.id, fbtags.shortname, fbtags.longname, fbtags.description,
+				fbusers.id AS userid, fbusers.author, fbtags.createddate
+				FROM fbtags
+				LEFT JOIN fbusers ON fbtags.createdby_id=fbusers.id
+				WHERE 
+				""" + 
+				shortNames
+					.map(generatedId -> "taggedepisodes_generatedid=" + generatedId)
+					.collect(Collectors.joining(" OR "));
+		
+		Set<Tag> ret = new HashSet<>();
+		
+		for (Object x : sesh.createNativeQuery(query).list()) {
+			Object[] arr = (Object[])x;
+			int i = 0;
+			long id = ((BigInteger)arr[i++]).longValue();
+			String shortname = (String)arr[i++];
+			String longname = (String)arr[i++];
+			String description = (String)arr[i++];
+			String createdbyid = (String)arr[i++];
+			String createdbyauthor = (String)arr[i++];
+			long createddate = ((BigInteger)arr[i++]).longValue();
+			ret.add(new Tag(id, shortname, longname, description, createdbyid, createdbyauthor, createddate, null));
 		}
 		
 		return ret;
@@ -3455,10 +3501,10 @@ public class DB {
 		return Integer.compare(aList.size(), bList.size());
  	};
  	
- 	public static List<Tag> getAllTags() {
+ 	public static Set<Tag> getAllTags() {
 		Session sesh = DB.openSession();
 		try {
-			return getAllTags(sesh).map(Tag::new).toList();
+			return getAllTags(sesh).map(Tag::new).collect(Collectors.toSet());
 		} finally {
 			DB.closeSession(sesh);
 		}

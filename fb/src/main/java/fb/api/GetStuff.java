@@ -454,13 +454,18 @@ public class GetStuff {
 	@GET
 	@Path("search/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response searchform(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("generatedId") long generatedId, @QueryParam("q") String q, @QueryParam("page") Integer page, @QueryParam("sort") String sort) {
+	public Response searchform(@CookieParam("fbtoken") Cookie fbtoken, 
+			@PathParam("generatedId") long generatedId, 
+			@QueryParam("q") String q, 
+			@QueryParam("page") Integer page, 
+			@QueryParam("sort") String sort,
+			@Context UriInfo uriInfo) {
 		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
 		if (q!=null && q.length() > 0) {
 			if (page==null) page = 1;
 			if (page < 1) page = 1;
 			if (sort != null && sort.length() == 0) sort = null;
-			return Response.ok(Story.searchPost(fbtoken, generatedId, q, Integer.toString(page), sort)).build();
+			return Response.ok(Story.searchPost(fbtoken, generatedId, q, Integer.toString(page), sort, uriInfo.getQueryParameters())).build();
 		} 
 		return Response.ok(Story.getSearchForm(fbtoken, generatedId)).build();
 	}

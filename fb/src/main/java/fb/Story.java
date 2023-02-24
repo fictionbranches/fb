@@ -252,7 +252,7 @@ public class Story {
 		if (tags == null || tags.size() == 0) return "";
 		return tags.stream()
 				.sorted()
-				.map(tag -> String.format("<span class='fbtag' title='%s'>%s</span>", escape(tag.longName + " - " + tag.description), escape(tag.shortName)))
+				.map(tag -> String.format("<span class='fbtag' title='%s'>%s</span>", escape(tag.longName + (tag.description.length() == 0 ? "" : (" - " + tag.description))), escape(tag.shortName)))
 				.collect(Collectors.joining(" "));
 	}
 	
@@ -680,10 +680,15 @@ public class Story {
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId);
 		}
-		return Strings.getFile("searchform.html", user).replace("$SEARCHTERM", "").replace("$TITLE", "Searching '" + escape(ep.title) + "'").replace("$ID", ""+generatedId).replace("$EXTRA", "");
+		return Strings.getFile("searchform.html", user)
+				.replace("$SEARCHTERM", "")
+				.replace("$TITLE", "Searching '" + escape(ep.title) + "'")
+				.replace("$ID", ""+generatedId)
+				.replace("$TAGS", Story.tagsHtmlForm(DB.getAllTags(), false))
+				.replace("$EXTRA", "");
 	}
 	
-	public static String searchPost(Cookie token, long generatedId, String search, String page, String sort) {
+	public static String searchPost(Cookie token, long generatedId, String search, String page, String sort, MultivaluedMap<String, String> params) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -698,17 +703,29 @@ public class Story {
 		} catch (NumberFormatException e) {
 			pageNum = 1;
 		}
+		
+		final Set<Tag> allTags = DB.getAllTags();
+		
+		final Set<String> selectedShortNames = allTags
+				.stream()
+				.map(tag -> tag.shortName)
+				.filter(shortName -> params.containsKey(shortName))
+				.collect(Collectors.toCollection(HashSet::new));
+		
+		final Map<Tag, Boolean> selectedTags = allTags.stream().collect(Collectors.toMap(tag -> tag, tag -> selectedShortNames.contains(tag.shortName)));
+		
+		
 		SearchResultList results;
 		try {
-			results = DB.search(generatedId, search, pageNum, sort==null?"":sort);
+			results = DB.search(generatedId, search, pageNum, sort==null?"":sort, selectedShortNames);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
 		} 
 		Map<FlatEpisode, Set<Tag>> result = results.episodes;
 		
 		StringBuilder sb = new StringBuilder();
-		if (pageNum > 1) sb.append(searchButton(generatedId,"Prev", search, pageNum-1, sort));
-		if (results.morePages) sb.append(searchButton(generatedId,"Next", search, pageNum+1, sort));
+		if (pageNum > 1) sb.append(searchButton(generatedId,"Prev", search, pageNum-1, sort, selectedShortNames));
+		if (results.morePages) sb.append(searchButton(generatedId,"Next", search, pageNum+1, sort, selectedShortNames));
 		if (sb.length() > 0) {
 			String asdf = sb.toString();
 			sb = new StringBuilder("<p>" + asdf + "</p>");
@@ -733,15 +750,21 @@ public class Story {
 			sb.append("No results (<a href=\"/fb/search\">search help</a>)");
 		}
 		sb.append(prevNext);
-		return Strings.getFile("searchform.html", user).replace("$SEARCHTERM", escape(search)).replace("$TITLE", "Search results").replace("$ID", ""+generatedId).replace("$EXTRA", sb.toString());
+		return Strings.getFile("searchform.html", user)
+				.replace("$SEARCHTERM", escape(search))
+				.replace("$TITLE", "Search results")
+				.replace("$ID", ""+generatedId)
+				.replace("$TAGS", Story.tagsHtmlForm(selectedTags, false))
+				.replace("$EXTRA", sb.toString());
 	}
 	
-	private static String searchButton(long generatedId, String name, String search, int page, String sort) {
+	private static String searchButton(long generatedId, String name, String search, int page, String sort, Set<String> tagShortNames) {
 		return "<form class=\"simplebutton\" action=\"/fb/search/"+generatedId+"\" method=\"get\">\n" + 
 				"  <input type=\"hidden\" name=\"q\" value=\""+escape(search)+"\" />\n" + 
 				"  <input type=\"hidden\" name=\"page\" value=\""+page+"\" />\n" + 
 				(sort == null ? "" : "  <input type=\"hidden\" name=\"sort\" value=\""+sort+"\" />\n") + 
 				"  <input class=\"simplebutton\" type=\"submit\" value=\""+name+"\" />\n" + 
+				tagShortNames.stream().map(tagShortName -> "<input type='hidden' name='"+tagShortName+"' value='' />").collect(Collectors.joining("\n")) + 
 				"</form>";
 	}
 	
@@ -829,7 +852,7 @@ public class Story {
 				.replace("$MARKDOWNSTATUS", parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")
 				.replace("$TITLE", parent.title)
 				.replace("$ID", parentId+"")
-				.replace("$EXTRA", tagsHtmlForm(DB.getAllTags()))
+				.replace("$EXTRA", tagsHtmlForm(DB.getAllTags(), true))
 				.replace("$OLDBODY",parseMarkdown?Story.formatBody(parent.body):escape(parent.body));
 	}
 	
@@ -939,7 +962,7 @@ public class Story {
 				.replace("$TITLE", escape(ep.title))
 				.replace("$BODY", escape(ep.body))
 				.replace("$LINK", escape(ep.link))
-				.replace("$EXTRA", tagsHtmlForm(tags))
+				.replace("$EXTRA", tagsHtmlForm(tags, true))
 				.replace("$ID", ""+generatedId);
 	}
 	
@@ -1002,23 +1025,27 @@ public class Story {
 		}	
 	}
 	
-	private static String tagsHtmlForm(Map<Tag, Boolean> tags) {
+	private static String tagsHtmlForm(Map<Tag, Boolean> tags, boolean vertical) {
 		return tags.entrySet().stream()
 				.sorted(Comparator.comparing(e -> e.getKey()))
-				.map(e -> String.format(
-					"<input type='checkbox' id='%s' name='%s' value='%s' %s><label for='%s' title='%s'> %s</label><br>", 
-					escape(e.getKey().shortName), 
-					escape(e.getKey().shortName), 
-					escape(e.getKey().shortName), 
-					e.getValue() ? "checked" : "",
-					escape(e.getKey().shortName), 
-					escape(e.getKey().description),
-					escape(e.getKey().shortName + " - " + e.getKey().longName)))
+				.map(e -> tagHtmlForm(e.getKey(), e.getValue(), vertical))
 				.collect(Collectors.joining(System.lineSeparator()));
 	}
 	
-	private static String tagsHtmlForm(Collection<Tag> tags) {
-		return tagsHtmlForm((Map<Tag, Boolean>) tags.stream().collect(Collectors.toMap(e->e, e->false, (a,b)->a||b, LinkedHashMap::new)));
+	private static String tagHtmlForm(Tag tag, boolean checked, boolean vertical) {
+		return String.format(
+				"<input type='checkbox' id='%s' name='%s' value='%s' %s><label for='%s' title='%s'> %s</label>"+(vertical ? "<br>" : " "), 
+				escape(tag.shortName), 
+				escape(tag.shortName), 
+				escape(tag.shortName), 
+				checked ? "checked" : "",
+				escape(tag.shortName), 
+				escape((!vertical ? (tag.longName + (tag.description.length()>0 ? " - " : "")) : "") + tag.description),
+				escape(tag.shortName + (vertical ? (" - " + tag.longName) : "")));
+	}
+	
+	private static String tagsHtmlForm(Collection<Tag> tags, boolean vertical) {
+		return tagsHtmlForm((Map<Tag, Boolean>) tags.stream().collect(Collectors.toMap(e->e, e->false, (a,b)->a||b, LinkedHashMap::new)), vertical);
 	}
 	
 	public static String commentForm(long generatedId, Cookie token) {
