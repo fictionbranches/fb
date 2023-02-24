@@ -929,28 +929,8 @@ public class DB {
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
-	private static Set<Tag> getTagsForEp(Session sesh, DBEpisode ep) {
-		String query = """
-				SELECT fbtags.id, fbtags.shortname, fbtags.longname, fbtags.description,
-				fbusers.id AS userid, fbusers.author, fbtags.createddate
-				FROM fbtags
-				INNER JOIN fbepisodes_fbtags ON fbepisodes_fbtags.tags_id=fbtags.id
-				LEFT JOIN fbusers ON fbtags.createdby_id=fbusers.id
-				WHERE taggedepisodes_generatedid=
-				""" + ep.getGeneratedId();
-		return ((Stream<Object>)sesh.createNativeQuery(query).stream()).map(x -> {
-			Object[] arr = (Object[])x;
-			int i = 0;
-			long id = ((BigInteger)arr[i++]).longValue();
-			String shortname = (String)arr[i++];
-			String longname = (String)arr[i++];
-			String description = (String)arr[i++];
-			String createdbyid = (String)arr[i++];
-			String createdbyauthor = (String)arr[i++];
-			long createddate = ((BigInteger)arr[i++]).longValue();
-			return new Tag(id, shortname, longname, description, createdbyid, createdbyauthor, createddate, null);
-		}).collect(Collectors.toCollection(HashSet::new));
+	private static Set<Tag> getTagsForEp(Session sesh, DBEpisode ep) {		
+		return DB.getTagsForEpisodes(sesh, Stream.of(ep.getGeneratedId())).get(ep.getGeneratedId());
 	}
 	
 	private static final String CHILD_QUERY = """
@@ -1138,7 +1118,7 @@ public class DB {
 					list = list.subList(0, PAGE_SIZE);
 				}
 				
-				Map<Long, Set<Tag>> tags = DB.getTagsForEpisodes(sesh, list.stream().map(e -> e.generatedId).collect(Collectors.toSet()));
+				Map<Long, Set<Tag>> tags = DB.getTagsForEpisodes(sesh, list.stream().map(e -> e.generatedId));
 				
 				Map<FlatEpisode, Set<Tag>> map = new LinkedHashMap<>();
 				
@@ -1154,8 +1134,8 @@ public class DB {
 			closeSession(session);
 		}
 	}
-	
-	public static Map<Long, Set<Tag>> getTagsForEpisodes(Session sesh, Set<Long> generatedIds) {
+		
+	public static Map<Long, Set<Tag>> getTagsForEpisodes(Session sesh, Stream<Long> generatedIds) {
 		String query = """
 				SELECT fbtags.id, fbtags.shortname, fbtags.longname, fbtags.description,
 				fbusers.id AS userid, fbusers.author, fbtags.createddate, fbepisodes_fbtags.taggedepisodes_generatedid
@@ -1164,7 +1144,7 @@ public class DB {
 				LEFT JOIN fbusers ON fbtags.createdby_id=fbusers.id
 				WHERE 
 				""" + 
-				generatedIds.stream()
+				generatedIds
 					.map(generatedId -> "taggedepisodes_generatedid=" + generatedId)
 					.collect(Collectors.joining(" OR "));
 		
@@ -1648,14 +1628,14 @@ public class DB {
 		}
 	}
 	private static Stream<DBEpisode> getRoots(Session session) {
-			CriteriaBuilder cb = session.getCriteriaBuilder();
-			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-			Root<DBEpisode> root = query.from(DBEpisode.class);			
-						
-			query.select(root).where(cb.isNull(root.get("parent"))).orderBy(cb.asc(root.get("date")));
-			
-			return session.createQuery(query).stream();
-	}
+		CriteriaBuilder cb = session.getCriteriaBuilder();
+		CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
+		Root<DBEpisode> root = query.from(DBEpisode.class);			
+					
+		query.select(root).where(cb.isNull(root.get("parent"))).orderBy(cb.asc(root.get("date")));
+		
+		return session.createQuery(query).stream();
+}
 	
 	/**
 	 * Change a user's author name
@@ -3546,7 +3526,7 @@ public class DB {
 	 * @return
 	 * @throws DBException
 	 */
- 	public static Map<Tag, Boolean> getTagsForEpisode(long generatedId) throws DBException {
+ 	public static Map<Tag, Boolean> getAllTagsForEpisode(long generatedId) throws DBException {
  		Session sesh = DB.openSession();
  		try {
  			DBEpisode ep = sesh.get(DBEpisode.class, generatedId);

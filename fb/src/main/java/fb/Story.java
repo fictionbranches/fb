@@ -373,7 +373,10 @@ public class Story {
 		try {
 			user = Accounts.getFlatUser(token);
 		} catch (FBLoginException e) {
-			return Strings.getFile("generic.html", null).replace("$EXTRA", Strings.getString("must_be_logged_in"));
+			return Strings.getFile("genericmeta.html", null)
+					.replace("$TITLE", "Search Help")
+					.replace("$@OGDESCRIPTION", "Search Fiction Branches")
+					.replace("$EXTRA", Strings.getString("must_be_logged_in"));
 		}
 		
 		StringBuilder sb = new StringBuilder();
@@ -926,7 +929,7 @@ public class Story {
 		Map<Tag, Boolean> tags;
 		try {
 			ep = DB.getFlatEp(generatedId);
-			tags = DB.getTagsForEpisode(generatedId);
+			tags = DB.getAllTagsForEpisode(generatedId);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId);
 		}
