@@ -575,7 +575,6 @@ public class Story {
 		synchronized (rootEpisodesCacheLock) {
 			LinkedHashMap<Long, FlatEpisode> newCache = new LinkedHashMap<>();
 			FlatEpisode[] arr = DB.getRoots();
-			LOGGER.info("Found " + arr.length + " roots");
 			for (FlatEpisode root : arr) newCache.put(root.generatedId, root);
 			rootEpisodesCache2 = newCache;
 		}
@@ -608,8 +607,6 @@ public class Story {
 	}
 	
 	public static String getPath(Cookie token, long generatedId) {
-		long start = System.nanoTime();
-		LOGGER.info("Generating a path page");
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -622,7 +619,6 @@ public class Story {
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
 		}
-		long aStart = System.nanoTime();
 		StringBuilder sb = new StringBuilder();
 		for (FlatEpisode child : path) if (child != null){
 			sb.append(child.depth + ". " + epLine(child));
@@ -636,8 +632,6 @@ public class Story {
 				.replace("$OGDESCRIPTION", escape("By " + ep.authorName + System.lineSeparator() + ep.body))
 				.replace("$TITLE", escape(ep.title))
 				;
-		LOGGER.info("Took " + (((double)(System.nanoTime()-aStart))/1000000000.0) + " to generate html");
-		LOGGER.info("Total path page took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
 		return ret;
 	}
 	

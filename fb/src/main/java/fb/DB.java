@@ -101,23 +101,19 @@ public class DB {
 	public static final String MESSENGER_ID = "fictionbranches";
 	
 	static SessionFactory mySessionFactory;
-	private static Object epLock = new Object(); // exists because DBEpisode.id is generated in java
 	private static Object userLock = new Object(); // exists because multiple users could submit for the same username simultaneously 
 	private static Object ecLock = new Object(); // exists because token is generated in java
 	private static Object puLock = new Object(); // exists because token is generated in java
-	private static Object dumpLock = new Object(); // exists to prevent multiple threads from overwriting files
 	private static Object prLock = new Object(); // exists because token is generated in java
 	private static Object archiveTokenLock = new Object(); // exists because token is generated in java
 	private static ReentrantReadWriteLock sessionLock = new ReentrantReadWriteLock(); // used to ensure no sessions are open when sessionfactory is closed
 	private static final char EP_PREFIX = 'A';
 	private static final char EP_INFIX = 'B';
 	static {
-		synchronized (epLock) {
-		synchronized (userLock) { synchronized (ecLock) { synchronized (puLock) { synchronized (dumpLock) {
+		synchronized (userLock) { synchronized (ecLock) { synchronized (puLock) { synchronized (prLock) {
 			mySessionFactory = newSessionFactory();
 			LOGGER.info("Database success");
-		}
-		} } } } 
+		} } } }
 	}
 	
 	private static SessionFactory newSessionFactory() {
@@ -351,7 +347,6 @@ public class DB {
 	 * @throws DBException if parent ep or author does not exist, or if new keystring is too long
 	 */
 	public static long addEp(long parentId, String link, String title, String body, String authorId, Date date) throws DBException {
-		synchronized (epLock) {
 		Session session = openSession();
 		try {
 			DBEpisode parent = session.get(DBEpisode.class, parentId);
@@ -432,16 +427,13 @@ public class DB {
 				LOGGER.error("addEp rollback", e);
 				throw new DBException("Database error", e);
 			}
-			LOGGER.info(String.format("New: <%s> %s %s", author, title, childId));
 			return childId;
 		} finally {
 			closeSession(session);
 		}
-		}
 	}
 	
 	public static long addArchiveEp(long parentId, String link, String title, String body, String authorName, Date date) throws DBException {
-		synchronized (epLock) {
 		Session session = openSession();
 		try {
 			DBEpisode parent = session.get(DBEpisode.class, parentId);
@@ -507,11 +499,9 @@ public class DB {
 				LOGGER.error("addArchiveEp rollback",e);
 				throw new DBException("Database error",e);
 			}
-			LOGGER.info(String.format("New: <%s> %s %s", author, title, child.getGeneratedId()));
 			return childId;
 		} finally {
 			closeSession(session);
-		}
 		}
 	}
 	
@@ -539,7 +529,6 @@ public class DB {
 	 * @throws DBException if episodes does not exist, or has children
 	 */
 	public static void deleteEp(long generatedId, String username) throws DBException {
-		synchronized(epLock) {
 			Session session = openSession();
 			try {				
 				DBEpisode ep = session.get(DBEpisode.class, generatedId);
@@ -610,7 +599,6 @@ public class DB {
 			} finally {
 				closeSession(session);
 			}
-		}
 	}
 	
 	/**
@@ -627,7 +615,6 @@ public class DB {
 	 * @throws DBException if parent ep or author does not exist, or if new keystring is too long
 	 */
 	public static long addRootEp(String link, String title, String body, String authorId, Date date) throws DBException {
-		synchronized (epLock) {
 		Session session = openSession();
 		try {
 			DBUser author = getUserById(session, authorId);
@@ -668,12 +655,10 @@ public class DB {
 				LOGGER.error("addRootEp rollback", e);
 				throw new DBException("Database error");
 			}
-			LOGGER.info(String.format("New: <%s> %s %s", author, title, childId+""));
 			return childId;
 		} finally {
 			closeSession(session);
 			Story.updateRootEpisodesCache();
-		}
 		}
 	}
 	
@@ -720,12 +705,21 @@ public class DB {
 		}
 	}
 	
+	/**
+	 * Transaction must already be open when calling this method
+	 * @param session
+	 * @param generatedId
+	 * @param link
+	 * @param title
+	 * @param body
+	 * @param editorId
+	 * @throws DBException
+	 */
 	private static void modifyEp(Session session, long generatedId, String link, String title, String body, String editorId) throws DBException {
 		DBEpisode ep = session.get(DBEpisode.class, generatedId);
 		if (ep == null) throw new DBException("Not found: " + generatedId);
 		DBUser editor = getUserById(session, editorId);
 		if (editor == null) throw new DBException("Editor not found: " + editorId);
-		DBUser oldEditor = ep.getEditor();
 		ep.setTitle(title);
 		ep.setLink(link);
 		ep.setBody(body);
@@ -733,10 +727,7 @@ public class DB {
 		ep.setEditor(editor);
 
 		session.merge(ep);
-		session.merge(oldEditor);
 		session.merge(editor);
-
-		LOGGER.info(String.format("Modified: <%s> %s", title, generatedId));
 	}
 		
 	public static void newEpisodeMod(long generatedId, String link, String title, String body) throws DBException {
@@ -1616,16 +1607,12 @@ public class DB {
 		public boolean get() { return value; }
 	}
 	
-	public static List<FlatEpisode> getPath(long generatedId) throws DBException {
-		final long start = System.nanoTime();
-		
+	public static List<FlatEpisode> getPath(long generatedId) throws DBException {		
 		Session session = openSession();
 		try {
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("Not found: " + generatedId);
-			
-			LOGGER.info("Processing path " + ep.getNewMap());
-						
+									
 			String query = "select * from fbepisodes where " + 
 				DB.newMapToIdList(ep.getNewMap()).map(id->"generatedid="+id).collect(Collectors.joining(" or ")) + 
 				" order by array_length(CAST(string_to_array(replace(replace(fbepisodes.newmap,'"+EP_INFIX+"','-'),'"+EP_PREFIX+"',''),'-') AS bigint[]),1) asc";
@@ -1635,7 +1622,6 @@ public class DB {
 			
 		} finally {
 			closeSession(session);
-			LOGGER.info("Total path took " + (((double)(System.nanoTime()-start))/1000000000.0) + " to generate");
 		}
 	}
 	
@@ -2128,7 +2114,6 @@ public class DB {
 		} finally {
 			closeSession(session);
 		}
-		LOGGER.info(String.format("Comment edit: <%s> %s %s", commentId, username, commentDate));
 	}
 	
 	public static class DeleteCommentConfirmation {
@@ -2237,7 +2222,6 @@ public class DB {
 				session.getTransaction().rollback();
 				throw new DBException("Database error");
 			}
-			LOGGER.info(String.format("Comment flag: <%s> %s %s", authorId, commentId, flagDate));
 			return new FlatEpisode(comment.getEpisode());
 		} finally {
 			closeSession(session);
@@ -2253,7 +2237,6 @@ public class DB {
 	 * @throws DBException
 	 */
 	public static void flagEp(long generatedId, String authorId, String flagText) throws DBException {
-		Date flagDate;
 		Session session = openSession();
 		try {
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
@@ -2268,9 +2251,7 @@ public class DB {
 			flag.setDate(new Date());
 			flag.setEpisode(ep);
 			flag.setUser(author);
-			
-			flagDate = flag.getDate();
-			
+						
 			try {
 				session.beginTransaction();
 				session.save(flag);
@@ -2284,7 +2265,6 @@ public class DB {
 		} finally {
 			closeSession(session);
 		}
-		LOGGER.info(String.format("Flag: <%s> %d %s", authorId, generatedId, flagDate));
 	}
 	
 	public static List<FlaggedEpisode> getFlags() {
@@ -3437,7 +3417,7 @@ public class DB {
 			if (ep == null) throw new DBException("not found: " + generatedId);
 			if (ep.episodeDepthFromNewMap() == 1) return; // already a root episode
 			
-			synchronized (epLock) {
+			{
 				final int branchSize = ep.getChildCount();
 				
 				final String oldNewMap = ep.getNewMap();
