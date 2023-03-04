@@ -1325,13 +1325,20 @@ public class DB {
 		}
 	}
 	
-	private static Map<FlatEpisode, Set<Tag>> getRecentsPage(Session session, long generatedId, int page, boolean reverse) {
+	private static Map<FlatEpisode, Set<Tag>> getRecentsPage(Session session, long generatedId, int page, boolean reverse, String tagFilter) {
+				
+//		String whereClause = generatedId==0?"":" WHERE newmap='" + EP_PREFIX + generatedId + "' OR newmap LIKE '" + EP_PREFIX + generatedId + EP_INFIX + "%' ";
 		
-//		String query = "SELECT * FROM fbepisodes " + 
-//				(generatedId==0?"":" WHERE newmap='" + EP_PREFIX + generatedId + "' OR newmap LIKE '" + EP_PREFIX + generatedId + EP_INFIX + "%' ") + 
-//				" ORDER BY date " +(reverse?"ASC":"DESC") + 
-//				" OFFSET " + (PAGE_SIZE*page) + 
-//				" LIMIT " + PAGE_SIZE;
+		List<String> whereClausesToAnd = new ArrayList<>();
+		if (generatedId != 0) {
+			final String rootClause = "newmap='" + EP_PREFIX + generatedId + "' OR newmap LIKE '" + EP_PREFIX + generatedId + EP_INFIX + "%'";
+			whereClausesToAnd.add(rootClause);
+		}
+		if (tagFilter != null && tagFilter.length() > 0) {
+			whereClausesToAnd.add("fbtags.shortname='" + tagFilter + "'");
+		}
+		
+		final String whereClause = whereClausesToAnd.size()==0 ? "" : ("WHERE " + whereClausesToAnd.stream().collect(Collectors.joining(") AND (", "(", ")")));
 		
 		String query = """
 				SELECT 
@@ -1361,12 +1368,12 @@ public class DB {
 				OFFSET $PAGE_OFFSET
 				LIMIT $PAGE_SIZE
 				"""
-				.replace("$WHERECLAUSE", generatedId==0?"":" WHERE newmap='" + EP_PREFIX + generatedId + "' OR newmap LIKE '" + EP_PREFIX + generatedId + EP_INFIX + "%' ")
+				.replace("$WHERECLAUSE", whereClause)
 				.replace("$ORDER", reverse?"ASC":"DESC")
 				.replace("$PAGE_OFFSET", String.valueOf(PAGE_SIZE*page))
 				.replace("$PAGE_SIZE", String.valueOf(PAGE_SIZE))
 				;
-				
+						
 		class EpTag {
 			public final FlatEpisode ep;
 			public final Tag tag;
@@ -1429,7 +1436,7 @@ public class DB {
 		
 	}
 
-	public static Map<FlatEpisode, Set<Tag>> getRecentsPage(long generatedId, int page, boolean reverse) throws DBException {
+	public static Map<FlatEpisode, Set<Tag>> getRecentsPage(long generatedId, int page, boolean reverse, String tagFilter) throws DBException {
 		Session session = openSession();
 		page -= 1;
 		try {
@@ -1438,7 +1445,7 @@ public class DB {
 				if (ep == null) throw new DBException("Not found: " + generatedId);
 				generatedId = DB.newMapToIdList(ep.getNewMap()).findFirst().get();
 			}
-			return Collections.unmodifiableMap(getRecentsPage(session, generatedId, page, reverse));
+			return Collections.unmodifiableMap(getRecentsPage(session, generatedId, page, reverse, tagFilter));
 		} finally {
 			closeSession(session);
 		}
@@ -1451,16 +1458,13 @@ public class DB {
 	public static class RecentsResultList {
 		public final FlatUser user;
 		public final Map<FlatEpisode, Set<Tag>> episodes;
-		public final boolean morePages;
 		public final int numPages;
-		public RecentsResultList(FlatUser user, Map<FlatEpisode, Set<Tag>> episodes, boolean morePages, int numPages) {
+		public RecentsResultList(FlatUser user, Map<FlatEpisode, Set<Tag>> episodes, int numPages) {
 			this.user = user;
 			this.episodes = episodes;
-			this.morePages = morePages;
 			this.numPages = numPages;
 		}
 	}
-
 	
 	/**
 	 * Get 100 (PAGE_SIZE) most recent episodes of a particular story, or of all stories
@@ -1469,7 +1473,7 @@ public class DB {
 	 * @return
 	 * @throws DBException
 	 */
-	public static RecentsResultList getRecents(long generatedId, int page, boolean reverse) throws DBException {
+	public static RecentsResultList getRecents(long generatedId, int page, boolean reverse, String tagFilter) throws DBException {
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1483,9 +1487,9 @@ public class DB {
 			if (generatedId != 0) sql += " WHERE newmap='" + EP_PREFIX+Long.toString(generatedId) + "' OR newmap LIKE '" + EP_PREFIX + Long.toString(generatedId) + EP_INFIX + "%" + "'";		
 			int totalCount = ((BigInteger)(session.createNativeQuery(sql).uniqueResult())).intValue();
 			
-			Map<FlatEpisode, Set<Tag>> alist = getRecentsPage(session, generatedId, page, reverse);
+			Map<FlatEpisode, Set<Tag>> alist = getRecentsPage(session, generatedId, page, reverse, tagFilter);
 									
-			return new RecentsResultList(null, Collections.unmodifiableMap(alist), false, totalCount/PAGE_SIZE+1);
+			return new RecentsResultList(null, Collections.unmodifiableMap(alist), totalCount/PAGE_SIZE+1);
 		}finally {
 			closeSession(session);
 		}

@@ -137,7 +137,7 @@ img.avatarsmall {
 	width: 100%;
 }
 
-.fbtag {
+span.fbtag {
 	background: #aaa;
 	border-radius: 3px;
 	color: #111;
@@ -147,4 +147,8 @@ img.avatarsmall {
 	padding: 1px 5px 1px 5px;
 	position: relative;
 	margin: 0 2px 0 2px;
+}
+
+a.fbtag {
+	color: inherit !important;
 }

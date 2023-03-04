@@ -275,7 +275,12 @@ public class GetStuff {
 	@GET
 	@Path("recent")
 	@Produces(MediaType.TEXT_HTML)
-	public Response recent(@CookieParam("fbtoken") Cookie fbtoken, @QueryParam("story") String story, @QueryParam("page") String page, @QueryParam("reverse") String reverseString) {
+	public Response recent(
+			@CookieParam("fbtoken") Cookie fbtoken, 
+			@QueryParam("story") String story,
+			@QueryParam("page") String page, 
+			@QueryParam("reverse") String reverseString,
+			@QueryParam("tag") String tagShortName) {
 		int pageNum;
 		try {
 			pageNum = Integer.parseInt(page);
@@ -285,23 +290,7 @@ public class GetStuff {
 		}
 		boolean reverse = reverseString!=null;
 		if (story == null || story.length() == 0) story = "0";
-		return Response.ok(Story.getRecents(fbtoken, story, pageNum, reverse)).build();
-	}
-	
-	@GET
-	@Path("recentpage")
-	@Produces(MediaType.TEXT_HTML)
-	public Response recentPage(@QueryParam("story") String story, @QueryParam("page") String page, @QueryParam("reverse") String reverseString) {
-		int pageNum;
-		try {
-			pageNum = Integer.parseInt(page);
-			if (pageNum < 1) pageNum = 1;
-		} catch (Exception e) {
-			pageNum = 1;
-		}
-		boolean reverse = reverseString!=null;
-		if (story == null || story.length() == 0) story = "0";
-		return Response.ok(Story.getRecentsTable(story, pageNum, reverse)).build();
+		return Response.ok(Story.getRecents(fbtoken, story, pageNum, reverse, tagShortName)).build();
 	}
 	
 	@GET

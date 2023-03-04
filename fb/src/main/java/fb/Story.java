@@ -252,7 +252,12 @@ public class Story {
 		if (tags == null || tags.size() == 0) return "";
 		return tags.stream()
 				.sorted()
-				.map(tag -> String.format("<span class='fbtag' title='%s'>%s</span>", escape(tag.longName + (tag.description.length() == 0 ? "" : (" - " + tag.description))), escape(tag.shortName)))
+				.map(tag -> 
+					String.format("<span class='fbtag' title='%s'><a class='fbtag' href='/fb/recent?tag=%s'>%s</a></span>", 
+							escape(tag.longName + (tag.description.length() == 0 ? "" : (" - " + tag.description))), 
+							escape(tag.shortName),
+							escape(tag.shortName))
+					)
 				.collect(Collectors.joining(" "));
 	}
 	
@@ -394,70 +399,28 @@ public class Story {
 	 * 
 	 * @return HTML recents
 	 */
-	public static String getRecents(Cookie token, String rootId, int page, boolean reverse) {
+	public static String getRecents(Cookie token, String rootId, int page, boolean reverse, String tagFilter) {
 		int root = getRecentsRoot(rootId);
 		
-		Map<FlatEpisode, Set<Tag>> recents;
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
 		} catch (FBLoginException e) {
 			user = null;
 		}
+		
 		RecentsResultList prof;
 		try {
-			prof = DB.getRecents(root, page, reverse);
+			prof = DB.getRecents(root, page, reverse, tagFilter);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
 		}
-		recents = prof.episodes;
-			
-		String theActualTable = getRecentsTableImpl(recents, root);
-		String pn; {
-			StringBuilder prevNext = new StringBuilder();
-			prevNext.append("<div id=recentcontainer>");
-			if (prof.numPages <= 8) {
-				for (int i=1; i<=prof.numPages; ++i) {
-					if (i == page) prevNext.append(i + " ");
-					else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse?"&reverse":"") + ">" + i + "</a> ");
-				}
-			} else {
-				if (page <= 3) { // 1 2 3 4 ... n
-					for (int i=1; i<=4; ++i) {
-						if (i == page) prevNext.append(i + " ");
-						else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse?"&reverse":"") + ">" + i + "</a> ");
-					}
-					prevNext.append("... ");
-					prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + prof.numPages + (reverse?"&reverse":"") + ">" + prof.numPages + "</a> ");
-				} else if (page >= prof.numPages-3) { // 1 ... n-3 n-2 n-1 n
-					prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + 1 + (reverse?"&reverse":"") + ">" + 1 + "</a> ");
-					prevNext.append("... ");
-					for (int i=prof.numPages-3; i<=prof.numPages; ++i) {
-						if (i == page) prevNext.append(i + " ");
-						else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse?"&reverse":"") + ">" + i + "</a> ");
-					}
-				} else { // 1 ... x-2 x-1 x x+1 x+2 ... n
-					prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + 1 + (reverse?"&reverse":"") + ">" + 1 + "</a> ");
-					prevNext.append("... ");
-					for (int i=page-2; i<=page+2; ++i) {
-						if (i == page) prevNext.append(i + " ");
-						else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse?"&reverse":"") + ">" + i + "</a> ");
-					}
-					prevNext.append("... ");
-					prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + prof.numPages + (reverse?"&reverse":"") + ">" + prof.numPages + "</a> ");
-				}
-			}
-			
-			prevNext.append("</div></p><p>");
-			
-			if (reverse) prevNext.append("<a href=?story=" + root + ">Recent episodes</a>");
-			else prevNext.append("<a href=?story=" + root + "?reverse>Oldest episodes</a>");
-			pn = prevNext.toString();
-		}
-		 
+		
+		
 		return Strings.getFile("recents.html", user)
-				.replace("$CHILDREN", theActualTable)
-				.replace("$PREVNEXT", pn)
+				.replace("$TAGS", recentsPageTagsHtmlForm(root, page, tagFilter))
+				.replace("$CHILDREN", getRecentsTableImpl(prof.episodes, root))
+				.replace("$PREVNEXT", recentsTablePrevNext(prof, root, page, reverse))
 				.replace("$NUMPAGES", Integer.toString(prof.numPages))
 				.replace("$TITLE", reverse?"Oldest":"Recent");
 	}
@@ -501,25 +464,66 @@ public class Story {
 		return sb.toString();
 	}
 	
-	/**
-	 * Get just the HTML for the recents table (not the entire page)
-	 * @param rootId
-	 * @param page
-	 * @param reverse
-	 * @return empty string if parameters are wrong
-	 */
-	public static String getRecentsTable(String rootId, int page, boolean reverse) {
-		int root = getRecentsRoot(rootId);
-		Map<FlatEpisode, Set<Tag>> episodes;
-		try {
-			episodes = DB.getRecentsPage(root, page, reverse); 
-		} catch (DBException e) {
-			return "";
+	private static String recentsPageTagsHtmlForm(int root, int page, String tagFilter) {
+		final Set<Tag> allTags = DB.getAllTags();		
+		boolean tagSelected = false;
+		StringBuilder tagsHTML = new StringBuilder();
+		for (Tag tag : allTags) {
+			if (tag.shortName.equals(tagFilter)) {
+				tagsHTML.append(tag.shortName + " ");
+				tagSelected = true;
+			} else {
+				tagsHTML.append("<a href='/fb/recent?story=" + root + "&page=" + page + "&tag=" + tag.shortName + "'>" + tag.shortName + "</a> ");
+			}
 		}
-		
-		return getRecentsTableImpl(episodes, root);
+		if (tagSelected) {
+			tagsHTML.append("<a href='/fb/recent?story=" + root + "&page=" + page + "'>Unselect All</a> ");
+		}
+		return tagsHTML.toString();
 	}
 	
+	private static String recentsTablePrevNext(RecentsResultList prof, int root, int page, boolean reverse) {
+		StringBuilder prevNext = new StringBuilder();
+		prevNext.append("<div id=recentcontainer>");
+		if (prof.numPages <= 8) {
+			for (int i = 1; i <= prof.numPages; ++i) {
+				if (i == page) prevNext.append(i + " ");
+				else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse ? "&reverse" : "") + ">" + i + "</a> ");
+			}
+		} else {
+			if (page <= 3) { // 1 2 3 4 ... n
+				for (int i = 1; i <= 4; ++i) {
+					if (i == page) prevNext.append(i + " ");
+					else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse ? "&reverse" : "") + ">" + i + "</a> ");
+				}
+				prevNext.append("... ");
+				prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + prof.numPages + (reverse ? "&reverse" : "") + ">" + prof.numPages + "</a> ");
+			} else if (page >= prof.numPages - 3) { // 1 ... n-3 n-2 n-1 n
+				prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + 1 + (reverse ? "&reverse" : "") + ">" + 1 + "</a> ");
+				prevNext.append("... ");
+				for (int i = prof.numPages - 3; i <= prof.numPages; ++i) {
+					if (i == page) prevNext.append(i + " ");
+					else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse ? "&reverse" : "") + ">" + i + "</a> ");
+				}
+			} else { // 1 ... x-2 x-1 x x+1 x+2 ... n
+				prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + 1 + (reverse ? "&reverse" : "") + ">" + 1 + "</a> ");
+				prevNext.append("... ");
+				for (int i = page - 2; i <= page + 2; ++i) {
+					if (i == page) prevNext.append(i + " ");
+					else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse ? "&reverse" : "") + ">" + i + "</a> ");
+				}
+				prevNext.append("... ");
+				prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + prof.numPages + (reverse ? "&reverse" : "") + ">" + prof.numPages + "</a> ");
+			}
+		}
+
+		prevNext.append("</div></p><p>");
+
+		if (reverse) prevNext.append("<a href=?story=" + root + ">Recent episodes</a>");
+		else prevNext.append("<a href=?story=" + root + "?reverse>Oldest episodes</a>");
+		return prevNext.toString();
+	}
+		
 	/**
 	 * get the rootId of an episode id
 	 * @param rootId
