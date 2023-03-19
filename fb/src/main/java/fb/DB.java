@@ -60,6 +60,7 @@ import fb.db.DBComment;
 import fb.db.DBCommentSub;
 import fb.db.DBEmailChange;
 import fb.db.DBEpisode;
+import fb.db.DBEpisodeTag;
 import fb.db.DBEpisodeView;
 import fb.db.DBFavEp;
 import fb.db.DBFlaggedComment;
@@ -180,6 +181,7 @@ public class DB {
 		configuration.addAnnotatedClass(DBFavEp.class);
 		configuration.addAnnotatedClass(DBCommentSub.class);
 		configuration.addAnnotatedClass(DBTag.class);
+		configuration.addAnnotatedClass(DBEpisodeTag.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -949,8 +951,8 @@ public class DB {
 
 			    ) as countstuff
 			LEFT JOIN fbusers ON fbusers.id=countstuff.author_id
-			LEFT JOIN fbepisodes_fbtags ON countstuff.generatedid=fbepisodes_fbtags.taggedepisodes_generatedid
-			LEFT JOIN fbtags ON fbtags.id=fbepisodes_fbtags.tags_id
+			LEFT JOIN fbepisodetags ON countstuff.generatedid=fbepisodetags.episode_generatedid
+			LEFT JOIN fbtags ON fbtags.id=fbepisodetags.tag_id
 			where countstuff.parent_generatedid=""";
 	
 	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,newmap,link,title,episodedate,childcount,author_id,author_name,fbtags.id,fbtags.shortname,fbtags.longname,fbtags.description";
@@ -1093,10 +1095,10 @@ public class DB {
 					.must(idQuery);
 			
 			for (String shortName : tagsShortNames) {
-				Query tagQuery = qb.keyword().onField("tags.shortName").matching(shortName).createQuery();
+				Query tagQuery = qb.keyword().onField("lazytags.tag.shortName").matching(shortName).createQuery();
 				combinedQueryBuilder = combinedQueryBuilder.must(tagQuery);
 			}
-									
+			
 			try {
 				
 				Sort sorter = switch (sort) {
@@ -1111,12 +1113,11 @@ public class DB {
 				q.setMaxResults(PAGE_SIZE+1);
 				
 				@SuppressWarnings("unchecked")
-				Stream<Object> stream = q.stream();
-				
-				List<FlatEpisode> list = stream
-					.map(e->new FlatEpisode((DBEpisode)e))
-					.collect(Collectors.toCollection(ArrayList::new));				
-				
+				List<FlatEpisode> list = ((Stream<Object>)(q.stream()))
+					.map(e -> (DBEpisode)e)
+					.map(e->new FlatEpisode(e))
+					.collect(Collectors.toCollection(ArrayList::new));	
+								
 				final boolean hasNext = list.size() > PAGE_SIZE;
 				if (hasNext) {
 					list = list.subList(0, PAGE_SIZE);
@@ -1145,14 +1146,14 @@ public class DB {
 		
 		String query = """
 				SELECT fbtags.id, fbtags.shortname, fbtags.longname, fbtags.description,
-				fbusers.id AS userid, fbusers.author, fbtags.createddate, fbepisodes_fbtags.taggedepisodes_generatedid
+				fbusers.id AS userid, fbusers.author, fbtags.createddate, fbepisodetags.episode_generatedid
 				FROM fbtags
-				INNER JOIN fbepisodes_fbtags ON fbepisodes_fbtags.tags_id=fbtags.id
+				INNER JOIN fbepisodetags ON fbepisodetags.tag_id=fbtags.id
 				LEFT JOIN fbusers ON fbtags.createdby_id=fbusers.id
 				WHERE 
 				""" + 
 				generatedIds.stream()
-					.map(generatedId -> "taggedepisodes_generatedid=" + generatedId)
+					.map(generatedId -> "episode_generatedid=" + generatedId)
 					.collect(Collectors.joining(" OR "));
 		
 		Map<Long, Set<Tag>> ret = new HashMap<>();
@@ -1192,7 +1193,7 @@ public class DB {
 				WHERE 
 				""" + 
 				shortNames
-					.map(generatedId -> "taggedepisodes_generatedid=" + generatedId)
+					.map(generatedId -> "episode_generatedid=" + generatedId)
 					.collect(Collectors.joining(" OR "));
 		
 		Set<Tag> ret = new HashSet<>();
@@ -1362,8 +1363,8 @@ public class DB {
 					fbtags.description
 				FROM fbepisodes
 				LEFT JOIN fbusers ON fbusers.id=fbepisodes.author_id
-				LEFT JOIN fbepisodes_fbtags ON fbepisodes_fbtags.taggedepisodes_generatedid=fbepisodes.generatedid
-				LEFT JOIN fbtags ON fbtags.id=fbepisodes_fbtags.tags_id
+				LEFT JOIN fbepisodetags ON fbepisodetags.episode_generatedid=fbepisodes.generatedid
+				LEFT JOIN fbtags ON fbtags.id=fbepisodetags.tag_id
 				$WHERECLAUSE
 				ORDER BY date $ORDER
 				OFFSET $PAGE_OFFSET
@@ -2925,8 +2926,8 @@ public class DB {
 			      WHERE fbepisodes.generatedid=fbupvotes.episode_generatedid
 			    GROUP BY fbepisodes.generatedid)
 			) AS countstuff
-			LEFT JOIN fbepisodes_fbtags ON fbepisodes_fbtags.taggedepisodes_generatedid=countstuff.generatedid
-			LEFT JOIN fbtags ON fbtags.id=fbepisodes_fbtags.tags_id
+			LEFT JOIN fbepisodetags ON fbepisodetags.episode_generatedid=countstuff.generatedid
+			LEFT JOIN fbtags ON fbtags.id=fbepisodetags.tag_id
 			GROUP BY generatedid,newmap,link,title,date,fbtags.id,fbtags.shortname,fbtags.longname,fbtags.description
 			""";
 		
@@ -3511,9 +3512,9 @@ public class DB {
 			final String query = 
 					"""
 					SELECT fbtags.id,shortname,longname,description,createdby_id,createddate,editedby_id,editeddate,fbusers.author,
-					COUNT(fbepisodes_fbtags.taggedepisodes_generatedid) AS ct 
+					COUNT(fbepisodetags.episode_generatedid) AS ct 
 					FROM fbtags 
-					LEFT JOIN fbepisodes_fbtags ON fbepisodes_fbtags.tags_id=fbtags.id 
+					LEFT JOIN fbepisodetags ON fbepisodetags.tag_id=fbtags.id 
 					LEFT JOIN fbusers ON fbusers.id=fbtags.createdby_id 
 					GROUP BY fbtags.id,shortname,longname,description,createdby_id,createddate,editedby_id,editeddate,fbusers.author
 					ORDER BY shortname ASC, longname ASC, createddate ASC
@@ -3607,37 +3608,37 @@ public class DB {
 		
 		if (tagger.getLevel()<10 && !ep.getAuthor().getId().equals(tagger.getId())) throw new DBException("You are not allowed to do that");
 		
-		final Set<Tag> allTags = getAllTags(sesh).map(Tag::new).collect(Collectors.toCollection(HashSet::new));
-		final Set<Tag> currentTags = DB.getTagsForEp(sesh, ep);
-
-		List<Tag> addTags = new ArrayList<>();
-		List<Tag> delTags = new ArrayList<>();
-					
-		for (Tag tag : allTags) {
-			if (formParams.containsKey(tag.shortName) && !currentTags.contains(tag)) {
-				addTags.add(tag);
-			} else if (!formParams.containsKey(tag.shortName) && currentTags.contains(tag)) {
-				delTags.add(tag);
-			}
-		}
 		
+		final Set<Tag> currentTags = DB.getTagsForEp(sesh, ep);
+		final Set<String> currentTagsShortNames = currentTags
+				.stream()
+				.map(tag -> tag.shortName)
+				.collect(Collectors.toCollection(HashSet::new));
+		
+		final Set<DBTag> allTags = getAllTags(sesh).collect(Collectors.toCollection(HashSet::new));
+		
+		final Set<DBTag> addTags = allTags.stream().filter(tag -> formParams.containsKey(tag.getShortName()) && !currentTagsShortNames.contains(tag.getShortName())).collect(Collectors.toCollection(HashSet::new));
+		
+		final Set<DBTag> delTags = allTags.stream()
+			.filter(tag -> !formParams.containsKey(tag.getShortName()) && currentTagsShortNames.contains(tag.getShortName()))
+			.collect(Collectors.toCollection(HashSet::new));
+				
 		if (addTags.size() > 0 || delTags.size() > 0) {
 			sesh.beginTransaction();
 			try {
-				if (addTags.size() > 0) {
-					String insert = """
-							INSERT INTO fbepisodes_fbtags (taggedepisodes_generatedid, tags_id)
-							VALUES
-							""" + addTags.stream().map(tag -> "(" + ep.getGeneratedId() + ", " + tag.id + ")").collect(Collectors.joining(", ")) + ";";
-					sesh.createNativeQuery(insert).executeUpdate();
+								
+				for (DBTag tag : addTags) {
+					sesh.save(new DBEpisodeTag(ep, tag, tagger));
 				}
 				if (delTags.size() > 0) {
 					String delete = """
-							DELETE FROM fbepisodes_fbtags
-							WHERE taggedepisodes_generatedid=
-							""" + ep.getGeneratedId() + " AND (" + delTags.stream().map(tag -> "tags_id=" + tag.id).collect(Collectors.joining(" OR ")) + ")";
+							DELETE FROM fbepisodetags
+							WHERE episode_generatedid=
+							""" + ep.getGeneratedId() + " AND (" + delTags.stream().map(tag -> "tag_id=" + tag.getId()).collect(Collectors.joining(" OR ")) + ")";
 					sesh.createNativeQuery(delete).executeUpdate();
 				}
+				ep.setTagDate(new Date());
+				sesh.merge(ep);
 				sesh.getTransaction().commit();
 			} catch (Exception e) {
 				sesh.getTransaction().rollback();

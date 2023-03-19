@@ -54,7 +54,7 @@ public class AdminStuff {
 		if (user.level<100) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","You must be an admin to do that")).build();
 		
 		String oldDonateButton = "";
-		 
+		
 		Session session = DB.openSession();
 		try {
 			DBSiteSetting button = session.get(DBSiteSetting.class, "donate_button");
@@ -639,7 +639,7 @@ public class AdminStuff {
 			if (tag == null) return Response.ok("Not found: " + tagid).build();
 			try {
 				sesh.beginTransaction();
-				sesh.createNativeQuery("DELETE FROM fbepisodes_fbtags WHERE tags_id=" + tag.getId()).executeUpdate();
+				sesh.createNativeQuery("DELETE FROM fbepisodetags WHERE tag_id=" + tag.getId()).executeUpdate();
 				sesh.delete(tag);
 				sesh.getTransaction().commit();
 			} catch (Exception e) {

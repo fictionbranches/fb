@@ -3,14 +3,14 @@ package fb.db;
 import java.util.Date;
 import java.util.Set;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import org.hibernate.search.annotations.Analyze;
@@ -77,18 +77,15 @@ public class DBEpisode {
 	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String body;
 	
-	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+	@OneToMany(mappedBy = "episode", fetch = FetchType.LAZY)
 	@IndexedEmbedded
-	private Set<DBTag> tags;
+	private Set<DBEpisodeTag> lazytags;
 	
-	public Set<DBTag> getTags() {
-		return tags;
-	}
-
-	public void setTags(Set<DBTag> tags) {
-		this.tags = tags;
-	}
-
+	@Field
+	@SortableField
+	@DateBridge(resolution = Resolution.SECOND)
+	private Date tagDate;
+	
 	public int episodeDepthFromNewMap() {
 		return DBEpisode.episodeDepthFromNewMap(this.newMap);
 	}
@@ -194,6 +191,22 @@ public class DBEpisode {
 		this.parent = parent;
 	}
 	
+	public Set<DBEpisodeTag> getLazytags() {
+		return lazytags;
+	}
+
+	public void setLazytags(Set<DBEpisodeTag> lazytags) {
+		this.lazytags = lazytags;
+	}
+
+	public Date getTagDate() {
+		return tagDate;
+	}
+
+	public void setTagDate(Date tagDate) {
+		this.tagDate = tagDate;
+	}
+
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(generatedId + ": " + title);

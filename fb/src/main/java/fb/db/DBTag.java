@@ -1,14 +1,12 @@
 package fb.db;
 
 import java.util.Objects;
-import java.util.Set;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
@@ -49,21 +47,10 @@ public class DBTag {
 	
 	private long editedDate;
 	
-	@ManyToMany(mappedBy = "tags")
-	private Set<DBEpisode> taggedEpisodes;
-
 	public long getId() {
 		return id;
 	}
-
-	public Set<DBEpisode> getTaggedEpisodes() {
-		return taggedEpisodes;
-	}
-
-	public void setTaggedEpisodes(Set<DBEpisode> taggedEpisodes) {
-		this.taggedEpisodes = taggedEpisodes;
-	}
-
+	
 	public void setCreatedDate(Long createdDate) {
 		this.createdDate = createdDate;
 	}
@@ -130,7 +117,7 @@ public class DBTag {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(createdBy, createdDate, description, editedBy, editedDate, id, longName, shortName, taggedEpisodes);
+		return Objects.hash(createdBy, createdDate, description, editedBy, editedDate, id, longName, shortName);
 	}
 
 	@Override
@@ -139,6 +126,6 @@ public class DBTag {
 		if (!(obj instanceof DBTag)) return false;
 		DBTag other = (DBTag) obj;
 		return Objects.equals(createdBy, other.createdBy) && Objects.equals(createdDate, other.createdDate) && Objects.equals(description, other.description) && Objects.equals(editedBy, other.editedBy) && editedDate == other.editedDate
-				&& id == other.id && Objects.equals(longName, other.longName) && Objects.equals(shortName, other.shortName) && Objects.equals(taggedEpisodes, other.taggedEpisodes);
+				&& id == other.id && Objects.equals(longName, other.longName) && Objects.equals(shortName, other.shortName);
 	}
 }

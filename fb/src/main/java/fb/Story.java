@@ -955,7 +955,7 @@ public class Story {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + generatedId);
 		}
 		if (!user.id.equals(ep.authorId) && user.level<10) return Strings.getFile("generic.html",user).replace("$EXTRA", "You can only edit episodes that you wrote");
-				
+		
 		return Strings.getFile("modifyform.html", user)
 				.replace("$TITLE", escape(ep.title))
 				.replace("$BODY", escape(ep.body))
@@ -1001,6 +1001,7 @@ public class Story {
 		if (ep.link.equals(link) && ep.title.equals(title) && ep.body.equals(body)) {
 			try {
 				DB.updateTags(generatedId, user.id, formParams);
+				return;
 			} catch (DBException e) {
 				throw new EpisodeException(Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage()));
 			}
@@ -1031,15 +1032,14 @@ public class Story {
 	}
 	
 	private static String tagHtmlForm(Tag tag, boolean checked, boolean vertical) {
-		return String.format(
-				"<input type='checkbox' id='%s' name='%s' value='%s' %s><label for='%s' title='%s'> %s</label>"+(vertical ? "<br>" : " "), 
-				escape(tag.shortName), 
+		return (vertical ? "" : "<span style='border: 1px solid; margin: 2px; padding: 2px;'>") + String.format(
+				"<input type='checkbox' id='%s' name='%s' value='' %s><label for='%s' title='%s'> %s</label>"+(vertical ? "<br>" : " "), 
 				escape(tag.shortName), 
 				escape(tag.shortName), 
 				checked ? "checked" : "",
 				escape(tag.shortName), 
 				escape((!vertical ? (tag.longName + (tag.description.length()>0 ? " - " : "")) : "") + tag.description),
-				escape(tag.shortName + (vertical ? (" - " + tag.longName) : "")));
+				escape(tag.shortName + (vertical ? (" - " + tag.longName) : ""))) + (vertical ? "" : "</span>");
 	}
 	
 	private static String tagsHtmlForm(Collection<Tag> tags, boolean vertical) {
