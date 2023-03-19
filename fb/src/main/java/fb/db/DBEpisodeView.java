@@ -7,12 +7,21 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
 @Entity
-@Table(name="fbepisodeviews", uniqueConstraints=@UniqueConstraint(columnNames= {"episode_generatedid", "user_id"}))
+@Table(
+	name="fbepisodeviews", 
+	uniqueConstraints=@UniqueConstraint(columnNames= {"episode_generatedid", "user_id"}),
+	indexes = {
+		@Index(columnList = "episode_generatedid"),
+		@Index(columnList = "user_id"),
+		@Index(columnList = "date"),
+	}
+)
 public class DBEpisodeView {
 
 	@Id

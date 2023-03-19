@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
@@ -921,8 +922,8 @@ public class DB {
 		}
 	}
 	
-	private static Set<Tag> getTagsForEp(Session sesh, DBEpisode ep) {		
-		return DB.getTagsForEpisodes(sesh, Set.of(ep.getGeneratedId())).get(ep.getGeneratedId());
+	private static Set<Tag> getTagsForEp(Session sesh, DBEpisode ep) {
+		return Objects.requireNonNullElseGet(DB.getTagsForEpisodes(sesh, Set.of(ep.getGeneratedId())).get(ep.getGeneratedId()), ()->Set.of());
 	}
 	
 	private static final String CHILD_QUERY = """
@@ -2880,27 +2881,6 @@ public class DB {
 		}
 	}
 	
-	public enum PopularUser{
-		HITS ("order by hits desc, upvotes desc, views desc, episodes desc"),
-		VIEWS ("order by views desc, upvotes desc, hits desc, episodes desc"),
-		UPVOTES ("order by upvotes desc, views desc, hits desc, episodes desc"),
-		EPISODES ("order by episodes desc, upvotes desc, views desc, hits desc");
-		public final String ORDER_BY;
-		private PopularUser(String orderBy) {
-			this.ORDER_BY=orderBy;
-		}
-	}
-	
-	public enum PopularUserTime{
-		ALL (""),
-		WEEK ("and fbepisodes.date > (now() - interval '7 days')"),
-		MONTH("and fbepisodes.date > (now() - interval '30 days')");
-		public final String TIMELIMIT;
-		private PopularUserTime(String timeLimit) {
-			this.TIMELIMIT = timeLimit;
-		}
-	}
-
 	private static final String POPULAR_QUERY = """
 			SELECT 
 				generatedid,
@@ -2949,31 +2929,7 @@ public class DB {
 			LEFT JOIN fbtags ON fbtags.id=fbepisodes_fbtags.tags_id
 			GROUP BY generatedid,newmap,link,title,date,fbtags.id,fbtags.shortname,fbtags.longname,fbtags.description
 			""";
-	
-	private static final String POPULAR_USERS_QUERY = """
-			select username, author, date, max(episodescount) as episodes, max(hitscount) as hits, max(viewscount) as views, max(upvotescount) as upvotes from (
-			(select fbusers.id as username, author,fbusers.date as date,count(*) as episodescount, 0 as hitscount, 0 as upvotescount, 0 as viewscount
-			    from fbusers, fbepisodes
-			    where fbusers.id=fbepisodes.author_id $TIMELIMIT
-			    group by username, author)
-			union
-			(select fbusers.id as username, author,fbusers.date as date,0 as episodescount, sum(fbepisodes.viewcount) as hitscount, 0 as upvotescount, 0 as viewscount
-			    from fbusers, fbepisodes
-			    where fbusers.id=fbepisodes.author_id $TIMELIMIT
-			    group by username, author)
-			union
-			(select fbusers.id as username, author,fbusers.date as date,0 as episodescount, 0 as hitscount, 0 as upvotescount, count(*) as viewscount
-			    from fbusers, fbepisodes, fbepisodeviews
-			    where fbusers.id=fbepisodes.author_id and fbepisodes.generatedid=fbepisodeviews.episode_generatedid $TIMELIMIT
-			    group by username, author)
-			union
-			(select fbusers.id as username, author,fbusers.date as date,0 as episodescount, 0 as hitscount, count(*) as upvotescount, 0 as viewscount
-			    from fbusers, fbepisodes, fbupvotes
-			    where fbusers.id=fbepisodes.author_id and fbepisodes.generatedid=fbupvotes.episode_generatedid $TIMELIMIT
-			    group by username, author)
-			) as countstuff group by username, author, date
-			""";
-	
+		
 	@SuppressWarnings("unchecked")
 	private static List<Episode> popularEpisodesReal(PopularEpisode pop) {
 		Session session = openSession();
@@ -3046,24 +3002,74 @@ public class DB {
 	
 	@SuppressWarnings("unchecked")
 	private static List<User> popularUsersReal(PopularUser pop, PopularUserTime time) {
-		Session session = openSession();
+		final Session session = openSession();
 		try {
-			
-			Stream<Object> stream = session.createNativeQuery(POPULAR_USERS_QUERY.replace("$TIMELIMIT", time.TIMELIMIT) + pop.ORDER_BY + " \nlimit 100;").stream();
-			
-			return stream.map(o->{
-				Object[] x = (Object[])o;
-				String username = (String)x[0];
-				String author = (String)x[1];
-				Date date = (Date)x[2];
-				long episodes = ((BigInteger)x[3]).longValue();
-				long hits = ((BigDecimal)x[4]).longValue();
-				long views = ((BigInteger)x[5]).longValue();
-				long upvotes = ((BigInteger)x[6]).longValue();
+			return ((Stream<Object>)(session.createNativeQuery(
+					POPULAR_USERS_QUERY.replace("$TIMELIMIT", time.TIMELIMIT) + pop.ORDER_BY + " \nlimit 100;"
+				).stream())).map(o->{
+				final Object[] x = (Object[])o;
+				final String username = (String)x[0];
+				final String author = (String)x[1];
+				final Date date = (Date)x[2];
+				final long episodes = ((BigInteger)x[3]).longValue();
+				final long hits = ((BigDecimal)x[4]).longValue();
+				final long views = ((BigInteger)x[5]).longValue();
+				final long upvotes = ((BigInteger)x[6]).longValue();
 				return (new User(username,author,date,episodes,hits,views,upvotes));
 			}).collect(Collectors.toCollection(ArrayList::new));
 		} finally {
 			closeSession(session);
+		}
+	}
+	
+	private static final String POPULAR_USERS_QUERY = """
+			SELECT username, author, date, MAX(episodescount) AS episodes, MAX(hitscount) AS hits, MAX(viewscount) AS views, MAX(upvotescount) AS upvotes FROM (
+			(SELECT fbusers.id AS username, author,fbusers.date AS date,COUNT(*) AS episodescount, 0 AS hitscount, 0 AS upvotescount, 0 AS viewscount
+			    FROM fbepisodes
+			    LEFT JOIN fbusers ON fbusers.id=fbepisodes.author_id
+			    WHERE fbepisodes.date > ($TIMELIMIT)
+			    GROUP BY username, author)
+			UNION
+			(SELECT fbusers.id AS username, author,fbusers.date AS date,0 AS episodescount, SUM(fbepisodes.viewcount) AS hitscount, 0 AS upvotescount, 0 AS viewscount
+			    FROM fbepisodes
+			    LEFT JOIN fbusers ON fbusers.id=fbepisodes.author_id
+			    WHERE fbepisodes.date > ($TIMELIMIT)
+			    GROUP BY username, author)
+			UNION
+			(SELECT fbusers.id AS username, author,fbusers.date AS date,0 AS episodescount, 0 AS hitscount, 0 AS upvotescount, COUNT(*) AS viewscount
+			    FROM fbepisodeviews
+			    LEFT JOIN fbepisodes ON fbepisodes.generatedid=fbepisodeviews.episode_generatedid
+			    LEFT JOIN fbusers ON fbusers.id=fbepisodes.author_id
+			    WHERE fbepisodeviews.date > ($TIMELIMIT)
+			    GROUP BY username, author)
+			UNION
+			(SELECT fbusers.id AS username, author,fbusers.date AS date,0 AS episodescount, 0 AS hitscount, COUNT(*) AS upvotescount, 0 AS viewscount
+			    FROM fbupvotes
+			    LEFT JOIN fbepisodes ON fbepisodes.generatedid=fbupvotes.episode_generatedid
+			    LEFT JOIN fbusers ON fbusers.id=fbepisodes.author_id
+			    WHERE fbupvotes.date > ($TIMELIMIT)
+			    GROUP BY username, author)
+			) AS countstuff GROUP BY username, author, date 
+			""";
+	
+	public enum PopularUser{
+		HITS ("ORDER BY hits DESC, upvotes DESC, views DESC, episodes DESC"),
+		VIEWS ("ORDER BY views DESC, upvotes DESC, hits DESC, episodes DESC"),
+		UPVOTES ("ORDER BY upvotes DESC, views DESC, hits DESC, episodes DESC"),
+		EPISODES ("ORDER BY episodes DESC, upvotes DESC, views DESC, hits DESC");
+		public final String ORDER_BY;
+		private PopularUser(String orderBy) {
+			this.ORDER_BY=orderBy;
+		}
+	}
+	
+	public enum PopularUserTime{
+		ALL ("TO_DATE('1970-01-01', 'YYYY-MM-DD')"),
+		WEEK ("NOW() - INTERVAL '7 days'"),
+		MONTH ("NOW() - INTERVAL '30 days'");
+		public final String TIMELIMIT;
+		private PopularUserTime(String timeLimit) {
+			this.TIMELIMIT = timeLimit;
 		}
 	}
 	
