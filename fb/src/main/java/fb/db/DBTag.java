@@ -1,5 +1,7 @@
 package fb.db;
 
+import static org.hibernate.search.annotations.Index.YES;
+
 import java.util.Objects;
 
 import javax.persistence.Column;
@@ -7,17 +9,22 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import org.hibernate.search.annotations.Analyze;
 import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Index;
 import org.hibernate.search.annotations.Indexed;
 import org.hibernate.search.annotations.Store;
 
 @Entity
-@Table(name="fbtags")
+@Table(
+	name="fbtags", 
+	indexes = {
+		@Index(columnList = "shortname"),
+	}
+)
 @Indexed
 public class DBTag {
 	
@@ -26,15 +33,15 @@ public class DBTag {
 	private long id;	
 	
 	@Column(columnDefinition = "text", unique = true, nullable = false)
-	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES)
+	@Field(index=YES, store=Store.NO, analyze=Analyze.YES)
 	private String shortName;
 	
 	@Column(columnDefinition = "text")
-	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES)
+	@Field(index=YES, store=Store.NO, analyze=Analyze.YES)
 	private String longName;
 	
 	@Column(columnDefinition = "text")
-	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES)
+	@Field(index=YES, store=Store.NO, analyze=Analyze.YES)
 	private String description;
 	
 	@ManyToOne
