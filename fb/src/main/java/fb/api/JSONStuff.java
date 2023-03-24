@@ -1,12 +1,16 @@
 package fb.api;
 
+import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.hibernate.Session;
 import org.slf4j.Logger;
@@ -23,8 +27,9 @@ import fb.Story;
 import fb.db.DBEpisode;
 import fb.objects.Episode;
 import fb.objects.EpisodeWithChildren;
-import fb.objects.FlatEpisode;
+import fb.objects.FlatEpisodeWithTags;
 import fb.objects.FlatUser;
+import fb.objects.Tag;
 import jakarta.ws.rs.FormParam;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -102,6 +107,7 @@ public class JSONStuff {
 		public final long[] path;
 		public final long hits;
 		public final List<JSONChildEpisode> children;
+		public final List<String> tags;
 		public JSONEpisode(EpisodeWithChildren ep, boolean sendhtml) {
 			this.id = ep.generatedId;
 			this.title=ep.title;
@@ -120,6 +126,7 @@ public class JSONStuff {
 			this.hits=ep.hits;
 			this.body=sendhtml?Story.formatBody(ep.body):ep.body;
 			this.children = ep.children.stream().map(JSONChildEpisode::new).collect(Collectors.toList());
+			this.tags = ep.tags.stream().map(tag -> tag.shortName).sorted().toList();
 		}		
 	}
 	
@@ -135,6 +142,7 @@ public class JSONStuff {
 		public final long hits;
 		public final long views;
 		public final long upvotes;
+		public final List<String> tags;
 		public JSONChildEpisode(Episode ep) {
 			this.id = ep.generatedId;
 			this.title=ep.title;
@@ -144,6 +152,7 @@ public class JSONStuff {
 			this.hits=ep.hits;
 			this.views=ep.views;
 			this.upvotes=ep.upvotes;
+			this.tags = ep.tags.stream().map(tag -> tag.shortName).sorted().toList();
 		}
 	}
 	
@@ -166,7 +175,8 @@ public class JSONStuff {
 		public final Long parentId;
 		public final long rootId;
 		public final long hits;
-		public JSONSimpleEpisode(FlatEpisode ep) {
+		public final List<String> tags;
+		public JSONSimpleEpisode(FlatEpisodeWithTags ep) {
 			this.id = ep.generatedId;
 			this.title=ep.title;
 			this.link=ep.link;
@@ -182,6 +192,17 @@ public class JSONStuff {
 			this.parentId=ep.parentId;
 			this.rootId = DB.newMapToIdList(ep.newMap).findFirst().get();
 			this.hits=ep.hits;
+			this.tags = ep.tags.stream().map(tag -> tag.shortName).sorted().toList();
+		}
+	}
+	
+	class JSONTag {
+		public final String shortName, longName, description;
+
+		public JSONTag(Tag tag) {
+			this.shortName = tag.shortName;
+			this.longName = tag.longName;
+			this.description = tag.description;
 		}
 	}
 	
@@ -197,13 +218,26 @@ public class JSONStuff {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getRoots(@QueryParam("token") String token) {		
 		
-		List<FlatEpisode> roots = Story.getRootEpisodes();
+		List<FlatEpisodeWithTags> roots;
 		FlatUser user;
 		try { 
 			user = Accounts.getFlatUserUsingTokenString(token); 
 		} catch (FBLoginException e) {
 			user = null;
 		}
+		
+		Session sesh = DB.openSession();
+		try {
+			
+			roots = sesh.createQuery("from DBEpisode ep join fetch ep.lazytags tags where ep.parent is null", DBEpisode.class)
+				.stream()
+				.map(FlatEpisodeWithTags::new)
+				.toList();
+			
+		} finally {
+			DB.closeSession(sesh);
+		}
+		
 		HashMap<String,Object> ret = new HashMap<>();
 		List<JSONSimpleEpisode> episodes = roots.stream().map(JSONSimpleEpisode::new).collect(Collectors.toList());
 		ret.put("episodes",episodes);
@@ -244,34 +278,35 @@ public class JSONStuff {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response recentEpisodes(@QueryParam("token") String token, @QueryParam("before") Long before, @QueryParam("after") Long after, @QueryParam("reverse") String reverse) {
 		
-		
 		FlatUser user;
 		try { 
 			user = Accounts.getFlatUserUsingTokenString(token); 
 		} catch (FBLoginException e) {
 			user = null;
 		}
-		
-		String order = "DESC";
-		if (reverse != null && reverse.trim().toLowerCase().equals("true")) order = "ASC";
-		
-		String query = "SELECT * FROM fbepisodes ";
-		if (before != null || after != null) query += "WHERE ";
-		if (before != null) query += "date < to_timestamp(" + before + ") ";
-		if (before != null && after != null) query += " AND ";
-		if (after != null) query += "date > to_timestamp(" + after + ") ";
-		query += "ORDER BY date " + order + " LIMIT 100";
-		
+				
 		List<JSONSimpleEpisode> episodes;
 		
 		Session session = DB.openSession();
 		try {
+			String order = "DESC";
+			if (reverse != null && reverse.trim().toLowerCase().equals("true")) order = "ASC";
 			
-			episodes = session.createNativeQuery(query, DBEpisode.class).stream()
-				.map(FlatEpisode::new)
-				.map(JSONSimpleEpisode::new)
-				.collect(Collectors.toList());
-			
+			String query = "SELECT generatedid FROM fbepisodes ";
+			if (before != null || after != null) query += "WHERE ";
+			if (before != null) query += "date < to_timestamp(" + before + ") ";
+			if (before != null && after != null) query += " AND ";
+			if (after != null) query += "date > to_timestamp(" + after + ") ";		
+				
+			@SuppressWarnings("unchecked")
+			List<Long> ids = ((Stream<Object>)session.createNativeQuery(query).stream()).map(x -> ((BigInteger)x).longValue()).toList();			
+			episodes = session.createQuery(
+					"FROM DBEpisode ep JOIN FETCH ep.lazytags tags WHERE ep.generatedId IN :ids ORDER BY ep.date " + order, DBEpisode.class)
+					.setParameter("ids", ids)
+					.stream()
+					.map(FlatEpisodeWithTags::new)
+					.map(JSONSimpleEpisode::new)
+					.toList();			
 		} finally {
 			DB.closeSession(session);
 		}
@@ -281,5 +316,27 @@ public class JSONStuff {
 		if (user != null) ret.put("user",new JSONUser(user));
 		return Response.ok(g().toJson(ret)).build();
 		
+	}
+	
+	@GET
+	@Path("gettags")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getTags(@QueryParam("token") String token) {		
+		FlatUser user;
+		try { 
+			user = Accounts.getFlatUserUsingTokenString(token); 
+		} catch (FBLoginException e) {
+			user = null;
+		}
+		
+		Map<String, JSONTag> map = DB.getAllTags()
+				.stream()
+				.sorted(Comparator.comparing(tag -> tag.shortName))
+				.collect(Collectors.toMap(tag -> tag.shortName, tag -> new JSONTag(tag)));
+				
+		HashMap<String,Object> ret = new HashMap<>();
+		ret.put("tags",map);
+		if (user != null) ret.put("user",new JSONUser(user));
+		return Response.ok(g().toJson(ret)).build();
 	}
 }

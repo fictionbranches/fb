@@ -1665,7 +1665,8 @@ public class DB {
 			closeSession(session);
 		}
 	}
-	private static Stream<DBEpisode> getRoots(Session session) {
+	
+	public static Stream<DBEpisode> getRoots(Session session) {
 		CriteriaBuilder cb = session.getCriteriaBuilder();
 		CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
 		Root<DBEpisode> root = query.from(DBEpisode.class);			
@@ -3609,8 +3610,7 @@ public class DB {
 		if (tagger.getLevel()<10 && !ep.getAuthor().getId().equals(tagger.getId())) throw new DBException("You are not allowed to do that");
 		
 		
-		final Set<Tag> currentTags = DB.getTagsForEp(sesh, ep);
-		final Set<String> currentTagsShortNames = currentTags
+		final Set<String> currentTagsShortNames = DB.getTagsForEp(sesh, ep)
 				.stream()
 				.map(tag -> tag.shortName)
 				.collect(Collectors.toCollection(HashSet::new));
@@ -3626,7 +3626,6 @@ public class DB {
 		if (addTags.size() > 0 || delTags.size() > 0) {
 			sesh.beginTransaction();
 			try {
-								
 				for (DBTag tag : addTags) {
 					sesh.save(new DBEpisodeTag(ep, tag, tagger));
 				}
