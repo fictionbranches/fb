@@ -4,7 +4,9 @@ import static fb.util.Text.escape;
 
 import java.net.URI;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -668,7 +670,22 @@ public class AdminStuff {
 
 		if (shortname == null || shortname.trim().length() == 0 || 
 				longname == null || longname.trim().length() == 0)
-			return Response.ok("Short name, long name, and description cannot be empty.").build();
+			return Response.ok("Short/long name cannot be empty.").build();
+		
+		{
+			Set<Character> illegal = new HashSet<>();
+			final String allowed = "-_";
+			for (char c : shortname.toCharArray()) {
+				if ('a'<=c && c<='z') continue;
+				if ('A'<=c && c<='Z') continue;
+				if ('0'<=c && c<='9') continue;
+				if (allowed.contains(c+"")) continue;
+				illegal.add(c);
+			}
+			if (illegal.size() > 0) {
+				return Response.ok("Disallowed characters: " + illegal.stream().sorted().map(c -> "'" + c + "'").collect(Collectors.joining(", "))).build();
+			}
+		}
 		
 		Session sesh = DB.openSession();
 		try {

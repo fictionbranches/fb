@@ -796,11 +796,11 @@ public class DB {
 		Session session = openSession();
 		try {
 			DBUser user = null;
-			DBEpisode ep = session.get(DBEpisode.class, generatedId);
+			final DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			
-			long visitorCount = (Long)session.createQuery("select count(*) from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId()).uniqueResult();
-			long upvotes = (Long)session.createQuery("select count(*) from DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId()).uniqueResult();
+			final long visitorCount = (Long)session.createQuery("select count(*) from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId()).uniqueResult();
+			final long upvotes = (Long)session.createQuery("select count(*) from DBUpvote uv where uv.episode.generatedId=" + ep.getGeneratedId()).uniqueResult();
 			
 			ArrayList<Comment> comments = session.createQuery("from DBComment c where c.episode.generatedId=" + ep.getGeneratedId() + " order by c.date", DBComment.class)
 					.setMaxResults(PAGE_SIZE)
@@ -848,12 +848,14 @@ public class DB {
 				
 			}
 			
-			String query = CHILD_QUERY + ep.getGeneratedId() + CHILD_QUERY_POST;
+			final Map<String, Tag> allTags = DB.getAllTags().stream().collect(Collectors.toMap(tag -> tag.shortName, tag -> tag));
+			
+			final String query = CHILD_QUERY + ep.getGeneratedId() + CHILD_QUERY_POST;
 			
 			@SuppressWarnings("unchecked")
-			Stream<Object> stream = session.createNativeQuery(query).stream(); // TODO this is extremely slow, multiple seconds sometimes
+			final Stream<Object> stream = session.createNativeQuery(query).stream(); // TODO this is extremely slow, multiple seconds sometimes
 			
-			ArrayList<Episode> children = stream.map(x -> {
+			final ArrayList<Episode> children = stream.map(x -> {
 				final Object[] arr = (Object[])x;
 				final long childGeneratedId = ((BigInteger)arr[1]).longValue();
 				final String newMap = (String)arr[2];
@@ -866,37 +868,21 @@ public class DB {
 				final long childUpvotes = ((BigInteger)arr[9]).longValue();
 				final String authorId = (String)arr[10];
 				final String authorName = (String)arr[11];
+				final String tagNamesStr = (String) arr[12];
 				
 				final Set<Tag> tags;
-				
-				if (arr[12] == null) {
-					tags = null;
-				} else {
-					final long tagId = ((BigInteger) arr[12]).longValue();
-					final String tagShort = (String)arr[13];
-					final String tagLong = (String) arr[14];
-					final String tagDesc = (String) arr[15];
-					tags = Set.of(new Tag(tagId, tagShort, tagLong, tagDesc, null, null, 0l, null));
+				if (tagNamesStr.length() == 0) tags = null;
+				else {
+					tags = new HashSet<>();
+					for (String name : tagNamesStr.split(",")) tags.add(allTags.get(name));
 				}
 				
 				return new Episode(childGeneratedId,newMap,link,title,date,childcount,hits,views,childUpvotes,authorId,authorName, tags);
 			}).collect(Collectors.toCollection(ArrayList::new));
-			
+						
+			final String pathQuery;
 			{
-				final HashMap<Long, Episode> map = new HashMap<>();
-				for (Episode child : children) {
-					map.merge(child.generatedId, child, (childA, childB) -> {
-						if (childA.tags == null) return childB;
-						if (childB.tags == null) return childA;
-						return new Episode(childA.generatedId,childA.newMap,childA.link,childA.title,childA.date,childA.childCount,childA.hits,childA.views,childA.upvotes,childA.authorId,childA.authorName, childA.tags, childB.tags);
-					});
-				}
-				children = map.values().stream().collect(Collectors.toCollection(ArrayList::new));
-			}
-			
-			String pathQuery;
-			{
-				ArrayList<Long> list = new ArrayList<>(DB.newMapToIdList(ep.getNewMap()).collect(Collectors.toList()));
+				final ArrayList<Long> list = new ArrayList<>(DB.newMapToIdList(ep.getNewMap()).collect(Collectors.toList()));
 				
 				Collections.reverse(list);
 				
@@ -929,7 +915,7 @@ public class DB {
 	}
 	
 	private static final String CHILD_QUERY = """
-			select parent_generatedid,generatedid,newmap,link,title,episodedate,childcount, max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes, author_id, fbusers.author as author_name,fbtags.id,fbtags.shortname,fbtags.longname,fbtags.description
+			select parent_generatedid,generatedid,newmap,link,title,episodedate,childcount, max(hitscount) as hits,max(viewscount) as views, max(upvotescount) as upvotes, author_id, fbusers.author as author_name,array_to_string(array_agg(distinct fbtags.shortname),',')
 			from (
 
 			    (select fbepisodes.parent_generatedid,fbepisodes.generatedid,fbepisodes.newmap as newmap,fbepisodes.author_id,fbepisodes.link,fbepisodes.title,fbepisodes.date as episodedate, fbepisodes.childcount, fbepisodes.viewcount as hitscount, count(*) as viewscount, 0 as upvotescount
@@ -955,7 +941,7 @@ public class DB {
 			LEFT JOIN fbtags ON fbtags.id=fbepisodetags.tag_id
 			where countstuff.parent_generatedid=""";
 	
-	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,newmap,link,title,episodedate,childcount,author_id,author_name,fbtags.id,fbtags.shortname,fbtags.longname,fbtags.description";
+	private static final String CHILD_QUERY_POST = " group by parent_generatedid,generatedid,newmap,link,title,episodedate,childcount,author_id,author_name";
 	
 	public static void upvote(long generatedId, String username) throws DBException {
 		Session session = openSession();
