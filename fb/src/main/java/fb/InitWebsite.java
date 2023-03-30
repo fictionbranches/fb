@@ -49,7 +49,7 @@ import jakarta.ws.rs.core.UriBuilder;
 
 public class InitWebsite {
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	/**
 	 * Where all the stuff is.
@@ -151,7 +151,6 @@ public class InitWebsite {
 
 			// Enable custom error pages
 			server.getServerConfiguration().setDefaultErrorPageGenerator(new MyErrorPageGenerator());
-			//try {jsEngineStarter.join();}catch(Exception e) {}
 		}
 
 		try {
@@ -339,6 +338,7 @@ public class InitWebsite {
 			DBUser me = sesh.get(DBUser.class, "phoenix");
 			if (me == null) throw new RuntimeException();
 			
+			@SuppressWarnings("squid:S2119")
 			Random r = new Random();
 			
 			sesh.beginTransaction();

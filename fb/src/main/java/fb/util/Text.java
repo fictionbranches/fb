@@ -21,10 +21,10 @@ import org.slf4j.LoggerFactory;
  */
 public class Text {
 
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	public static List<String> traceToLines(Throwable e) {
-		if (e==null) return Stream.of("null").collect(Collectors.toList());
+		if (e==null) return Stream.of("null").toList();
 		try (StringWriter sw = new StringWriter()) {
 			try (PrintWriter writer = new PrintWriter(sw)) {
 				e.printStackTrace(writer);

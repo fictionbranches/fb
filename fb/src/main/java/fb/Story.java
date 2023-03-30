@@ -13,11 +13,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import fb.Accounts.FBLoginException;
 import fb.DB.DBException;
@@ -42,7 +41,7 @@ import jakarta.ws.rs.core.MultivaluedMap;
  */
 public class Story { 
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+//	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	/////////////////////////////////////// function to get episodes \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	
@@ -165,27 +164,27 @@ public class Story {
 		String commentFormHTML =
 				"<h4>Add a comment</h4>\n" + 
 				"<form id='fbcommentform' action= \"/fb/addcommentpost/"+ep.generatedId+"\" method=\"post\">\n" + 
-				"	<p>\n" + 
-				"		<a name=\"addcomment\" /><textarea id='fbcommenttext' name= \"body\" placeholder=\"Comment\" ></textarea>\n" + 
-				"	</p>\n" + 
-				"	<p><div id='fbcommentformextra' ></div></p>\n" +
-				"	<input id='fbcommentbutton' type= \"submit\" value= \"Submit\"/>\n" +  
+				"  <p>\n" + 
+				"    <a name=\"addcomment\" /><textarea id='fbcommenttext' name= \"body\" placeholder=\"Comment\" ></textarea>\n" + 
+				"  </p>\n" + 
+				"  <p><div id='fbcommentformextra' ></div></p>\n" +
+				"  <input id='fbcommentbutton' type= \"submit\" value= \"Submit\"/>\n" +  
 				"</form>";
 		if (ep.viewer != null && !ep.viewer.id.equals(ep.authorId)) {
 			if (ep.userIsSubscribedToComments) {
 				// unsubscribe button
 				commentFormHTML += "<form id='fbcommentsubform' action= '/fb/commentsubscribepost/" + ep.generatedId
 						+ "' method=\"post\">\n"
-						+ "	<p>You are currently subscribed to notifications for new comments.<br/>\n"
-						+ "	<input id='fbcommentsubvalue' type= 'hidden' value= 'false'/>\n"
-						+ "	<input id='fbcommentsubbutton' type= 'submit' value= 'Unsubscribe'/>\n" + "</form>";
+						+ " <p>You are currently subscribed to notifications for new comments.<br/>\n"
+						+ " <input id='fbcommentsubvalue' type= 'hidden' value= 'false'/>\n"
+						+ " <input id='fbcommentsubbutton' type= 'submit' value= 'Unsubscribe'/>\n" + "</form>";
 			} else {
 				// subscribe button
 				commentFormHTML += "<form id='fbcommentsubform' action= '/fb/commentsubscribepost/" + ep.generatedId
 						+ "' method=\"post\">\n"
-						+ "	<p>You are not currently subscribed to notifications for new comments.<br/>\n"
-						+ "	<input id='fbcommentsubvalue' type= 'hidden' name = 'commentsubvalue' value= 'true'/>\n"
-						+ "	<input id='fbcommentsubbutton' type= 'submit' value= 'Subscribe'/>\n" + "</form>";
+						+ " <p>You are not currently subscribed to notifications for new comments.<br/>\n"
+						+ " <input id='fbcommentsubvalue' type= 'hidden' name = 'commentsubvalue' value= 'true'/>\n"
+						+ " <input id='fbcommentsubbutton' type= 'submit' value= 'Subscribe'/>\n" + "</form>";
 
 			}
 		}
@@ -249,7 +248,7 @@ public class Story {
 	}
 	
 	private static String tagsHtmlView(Set<Tag> tags) {
-		if (tags == null || tags.size() == 0) return "";
+		if (tags == null || tags.isEmpty()) return "";
 		return tags.stream()
 				.sorted()
 				.map(tag -> 
@@ -531,20 +530,20 @@ public class Story {
 	 */
 	private static int getRecentsRoot(String rootId) {
 		int root = -1;
-		{ // Check rootId is actually a root Id
-			if (rootId == null || rootId.length() == 0) root = 0;
-			else {
-				for (char c : rootId.toCharArray()) if (c<'0' || c>'9') {
-					root = 0;
-					break;
-				}
-			}
-			if (root == -1) try {
-				root = Integer.parseInt(rootId);
-			} catch (NumberFormatException e) {
+		// Check rootId is actually a root Id
+		if (rootId == null || rootId.length() == 0) root = 0;
+		else {
+			for (char c : rootId.toCharArray()) if (c < '0' || c > '9') {
 				root = 0;
+				break;
 			}
 		}
+		if (root == -1) try {
+			root = Integer.parseInt(rootId);
+		} catch (NumberFormatException e) {
+			root = 0;
+		}
+
 		return root;
 	}
 		
@@ -552,23 +551,11 @@ public class Story {
 	private static LinkedHashMap<Long,FlatEpisode> rootEpisodesCache2 = new LinkedHashMap<>();
 	static {
 		updateRootEpisodesCache();
-		Thread t = new Thread(()->{
-			while (true) {
-				try {
-					Thread.sleep(1000l*60l*5l);
-				} catch (InterruptedException e) {
-					LOGGER.error("Root cache thread interrupted (should never happend) ", e);
-					break;
-				}
-				updateRootEpisodesCache();
-			}
-		});
-		t.setName("RootCacheUpdaterThread");
-		t.start();
+		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(Story::updateRootEpisodesCache, 5, 5, TimeUnit.MINUTES);
 	}
 	
 	public static List<FlatEpisode> getRootEpisodes() {
-		return Story.rootEpisodesCache2.values().stream().collect(Collectors.toList());
+		return Story.rootEpisodesCache2.values().stream().toList();
 	}
 	
 	public static FlatEpisode getRootEpisodeById(long generatedId) {
@@ -630,13 +617,12 @@ public class Story {
 		
 		FlatEpisode ep = path.get(path.size()-1);
 		
-		String ret = Strings.getFile("path.html", user)
+		return Strings.getFile("path.html", user)
 				.replace("$ID", ""+generatedId)
 				.replace("$CHILDREN", sb.toString())
 				.replace("$OGDESCRIPTION", escape("By " + ep.authorName + System.lineSeparator() + ep.body))
 				.replace("$TITLE", escape(ep.title))
 				;
-		return ret;
 	}
 	
 	public static String getCompleteHTML(Cookie token, long generatedId, Cookie fbjs) {
@@ -707,7 +693,7 @@ public class Story {
 		final Set<String> selectedShortNames = allTags
 				.stream()
 				.map(tag -> tag.shortName)
-				.filter(shortName -> params.containsKey(shortName))
+				.filter(params::containsKey)
 				.collect(Collectors.toCollection(HashSet::new));
 		
 		final Map<Tag, Boolean> selectedTags = allTags.stream().collect(Collectors.toMap(tag -> tag, tag -> selectedShortNames.contains(tag.shortName)));

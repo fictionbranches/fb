@@ -18,7 +18,7 @@ public class Markdown {
 	
 	private static final String MARKDOWN_IT_URL = "https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js";
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	private static final Object lock = new Object();
 	public static final Markdown m = new Markdown();
@@ -29,7 +29,7 @@ public class Markdown {
 			try {
 				return (String) ((Invocable) m.engine).invokeFunction("markdownToHTML", body);
 			} catch (NoSuchMethodException | ScriptException e) {
-				System.err.println(e + " " + e.getMessage());
+				LOGGER.error(e + " " + e.getMessage(), e);
 				return body;
 			}
 		}

@@ -38,7 +38,7 @@ import fb.util.Text;
 @Path("fb")
 public class AccountStuff {
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	@GET
 	@Path("user/{id}")
@@ -93,8 +93,8 @@ public class AccountStuff {
 	@Produces(MediaType.TEXT_HTML)
 	public Response loginpost(@Context UriInfo uriInfo, @FormParam("email") String email, @FormParam("password") String password,
 			@FormParam("g-recaptcha-response") String google) {
-		
-		LOGGER.info("Login attempt: " + email);
+		LOGGER.info(password, google);
+		LOGGER.info("Login attempt: %s", email);
 		try {
 			String token = Accounts.login(email, password);
 			return Response.seeOther(GetStuff.createURI("/fb")).cookie(GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost())).build();
@@ -490,19 +490,18 @@ public class AccountStuff {
 		// fbfaveps.date ASC
 		if (sort == null) sort = "";
 		switch (sort) {
-		case "default":
-		case "newfav":			
-		default:
-			query = query.replace("$ORDERBY", "fbfaveps.date DESC");
-			break;
-		case "oldfav":
-			query = query.replace("$ORDERBY", "fbfaveps.date ASC");
-			break;
 		case "newest":
 			query = query.replace("$ORDERBY", "fbepisodes.date DESC");
 			break;
 		case "oldest":
 			query = query.replace("$ORDERBY", "fbepisodes.date ASC");
+			break;
+		case "oldfav":
+			query = query.replace("$ORDERBY", "fbfaveps.date ASC");
+			break;
+		case "default", "newfav":
+		default:
+			query = query.replace("$ORDERBY", "fbfaveps.date DESC");
 			break;
 		}
 		

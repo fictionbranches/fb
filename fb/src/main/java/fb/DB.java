@@ -97,7 +97,7 @@ import jakarta.ws.rs.core.StreamingOutput;
 
 public class DB {
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	public static final String ROOT_ID = "fbadministrator1";
 	public static final String MESSENGER_ID = "fictionbranches";
@@ -569,7 +569,7 @@ public class DB {
 							using fbcomments, fbepisodes 
 							where fbflaggedcomments.comment_id=fbcomments.id and fbcomments.episode_generatedid=fbepisodes.generatedid and 
 							fbepisodes.generatedid=
-									""" + ep.getGeneratedId() + ";").executeUpdate();
+							""" + ep.getGeneratedId() + ";").executeUpdate();
 
 					session.createNativeQuery(
 							"""
@@ -677,7 +677,7 @@ public class DB {
 			Predicate combPred = cb.and(levelPred, notRootPred);
 			query.select(root).where(combPred).orderBy(cb.asc(root.get("author")));
 			
-			return session.createQuery(query).stream().map(FlatUser::new).collect(Collectors.toList());
+			return session.createQuery(query).stream().map(FlatUser::new).toList();
 		} finally {
 			closeSession(session);
 		}
@@ -882,7 +882,7 @@ public class DB {
 						
 			final String pathQuery;
 			{
-				final ArrayList<Long> list = new ArrayList<>(DB.newMapToIdList(ep.getNewMap()).collect(Collectors.toList()));
+				final ArrayList<Long> list = new ArrayList<>(DB.newMapToIdList(ep.getNewMap()).toList());
 				
 				Collections.reverse(list);
 				
@@ -897,7 +897,7 @@ public class DB {
 			final List<FlatEpisode> pathbox = session
 					.createQuery(pathQuery,DBEpisode.class)
 					.stream().map(FlatEpisode::new)
-					.collect(Collectors.toList());
+					.toList();
 			
 			boolean userIsSubscribedToComments;
 			if (user == null) userIsSubscribedToComments = false;
@@ -911,7 +911,7 @@ public class DB {
 	}
 	
 	private static Set<Tag> getTagsForEp(Session sesh, DBEpisode ep) {
-		return Objects.requireNonNullElseGet(DB.getTagsForEpisodes(sesh, Set.of(ep.getGeneratedId())).get(ep.getGeneratedId()), ()->Set.of());
+		return Objects.requireNonNullElseGet(DB.getTagsForEpisodes(sesh, Set.of(ep.getGeneratedId())).get(ep.getGeneratedId()), Set::of);
 	}
 	
 	private static final String CHILD_QUERY = """
@@ -1128,7 +1128,7 @@ public class DB {
 		
 	public static Map<Long, Set<Tag>> getTagsForEpisodes(Session sesh, Set<Long> generatedIds) {
 		
-		if (generatedIds.size() == 0) return Map.of();
+		if (generatedIds.isEmpty()) return Map.of();
 		
 		String query = """
 				SELECT fbtags.id, fbtags.shortname, fbtags.longname, fbtags.description,
@@ -1156,13 +1156,9 @@ public class DB {
 			long createddate = ((BigInteger)arr[i++]).longValue();
 			long generatedId = ((BigInteger)arr[i++]).longValue();
 			Tag tag = new Tag(id, shortname, longname, description, createdbyid, createdbyauthor, createddate, null);
-			
-			Set<Tag> set = ret.get(generatedId);
-			if (set == null) {
-				set = new HashSet<Tag>();
-				ret.put(generatedId, set);
-			}
-			set.add(tag);
+						
+			ret.computeIfAbsent(generatedId, g -> new HashSet<Tag>())
+			.add(tag);
 			
 		}
 		
@@ -1257,7 +1253,7 @@ public class DB {
 			long start = System.nanoTime();
 			LOGGER.warn("Beginning indexing");
 			sesh.createIndexer().startAndWait();
-			LOGGER.warn("Done indexing " + (((double)(System.nanoTime()-start))/1000000000.0));
+			LOGGER.warn("Done indexing " + ((System.nanoTime()-start)/1000000000.0));
 		} catch (InterruptedException e) {
 			LOGGER.error("Interrupted search index", e);
 		} finally {
@@ -1315,8 +1311,6 @@ public class DB {
 	
 	private static Map<FlatEpisode, Set<Tag>> getRecentsPage(Session session, long generatedId, int page, boolean reverse, String tagFilter) {
 				
-//		String whereClause = generatedId==0?"":" WHERE newmap='" + EP_PREFIX + generatedId + "' OR newmap LIKE '" + EP_PREFIX + generatedId + EP_INFIX + "%' ";
-		
 		List<String> whereClausesToAnd = new ArrayList<>();
 		if (generatedId != 0) {
 			final String rootClause = "newmap='" + EP_PREFIX + generatedId + "' OR newmap LIKE '" + EP_PREFIX + generatedId + EP_INFIX + "%'";
@@ -1326,27 +1320,27 @@ public class DB {
 			whereClausesToAnd.add("fbtags.shortname='" + tagFilter + "'");
 		}
 		
-		final String whereClause = whereClausesToAnd.size()==0 ? "" : ("WHERE " + whereClausesToAnd.stream().collect(Collectors.joining(") AND (", "(", ")")));
+		final String whereClause = whereClausesToAnd.isEmpty() ? "" : ("WHERE " + whereClausesToAnd.stream().collect(Collectors.joining(") AND (", "(", ")")));
 		
 		String query = """
-				SELECT 
-					fbepisodes.generatedid,
-					fbepisodes.oldmap,
-					fbepisodes.newmap,
-					fbepisodes.title,
-					fbepisodes.link,
-					fbusers.id AS userid,
-					fbusers.author,
-					fbusers.avatar,
-					fbepisodes.body,
-					fbepisodes.date,
-					fbepisodes.childcount,
-					fbepisodes.parent_generatedid,
-					fbepisodes.viewcount,
-					fbtags.id AS tagid,
-					fbtags.shortname,
-					fbtags.longname,
-					fbtags.description
+				SELECT
+				    fbepisodes.generatedid,
+				    fbepisodes.oldmap,
+				    fbepisodes.newmap,
+				    fbepisodes.title,
+				    fbepisodes.link,
+				    fbusers.id AS userid,
+				    fbusers.author,
+				    fbusers.avatar,
+				    fbepisodes.body,
+				    fbepisodes.date,
+				    fbepisodes.childcount,
+				    fbepisodes.parent_generatedid,
+				    fbepisodes.viewcount,
+				    fbtags.id AS tagid,
+				    fbtags.shortname,
+				    fbtags.longname,
+				    fbtags.description
 				FROM fbepisodes
 				LEFT JOIN fbusers ON fbusers.id=fbepisodes.author_id
 				LEFT JOIN fbepisodetags ON fbepisodetags.episode_generatedid=fbepisodes.generatedid
@@ -1490,7 +1484,7 @@ public class DB {
 	 * @return
 	 * @throws DBException
 	 */
-	public static CommentResultList getRecentComments(int page) throws DBException {
+	public static CommentResultList getRecentComments(int page) {
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1507,7 +1501,7 @@ public class DB {
 				DBComment.class)
 					.stream()
 					.map(Comment::new)
-					.collect(Collectors.toUnmodifiableList());
+					.toList();
 												
 			return new CommentResultList(list, totalCount/COMMENT_PAGE_SIZE+1);
 		}finally {
@@ -1610,7 +1604,7 @@ public class DB {
 				" order by array_length(CAST(string_to_array(replace(replace(fbepisodes.newmap,'"+EP_INFIX+"','-'),'"+EP_PREFIX+"',''),'-') AS bigint[]),1) asc";
 			return session.createNativeQuery(query,DBEpisode.class).stream()
 				.map(FlatEpisode::new)
-				.collect(Collectors.toUnmodifiableList());
+				.toList();
 			
 		} finally {
 			closeSession(session);
@@ -1623,7 +1617,7 @@ public class DB {
 			DBEpisode ep = session.get(DBEpisode.class, generatedId);
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			
-			List<Long> ids = DB.newMapToIdList(ep.getNewMap()).collect(Collectors.toList());
+			List<Long> ids = DB.newMapToIdList(ep.getNewMap()).toList();
 			if (ids.size() > 30) ids = ids.subList(ids.size()-30, ids.size());
 			
 			String query = "select * from fbepisodes where " + 
@@ -1631,7 +1625,7 @@ public class DB {
 				" order by array_length(CAST(string_to_array(replace(replace(fbepisodes.newmap,'"+EP_INFIX+"','-'),'"+EP_PREFIX+"',''),'-') AS bigint[]),1) asc";
 			return session.createNativeQuery(query,DBEpisode.class).stream()
 				.map(FlatEpisode::new)
-				.collect(Collectors.toUnmodifiableList());
+				.toList();
 
 		} finally {
 			closeSession(session);
@@ -2263,7 +2257,7 @@ public class DB {
 	public static List<FlaggedEpisode> getFlags() {
 		Session session = openSession();
 		try {
-			return session.createQuery("from DBFlaggedEpisode flag order by flag.date desc", DBFlaggedEpisode.class).stream().map(FlaggedEpisode::new).collect(Collectors.toList());
+			return session.createQuery("from DBFlaggedEpisode flag order by flag.date desc", DBFlaggedEpisode.class).stream().map(FlaggedEpisode::new).toList();
 		} finally {
 			closeSession(session);
 		}
@@ -2316,7 +2310,7 @@ public class DB {
 	public static List<FlaggedComment> getFlaggedComments() {
 		Session session = openSession();
 		try {
-			return session.createQuery("from DBFlaggedComment mod order by mod.date desc", DBFlaggedComment.class).stream().map(FlaggedComment::new).collect(Collectors.toList());
+			return session.createQuery("from DBFlaggedComment mod order by mod.date desc", DBFlaggedComment.class).stream().map(FlaggedComment::new).toList();
 		} finally {
 			closeSession(session);
 		}
@@ -2325,7 +2319,7 @@ public class DB {
 	public static List<ModEpisode> getMods() {
 		Session session = openSession();
 		try {
-			return session.createQuery("from DBModEpisode mod order by mod.date desc", DBModEpisode.class).stream().map(ModEpisode::new).collect(Collectors.toList());
+			return session.createQuery("from DBModEpisode mod order by mod.date desc", DBModEpisode.class).stream().map(ModEpisode::new).toList();
 		} finally {
 			closeSession(session);
 		}
@@ -2465,7 +2459,7 @@ public class DB {
 					session.delete(pr);
 					session.merge(user);
 				});
-				puList.forEach(pu->session.delete(pu));
+				puList.forEach(session::delete);
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();
@@ -2870,45 +2864,45 @@ public class DB {
 	}
 	
 	private static final String POPULAR_QUERY = """
-			SELECT 
-				generatedid,
-				newmap,
-				link,
-				title,
-				date,
-				MAX(childcount), 
-				MAX(hitscount) AS hits,
-				MAX(viewscount) AS views, 
-				MAX(upvotescount) AS upvotes,
-				fbtags.id,
-				fbtags.shortname,
-				fbtags.longname,
-				fbtags.description
+			SELECT
+			    generatedid,
+			    newmap,
+			    link,
+			    title,
+			    date,
+			    MAX(childcount),
+			    MAX(hitscount) AS hits,
+			    MAX(viewscount) AS views,
+			    MAX(upvotescount) AS upvotes,
+			    fbtags.id,
+			    fbtags.shortname,
+			    fbtags.longname,
+			    fbtags.description
 			FROM (
-			    (SELECT 
-			    	fbepisodes.generatedid,
-			    	fbepisodes.newmap,
-			    	fbepisodes.link,
-			    	fbepisodes.title,
-			    	fbepisodes.date,
-			    	childcount, 
-			    	fbepisodes.viewcount AS hitscount, 
-			    	COUNT(*) AS viewscount, 
-			    	0 AS upvotescount
+			    (SELECT
+			        fbepisodes.generatedid,
+			        fbepisodes.newmap,
+			        fbepisodes.link,
+			        fbepisodes.title,
+			        fbepisodes.date,
+			        childcount,
+			        fbepisodes.viewcount AS hitscount,
+			        COUNT(*) AS viewscount,
+			        0 AS upvotescount
 			      FROM fbepisodes, fbepisodeviews
 			      WHERE fbepisodes.generatedid=fbepisodeviews.episode_generatedid
 			    GROUP BY fbepisodes.generatedid)
-				UNION
-			    (SELECT 
-			    	fbepisodes.generatedid,
-			    	fbepisodes.newmap,
-			    	fbepisodes.link,
-			    	fbepisodes.title,
-			    	fbepisodes.date,
-			    	childcount, 
-			    	fbepisodes.viewcount AS hitscount, 
-			    	0 AS viewscount, 
-			    	COUNT(*) AS upvotescount
+			    UNION
+			    (SELECT
+			        fbepisodes.generatedid,
+			        fbepisodes.newmap,
+			        fbepisodes.link,
+			        fbepisodes.title,
+			        fbepisodes.date,
+			        childcount,
+			        fbepisodes.viewcount AS hitscount,
+			        0 AS viewscount,
+			        COUNT(*) AS upvotescount
 			      FROM fbepisodes,fbupvotes
 			      WHERE fbepisodes.generatedid=fbupvotes.episode_generatedid
 			    GROUP BY fbepisodes.generatedid)
@@ -3061,7 +3055,6 @@ public class DB {
 		}
 	}
 	
-	//private static Map<PopularUserEnumContainer, PopularUserContainer> popularUsersMap = Collections.synchronizedMap(new HashMap<PopularUserEnumContainer,PopularUserContainer>()); 
 	private static ConcurrentHashMap<PopularUserEnumContainer, PopularUserContainer> popularUsersMap = new ConcurrentHashMap<>(); 
 	
 	private static class PopularUserEnumContainer {
@@ -3266,7 +3259,7 @@ public class DB {
 			if (!all) q.append("and note.read=false ");
 			q.append("order by note.date desc");
 			
-			List<Notification> result = session.createQuery(q.toString(), DBNotification.class).setMaxResults(100).setFirstResult(page*100).stream().map(Notification::new).collect(Collectors.toList());
+			List<Notification> result = session.createQuery(q.toString(), DBNotification.class).setMaxResults(100).setFirstResult(page*100).stream().map(Notification::new).toList();
 			
 			try {
 				session.beginTransaction();
@@ -3468,8 +3461,8 @@ public class DB {
 	}
  	
  	public static final Comparator<String> newMapComparator = (a,b)->{
- 		List<Long> aList = DB.newMapToIdList(a).collect(Collectors.toList());
-		List<Long> bList = DB.newMapToIdList(b).collect(Collectors.toList());
+ 		List<Long> aList = DB.newMapToIdList(a).toList();
+		List<Long> bList = DB.newMapToIdList(b).toList();
 		for (int i=0; i<aList.size() && i<bList.size(); ++i) {
 			Long x = aList.get(i);
 			Long y = bList.get(i);
@@ -3498,7 +3491,7 @@ public class DB {
 			
 			final String query = 
 					"""
-					SELECT fbtags.id,shortname,longname,description,createdby_id,createddate,editedby_id,editeddate,fbusers.author,
+					SELECT fbtags.id,shortname,longname,description,createdby_id,createddate,fbusers.author,
 					COUNT(fbepisodetags.episode_generatedid) AS ct 
 					FROM fbtags 
 					LEFT JOIN fbepisodetags ON fbepisodetags.tag_id=fbtags.id 
@@ -3520,10 +3513,8 @@ public class DB {
 				String description = (String)arr[3];
 				String createdby_id = (String)arr[4];
 				long createddate = ((BigInteger)arr[5]).longValue();
-//				String editedby_id = (String)arr[6];
-//				long editeddate = ((BigInteger)arr[7]).longValue();
-				String author = (String)arr[8];
-				long count = ((BigInteger)arr[9]).longValue();
+				String author = (String)arr[6];
+				long count = ((BigInteger)arr[7]).longValue();
 								
 				return new Tag(id, shortname, longname, description, createdby_id, author, createddate, count);
 		 	}).toList();
@@ -3557,7 +3548,7 @@ public class DB {
  			if (ep == null) throw new DBException("Not found: " + generatedId);
  			Set<Tag> epTags = DB.getTagsForEp(sesh, ep);
  			List<Tag> allTags = getAllTags(sesh).map(Tag::new).toList();
- 			return allTags.stream().collect(Collectors.toMap(tag -> tag, tag -> epTags.contains(tag), (a, b) -> a||b, LinkedHashMap::new));
+ 			return allTags.stream().collect(Collectors.toMap(tag -> tag, epTags::contains, (a, b) -> a||b, LinkedHashMap::new));
  		} finally {
  			DB.closeSession(sesh);
  		}
@@ -3609,13 +3600,13 @@ public class DB {
 			.filter(tag -> !formParams.containsKey(tag.getShortName()) && currentTagsShortNames.contains(tag.getShortName()))
 			.collect(Collectors.toCollection(HashSet::new));
 				
-		if (addTags.size() > 0 || delTags.size() > 0) {
+		if (!addTags.isEmpty() || !delTags.isEmpty()) {
 			sesh.beginTransaction();
 			try {
 				for (DBTag tag : addTags) {
 					sesh.save(new DBEpisodeTag(ep, tag, tagger));
 				}
-				if (delTags.size() > 0) {
+				if (!delTags.isEmpty()) {
 					String delete = """
 							DELETE FROM fbepisodetags
 							WHERE episode_generatedid=

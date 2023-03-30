@@ -14,7 +14,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.mail.Authenticator;
 import javax.mail.Message;
@@ -53,7 +54,7 @@ import jakarta.ws.rs.core.Cookie;
 
 public class Accounts {
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	public static final int AUTHOR_LENGTH_LIMIT = 32;
 	
@@ -122,19 +123,12 @@ public class Accounts {
 	 */
 	private static void initAccounts() {
 		readSessionsFromFile();
-		Thread t = new Thread(()-> {
-				while (true) {
-				try {
-					Thread.sleep(1000l * 60l * 60l);// run every hour
-				} catch (InterruptedException e) {
-					LOGGER.error("session prunning thread interrupted", e);
-				}
-				Accounts.pruneSessions();
-				DB.pruneQueues();
-			}
-		});
-		t.setName("AccountTrackerThread");
-		t.start();
+		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+			LOGGER.info("RUNNING SESSION/QUEUE PRUNNER");
+			Accounts.pruneSessions();
+			DB.pruneQueues();
+			LOGGER.info("RAN SESSION/QUEUE PRUNNER");
+		}, 0, 1, TimeUnit.HOURS);
 	}
 	
 	/**
@@ -171,16 +165,15 @@ public class Accounts {
 			sb.append("</div>");
 			return sb.toString();
 		}
-		if (user == null) return "<div class=\"loginstuff\">\n"
-				+ "<p><a href=/fb/createaccount>Create an account</a></p>"
-				+ "<p>or log in:<br/>\n"
-				+ "<form id=\"loginForm\" action=\"/fb/loginpost\" method=\"post\">\n"
-				+ "<input type=\"text\" id=\"loginEmail\" class=\"logintext\" name=\"email\" placeholder=\"username or email\" /><br/>\n"
-				+ "<input type= \"password\" id=\"loginPassword\" class=\"logintext\" name= \"password\" placeholder=\"password\" /><br/>\n"
-				+ "<input type= \"submit\" id=\"loginButton\" value= \"Log in\" />\n"
-				+ "</form>"
-				+ "<div id=\"loginResultDiv\" ></div>" 
-				+ "</p><p><a href=/fb/passwordreset>I forgot my password</a></p></div>";
+		if (user == null) return """
+				<div class="loginstuff">
+				<p><a href=/fb/createaccount>Create an account</a></p><p>or log in:<br/>
+				<form id="loginForm" action="/fb/loginpost" method="post">
+				<input type="text" id="loginEmail" class="logintext" name="email" placeholder="username or email" /><br/>
+				<input type= "password" id="loginPassword" class="logintext" name= "password" placeholder="password" /><br/>
+				<input type= "submit" id="loginButton" value= "Log in" />
+				</form><div id="loginResultDiv" ></div></p><p><a href=/fb/passwordreset>I forgot my password</a></p></div>
+				""";
 		
 		String logoutButton = "<form id=\"logoutButton\" class=\"simplebutton\" action= \"/fb/logout\" method=\"get\"><input class=\"simplebutton\" type= \"submit\" value= \"Log out\"/></form>";
 				
@@ -976,8 +969,8 @@ public class Accounts {
 				DiffRowGenerator generator = DiffRowGenerator.create()
 		                .showInlineDiffs(true)
 		                .inlineDiffByWord(true)
-		                .oldTag(f -> (f?"<del>":"</del>"))
-		                .newTag(f -> (f?"<strong>":"</strong>"))
+		                .oldTag(f -> (Boolean.TRUE.equals(f)?"<del>":"</del>"))
+		                .newTag(f -> (Boolean.TRUE.equals(f)?"<strong>":"</strong>"))
 		                .build();
 				List<DiffRow> rows = generator.generateDiffRows(listify(escape(oldBody)), listify(escape(mod.body)));
 				StringBuilder out = new StringBuilder();
@@ -1010,7 +1003,7 @@ public class Accounts {
 	}
 	
 	private static List<String> listify(String s) {
-		return new BufferedReader(new StringReader(s)).lines().collect(Collectors.toList());
+		return new BufferedReader(new StringReader(s)).lines().toList();
 	}
 	
 	public static void clearMod(long id, Cookie fbtoken, boolean accepted) throws FBLoginException {
@@ -1182,8 +1175,11 @@ public class Accounts {
 				sb.append("<a href=\"/fb/user/" + a.comment.user.id + "\">" + escape(a.comment.user.author) + "</a> left a <a href=\"/fb/story/" + a.comment.episode.generatedId + "#comment" + a.comment.id + "\">comment</a> on " + escape(a.comment.episode.title));
 				break;
 			case DBNotification.MODIFICATION_RESPONSE:
-				sb.append("<a href=\"/fb/user/" + a.sender.id + "\">" + escape(a.sender.author) + "</a> "+(a.approved?"approved":"rejected")+" your request to modify <a href=\"/fb/story/" + a.episode.generatedId + " \">"+escape(a.episode.link)+"</a>");
+				sb.append("<a href=\"/fb/user/" + a.sender.id + "\">" + escape(a.sender.author) + "</a> "+(Boolean.TRUE.equals(a.approved)?"approved":"rejected")+" your request to modify <a href=\"/fb/story/" + a.episode.generatedId + " \">"+escape(a.episode.link)+"</a>");
 				break;
+			default:
+				if (a.body != null && a.body.length() > 0) sb.append("<p>" + a.body + "</p>");
+				else sb.append("<p>Invalid notification</p>");
 			}
 			sb.append("<p>(" + Dates.outputDateFormat2(a.date) + ")</p>\n");
 			sb.append("<hr/>\n");

@@ -43,7 +43,7 @@ import jakarta.ws.rs.core.Response;
 @Path("fbapi")
 public class JSONStuff {
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 
 	private final ThreadLocal<Gson> g = ThreadLocal.withInitial(()->new GsonBuilder().setPrettyPrinting().create());
 	public Gson g() {
@@ -62,7 +62,7 @@ public class JSONStuff {
 	@Path("markdowntohtml")
 	@Produces(MediaType.TEXT_HTML)
 	public Response markdownToHTML(@FormParam("body") String body) {
-		System.out.println("markdownToHTML API request: " + body.length());
+		LOGGER.info("markdownToHTML API request: " + body.length());
 		return Response.ok(Story.formatBody(body)).build();
 	}
 	
@@ -125,7 +125,7 @@ public class JSONStuff {
 			this.path = DB.newMapToIdList(ep.newMap).mapToLong(x->x).toArray();
 			this.hits=ep.hits;
 			this.body=sendhtml?Story.formatBody(ep.body):ep.body;
-			this.children = ep.children.stream().map(JSONChildEpisode::new).collect(Collectors.toList());
+			this.children = ep.children.stream().map(JSONChildEpisode::new).toList();
 			this.tags = ep.tags.stream().map(tag -> tag.shortName).sorted().toList();
 		}		
 	}
@@ -239,7 +239,7 @@ public class JSONStuff {
 		}
 		
 		HashMap<String,Object> ret = new HashMap<>();
-		List<JSONSimpleEpisode> episodes = roots.stream().map(JSONSimpleEpisode::new).collect(Collectors.toList());
+		List<JSONSimpleEpisode> episodes = roots.stream().map(JSONSimpleEpisode::new).toList();
 		ret.put("episodes",episodes);
 		if (user != null) ret.put("user",new JSONUser(user));
 		return Response.ok(g().toJson(ret)).build();
@@ -290,7 +290,7 @@ public class JSONStuff {
 		Session session = DB.openSession();
 		try {
 			String order = "DESC";
-			if (reverse != null && reverse.trim().toLowerCase().equals("true")) order = "ASC";
+			if (reverse != null && reverse.trim().equalsIgnoreCase("true")) order = "ASC";
 			
 			String query = "SELECT generatedid FROM fbepisodes ";
 			if (before != null || after != null) query += "WHERE ";

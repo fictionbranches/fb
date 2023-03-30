@@ -10,6 +10,7 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -22,7 +23,7 @@ import com.google.gson.Gson;
 
 public class GoogleRECAPTCHA {
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	private GoogleRECAPTCHA() {}
 	
@@ -81,11 +82,7 @@ public class GoogleRECAPTCHA {
 	 * @return
 	 */
 	private static byte[] getBytes(String s) {
-		try {
-			return s.getBytes("UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			throw new AssertionError("UTF-8 is not supported");
-		}
+		return s.getBytes(StandardCharsets.UTF_8);
 	}
 	
 	/**
@@ -130,7 +127,7 @@ public class GoogleRECAPTCHA {
 		}
 		Reader in;
 		try {
-			in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+			in = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
 		} catch (UnsupportedEncodingException e) {
 			LOGGER.error("UnsupportedEncodingException2? Really? wtf ", e);
 			throw new GoogleCheckException("Tell Phoenix you got recaptcha UnsupportedEncodingException2");

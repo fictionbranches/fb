@@ -41,7 +41,7 @@ import jakarta.ws.rs.core.Response;
 @Path("fb")
 public class AdminStuff {
 	
-	//private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	//private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	@GET
 	@Path("admin")
@@ -533,7 +533,6 @@ public class AdminStuff {
 		try {
 			user = Accounts.getFlatUser(fbtoken);
 		} catch (FBLoginException e) {
-			System.out.println("A");
 			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA", "You are not authorized to do that")).build();
 		}
 		if (user.level < 10) 
@@ -682,7 +681,7 @@ public class AdminStuff {
 				if (allowed.contains(c+"")) continue;
 				illegal.add(c);
 			}
-			if (illegal.size() > 0) {
+			if (!illegal.isEmpty()) {
 				return Response.ok("Disallowed characters: " + illegal.stream().sorted().map(c -> "'" + c + "'").collect(Collectors.joining(", "))).build();
 			}
 		}

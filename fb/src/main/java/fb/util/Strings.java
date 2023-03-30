@@ -1,6 +1,5 @@
 package fb.util;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -29,7 +28,7 @@ import jakarta.ws.rs.core.Cookie;
 
 public class Strings {
 
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 
 	/**
 	 * use for any random numbers needed anywhere
@@ -273,19 +272,19 @@ public class Strings {
 	
 	public static String themeToCss(FlatUser user) {
 		
-		final String base1 = 
-				".fbepisodebody {\n" + 
-				"	width: 90%;\n" + 
-				"	text-align: left;\n" + 
-				"}\n"
-				;
-		final String base2 = 
-				"@media (min-width: $BIGWIDTHpx)  { \n" + 
-				"	.fbepisodebody {\n" + 
-				"		width: $WIDTHpx;\n" + 
-				"	}\n" + 
-				"}\n"
-				;
+		final String base1 = """
+				.fbepisodebody {
+				  width: 90%;
+				  text-align: left;
+				}
+				""";
+		final String base2 = """
+				@media (min-width: $BIGWIDTHpx)  {
+				  .fbepisodebody {
+				    width: $WIDTHpx;
+				  }
+				}
+				""";
 		
 		if (user == null) {
 			int width = 900;
@@ -308,8 +307,9 @@ public class Strings {
 		if (user.hideImages) {
 			theme += """
 					div.fbepisodebody p img {
-						display: none;
-					}""";
+					    display: none;
+					}
+					""";
 		}
 		
 		int width = user.bodyTextWidth;
@@ -344,13 +344,11 @@ public class Strings {
 	}
 	
 	public static void safeDeleteFileDirectory(String dirPath) {
-		File f = new File(dirPath);
-		if (f.exists()) {
-			if (f.isDirectory()) {
-				Path directory = Paths.get(dirPath);
-
+		Path f = Paths.get(dirPath);
+		if (Files.exists(f)) {
+			if (Files.isDirectory(f)) {
 				try {
-					Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+					Files.walkFileTree(f, new SimpleFileVisitor<Path>() {
 						@Override
 						public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 							Files.delete(file);
@@ -367,7 +365,11 @@ public class Strings {
 					LOGGER.error("Error deleting directory " + dirPath, e);
 				}
 			} else {
-				f.delete();
+				try {
+					Files.delete(f);
+				} catch (IOException e) {
+					LOGGER.error("Error deleting directory " + dirPath, e);
+				}
 			}
 		}
 	}

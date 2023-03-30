@@ -48,7 +48,7 @@ import jakarta.ws.rs.core.UriInfo;
 @Path("fb")
 public class GetStuff {
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	@GET
 	@Path("asdf")
@@ -174,35 +174,22 @@ public class GetStuff {
 		
 		if (sort != null) {
 			ResponseBuilder ret = Response.seeOther(createURI("/fb/story/" + generatedId + "#children"));
-			switch (sort.toLowerCase()) {
-			case "oldest":
-			case "newest":
-			case "mostfirst":
-			case "leastfirst":
-			case "random":
-				ret = ret.cookie(newCookie("fbchildsort", sort.toLowerCase(), uriInfo.getRequestUri().getHost()));
-			}
+			ret = switch (sort.toLowerCase()) {
+				case "oldest", "newest", "mostfirst", "leastfisrt", "random" -> ret.cookie(newCookie("fbchildsort", sort.toLowerCase(), uriInfo.getRequestUri().getHost()));
+				default -> ret;
+			};
 			return ret.build();
 		}
 		
 		int sortNum = 0;
-		if (fbchildsort != null) switch (fbchildsort.getValue().toLowerCase()) {
-		case "oldest":
-			sortNum = 0;
-			break;
-		case "newest":
-			sortNum = 1;
-			break;
-		case "mostfirst":
-			sortNum = 2;
-			break;
-		case "leastfirst":
-			sortNum = 3;
-			break;
-		case "random":
-			sortNum = 4;
-			break;
-		}
+		if (fbchildsort != null) sortNum = switch (fbchildsort.getValue().toLowerCase()) {
+			case "oldest" -> 0;
+			case "newest" -> 1;
+			case "mostfirst" -> 2;
+			case "leastfirst" -> 3;
+			case "random" -> 4;
+			default -> 0;
+		};
 		
 		boolean parseMarkdown = fbjs==null || !"true".equals(fbjs.getValue());
 		return Response.ok(Story.getHTML(generatedId, sortNum, advancedChildren, fbtoken, parseMarkdown)).build();
@@ -657,16 +644,6 @@ public class GetStuff {
 		}
 		Session session = DB.openSession();
 		try {
-			
-			/*@SuppressWarnings("unused")
-			class StatResult {
-				String day;
-				int ct;
-				public StatResult(String day, int ct) {
-					this.day = day;
-					this.ct = ct;
-				}
-			}*/
 			
 			String query = "SELECT d.day,count(fbepisodes.date) as ct from (\n" + 
 					"    SELECT generate_series('"+start+"'\\:\\:timestamp, '"+end+"'\\:\\:timestamp, '1 day')\n" + 

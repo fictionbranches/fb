@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -37,7 +39,7 @@ import jakarta.ws.rs.core.Response;
 @Path("fb")
 public class RssStuff {
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	@GET
 	@Path("rss")
@@ -93,19 +95,7 @@ public class RssStuff {
 	private static HashMap<Long,String> feeds;
 	static {
 		updateFeeds();
-		Thread t = new Thread(()-> {
-			final long sleepTime = 1000l*60l*60l;
-			while (true) {
-				try {
-					Thread.sleep(sleepTime);
-					updateFeeds();
-				} catch (InterruptedException e) {
-					LOGGER.error("Feed updater thread interrupted", e);
-				}
-			}
-		});
-		t.setName("RSSFeedUpdater");
-		t.start();
+		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(RssStuff::updateFeeds, 1, 1, TimeUnit.HOURS);
 	}
 	
 	private static void updateFeeds() {
@@ -118,7 +108,7 @@ public class RssStuff {
 			}
 		} finally {
 			feeds = list;
-			LOGGER.info("Updated RSS feeds: " + list.keySet().stream().map(Object::toString).collect(Collectors.joining(" ")));
+			LOGGER.info("Updated RSS feeds: %s", list.keySet().stream().map(Object::toString).collect(Collectors.joining(" ")));
 		}
 		commentsFeed = generateComments();
 	}
@@ -167,13 +157,7 @@ public class RssStuff {
 		feed.setLink("https://" + Strings.getDOMAIN());
 		feed.setDescription("Fiction Branches is an online software engine which allows the production of multi-plotted stories.");
 		final ArrayList<SyndEntry> entries = new ArrayList<>();
-		List<Comment> coms;
-		try {
-			coms = DB.getRecentComments(1).comments;
-		} catch (DBException e) {
-			LOGGER.info("Couldn't get recents for RSS");
-			return feedToString(feed);
-		}
+		List<Comment> coms = DB.getRecentComments(1).comments;
 		for (Comment com : coms) {
 			SyndEntry entry = new SyndEntryImpl();
 			entry.setTitle(escape("Comment on " + com.episode.link));

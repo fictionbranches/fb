@@ -17,7 +17,7 @@ import fb.util.Strings;
 @Path("fb")
 public class LegacyStuff {
 	
-	//private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	//private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	@GET
 	@Path("get/{oldmap}")

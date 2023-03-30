@@ -23,7 +23,7 @@ import jakarta.ws.rs.core.Response;
 @Path("")
 public class DevStuff {	
 	
-	//private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	//private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 		
 	@GET
 	public static Response getRoot() {
@@ -144,4 +144,5 @@ public class DevStuff {
 	private static Response readTextResource(String filename) {
 		return Response.ok(Text.readFileFromJar(filename)).build();
 	}
+	
 }

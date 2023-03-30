@@ -40,7 +40,7 @@ import jakarta.ws.rs.core.UriInfo;
 @Path("fb")
 public class AddStuff {
 		
-	//private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+	//private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	/**
 	 * Returns the form for adding new episodes
@@ -160,7 +160,7 @@ public class AddStuff {
 			@CookieParam("fbtoken") Cookie fbtoken) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 		
-		final boolean subscribe = value != null && value.trim().toLowerCase().equals("true");
+		final boolean subscribe = value != null && value.trim().equalsIgnoreCase("true");
 		
 		Session session = DB.openSession();
 		try {
@@ -192,7 +192,7 @@ public class AddStuff {
 				cs.setEpisode(episode);
 				cs.setDate(new Date());
 				session.save(cs);
-			} else {
+			} else if (opt.isPresent()){
 				session.delete(opt.get());
 			}
 			try {

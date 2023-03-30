@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 import org.slf4j.Logger;
@@ -16,8 +17,8 @@ import fb.objects.FlatEpisode;
 
 public class Discord {
 	
-	private final static Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
-	
+	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
+		
 	public static synchronized void notifyError(String message) {
 		if (message.length() > 2000) message = message.substring(0,2000);
 		HookMessage form = new HookMessage("FB Errors", message);
@@ -63,7 +64,7 @@ public class Discord {
 	private static void sendToDiscordHook(String hookURL, Object data) {
 		try {
 			final String postData = new Gson().toJson(data);
-			final byte[] postDataBytes = postData.getBytes("UTF-8");
+			final byte[] postDataBytes = postData.getBytes(StandardCharsets.UTF_8);
 			
 			final HttpURLConnection conn = (HttpURLConnection) new URL(hookURL).openConnection();
 
@@ -76,7 +77,7 @@ public class Discord {
 			conn.setDoOutput(true);
 			conn.getOutputStream().write(postDataBytes);
 
-			try (Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
+			try (Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
 				while (in.read() >= 0);
 			}
 		} catch (Exception e) {
