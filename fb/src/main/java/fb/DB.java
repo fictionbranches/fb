@@ -17,6 +17,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1383,9 +1384,8 @@ public class DB {
 			String editorId = null;
 			String editorName = null;
 			int childCount = (int)arr[10];
-			Long parentId = ((BigInteger)arr[11]).longValue();
+			Long parentId = arr[11]==null ? null : ((BigInteger)arr[11]).longValue();
 			long hits = ((BigInteger)arr[12]).longValue();
-			
 			
 			
 			Long tagid = arr[13] == null ? null : ((BigInteger)arr[13]).longValue();
@@ -3475,7 +3475,7 @@ public class DB {
  	public static Set<Tag> getAllTags() {
 		Session sesh = DB.openSession();
 		try {
-			return getAllTags(sesh).map(Tag::new).collect(Collectors.toSet());
+			return getAllTags(sesh).map(Tag::new).sorted(Comparator.comparing(tag -> tag.shortName.toLowerCase())).collect(Collectors.toCollection(LinkedHashSet::new));
 		} finally {
 			DB.closeSession(sesh);
 		}
