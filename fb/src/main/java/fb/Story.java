@@ -394,6 +394,15 @@ public class Story {
 	}
 	
 	/**
+	 * If tagFilter is a tag from a query param, return a String containing a valid tag name, or null if invalid
+	 * @param tagFilter
+	 * @return
+	 */
+	private static String validTag(String tagFilter) {
+		return DB.getAllTags().stream().map(tag -> tag.shortName).filter(tag -> tag.equals(tagFilter)).findAny().orElse(null);
+	}
+	
+	/**
 	 * Return the complete HTML page of the recents table, including data
 	 * 
 	 * @return HTML recents
@@ -408,6 +417,8 @@ public class Story {
 			user = null;
 		}
 		
+		tagFilter = validTag(tagFilter);
+		
 		RecentsResultList prof;
 		try {
 			prof = DB.getRecents(root, page, reverse, tagFilter);
@@ -417,9 +428,9 @@ public class Story {
 		
 		
 		return Strings.getFile("recents.html", user)
-				.replace("$TAGS", recentsPageTagsHtmlForm(root, page, tagFilter))
+				.replace("$TAGS", recentsPageTagsHtmlForm(root, page, tagFilter, reverse))
 				.replace("$CHILDREN", getRecentsTableImpl(prof.episodes, root))
-				.replace("$PREVNEXT", recentsTablePrevNext(prof, root, page, reverse))
+				.replace("$PREVNEXT", recentsTablePrevNext(prof, root, page, reverse, tagFilter))
 				.replace("$NUMPAGES", Integer.toString(prof.numPages))
 				.replace("$TITLE", reverse?"Oldest":"Recent");
 	}
@@ -463,7 +474,7 @@ public class Story {
 		return sb.toString();
 	}
 	
-	private static String recentsPageTagsHtmlForm(int root, int page, String tagFilter) {
+	private static String recentsPageTagsHtmlForm(int root, int page, String tagFilter, boolean reverse) {
 		final Set<Tag> allTags = DB.getAllTags();		
 		boolean tagSelected = false;
 		StringBuilder tagsHTML = new StringBuilder();
@@ -472,55 +483,73 @@ public class Story {
 				tagsHTML.append(tag.shortName + " ");
 				tagSelected = true;
 			} else {
-				tagsHTML.append("<a href='/fb/recent?story=" + root + "&page=" + page + "&tag=" + tag.shortName + "'>" + tag.shortName + "</a> ");
+				tagsHTML.append(recentsTablePrevNextItem(root, 1, reverse, tag.shortName, false, tag.shortName));
 			}
 		}
 		if (tagSelected) {
-			tagsHTML.append("<a href='/fb/recent?story=" + root + "&page=" + page + "'>Unselect All</a> ");
+			tagsHTML.append(recentsTablePrevNextItem(root, 1, reverse, null, false, "Unselect All"));
 		}
 		return tagsHTML.toString();
 	}
 	
-	private static String recentsTablePrevNext(RecentsResultList prof, int root, int page, boolean reverse) {
+	private static String recentsTablePrevNext(RecentsResultList prof, int root, int page, boolean reverse, String tag) {
 		StringBuilder prevNext = new StringBuilder();
 		prevNext.append("<div id=recentcontainer>");
 		if (prof.numPages <= 8) {
 			for (int i = 1; i <= prof.numPages; ++i) {
 				if (i == page) prevNext.append(i + " ");
-				else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse ? "&reverse" : "") + ">" + i + "</a> ");
+				else prevNext.append(recentsTablePrevNextItem(root, i, reverse, tag, true, null));
 			}
 		} else {
 			if (page <= 3) { // 1 2 3 4 ... n
 				for (int i = 1; i <= 4; ++i) {
 					if (i == page) prevNext.append(i + " ");
-					else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse ? "&reverse" : "") + ">" + i + "</a> ");
+					else prevNext.append(recentsTablePrevNextItem(root, i, reverse, tag, true, null));
 				}
 				prevNext.append("... ");
-				prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + prof.numPages + (reverse ? "&reverse" : "") + ">" + prof.numPages + "</a> ");
+				prevNext.append(recentsTablePrevNextItem(root, prof.numPages, reverse, tag, true, null));
 			} else if (page >= prof.numPages - 3) { // 1 ... n-3 n-2 n-1 n
-				prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + 1 + (reverse ? "&reverse" : "") + ">" + 1 + "</a> ");
+				prevNext.append(recentsTablePrevNextItem(root, 1, reverse, tag, true, null));
 				prevNext.append("... ");
 				for (int i = prof.numPages - 3; i <= prof.numPages; ++i) {
 					if (i == page) prevNext.append(i + " ");
-					else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse ? "&reverse" : "") + ">" + i + "</a> ");
+					else prevNext.append(recentsTablePrevNextItem(root, i, reverse, tag, true, null));
 				}
 			} else { // 1 ... x-2 x-1 x x+1 x+2 ... n
-				prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + 1 + (reverse ? "&reverse" : "") + ">" + 1 + "</a> ");
+				prevNext.append(recentsTablePrevNextItem(root, 1, reverse, tag, true, null));
 				prevNext.append("... ");
 				for (int i = page - 2; i <= page + 2; ++i) {
 					if (i == page) prevNext.append(i + " ");
-					else prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + i + (reverse ? "&reverse" : "") + ">" + i + "</a> ");
+					else prevNext.append(recentsTablePrevNextItem(root, i , reverse, tag, true, null));
 				}
 				prevNext.append("... ");
-				prevNext.append("<a class=\"monospace\" href=?story=" + root + "&page=" + prof.numPages + (reverse ? "&reverse" : "") + ">" + prof.numPages + "</a> ");
+				prevNext.append(recentsTablePrevNextItem(root, prof.numPages, reverse, tag, true, null));
 			}
 		}
 
 		prevNext.append("</div></p><p>");
 
-		if (reverse) prevNext.append("<a href=?story=" + root + ">Recent episodes</a>");
-		else prevNext.append("<a href=?story=" + root + "?reverse>Oldest episodes</a>");
+		prevNext.append(recentsTablePrevNextItem(root, page, !reverse, tag, false, reverse ? "Recent episodes" : "Oldest episodes"));
 		return prevNext.toString();
+	}
+	
+	/**
+	 * 
+	 * @param root which root story to query, 0 for all stories
+	 * @param page 
+	 * @param reverse 
+	 * @param tag single tag shortname, must be valid
+	 * @param mono whether text should be monospaced
+	 * @param name display name of item, or null to use page number as name
+	 * @return
+	 */
+	private static String recentsTablePrevNextItem(int root, int page, boolean reverse, String tag, boolean mono, Object name) {
+		if (tag != null && tag.length() == 0) tag = null;
+		return "<a " + (mono ? "class=\"monospace\" " : "") + "href=?story=" + root + "&page=" + page + (reverse ? "&reverse" : "") + recentsTableTagParam(tag) + ">" + (name==null?page:name) + "</a> ";
+	}
+	
+	private static String recentsTableTagParam(String tag) {
+		return (tag==null ? "" : "&tag="+tag);
 	}
 		
 	/**

@@ -83,6 +83,7 @@ import fb.objects.EpisodeWithChildren;
 import fb.objects.FlaggedComment;
 import fb.objects.FlaggedEpisode;
 import fb.objects.FlatEpisode;
+import fb.objects.FlatEpisodeWithTags;
 import fb.objects.FlatUser;
 import fb.objects.ModEpisode;
 import fb.objects.Notification;
@@ -1310,6 +1311,7 @@ public class DB {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	private static Map<FlatEpisode, Set<Tag>> getRecentsPage(Session session, long generatedId, int page, boolean reverse, String tagFilter) {
 				
 		List<String> whereClausesToAnd = new ArrayList<>();
@@ -1318,7 +1320,7 @@ public class DB {
 			whereClausesToAnd.add(rootClause);
 		}
 		if (tagFilter != null && tagFilter.length() > 0) {
-			whereClausesToAnd.add("fbtags.shortname='" + tagFilter + "'");
+			whereClausesToAnd.add("EXISTS (SELECT fbepisodetags.id FROM fbepisodetags INNER JOIN fbtags ON fbtags.id=fbepisodetags.tag_id WHERE episode_generatedid=fbepisodes.generatedid AND fbtags.shortname='"+tagFilter+"')");
 		}
 		
 		final String whereClause = whereClausesToAnd.isEmpty() ? "" : ("WHERE " + whereClausesToAnd.stream().collect(Collectors.joining(") AND (", "(", ")")));
@@ -1338,15 +1340,13 @@ public class DB {
 				    fbepisodes.childcount,
 				    fbepisodes.parent_generatedid,
 				    fbepisodes.viewcount,
-				    fbtags.id AS tagid,
-				    fbtags.shortname,
-				    fbtags.longname,
-				    fbtags.description
+				    array_to_string(array_agg(distinct fbtags.shortname),',')
 				FROM fbepisodes
 				LEFT JOIN fbusers ON fbusers.id=fbepisodes.author_id
 				LEFT JOIN fbepisodetags ON fbepisodetags.episode_generatedid=fbepisodes.generatedid
 				LEFT JOIN fbtags ON fbtags.id=fbepisodetags.tag_id
 				$WHERECLAUSE
+				GROUP BY generatedid,oldmap,newmap,title,link,userid,author,avatar,body,fbepisodes.date,childcount,parent_generatedid,viewcount
 				ORDER BY date $ORDER
 				OFFSET $PAGE_OFFSET
 				LIMIT $PAGE_SIZE
@@ -1356,18 +1356,10 @@ public class DB {
 				.replace("$PAGE_OFFSET", String.valueOf(PAGE_SIZE*page))
 				.replace("$PAGE_SIZE", String.valueOf(PAGE_SIZE))
 				;
-						
-		class EpTag {
-			public final FlatEpisode ep;
-			public final Tag tag;
-			private EpTag(FlatEpisode ep, Tag tag) {
-				this.ep = ep;
-				this.tag = tag;
-			}
-		}
+												
+		Map<String, Tag> allTags = DB.getAllTags(session).map(Tag::new).collect(Collectors.toMap(tag -> tag.shortName, tag -> tag));
 		
-		@SuppressWarnings("unchecked")
-		List<EpTag> list = session.createNativeQuery(query).stream().map(x -> {
+		return ((Stream<Object>)session.createNativeQuery(query).stream()).map(x -> {
 			Object[] arr = (Object[])x;
 			
 			long epid = ((BigInteger)arr[0]).longValue();
@@ -1387,34 +1379,17 @@ public class DB {
 			Long parentId = arr[11]==null ? null : ((BigInteger)arr[11]).longValue();
 			long hits = ((BigInteger)arr[12]).longValue();
 			
+			String tagNamesStr = (String)arr[13];
+			final Set<Tag> tags;
+			if (tagNamesStr.length() == 0) tags = Set.of();
+			else {
+				tags = new HashSet<>();
+				for (String name : tagNamesStr.split(",")) tags.add(allTags.get(name));
+			}
 			
-			Long tagid = arr[13] == null ? null : ((BigInteger)arr[13]).longValue();
-			String shortName = (String)arr[14];
-			String longName = (String)arr[15];
-			String description = (String)arr[16];
-			String createdById = null;
-			String createdByAuthor = null;
-			long createdDate = 0;
-			Long count = null;
-
-			final FlatEpisode ep = new FlatEpisode(epid, oldMap, newMap, title, link, authorId, authorName, authorAvatar, 
-					body, date, editDate, editorId, editorName, childCount, parentId, hits);
-			final Tag tag = tagid==null ? null : new Tag(tagid, shortName, longName, description, createdById, createdByAuthor, createdDate, count);
-							
-			return new EpTag(ep, tag);
-		}).toList();
-
-		Map<FlatEpisode, Set<Tag>> map = new LinkedHashMap<>();
-		for (EpTag et : list) {
-			map.merge(et.ep, et.tag == null ? Set.of() : Set.of(et.tag), (a, b) -> {
-				HashSet<Tag> ret = new HashSet<>();
-				ret.addAll(a);
-				ret.addAll(b);
-				return ret;
-			});
-		}
-		
-		return map;
+			return new FlatEpisodeWithTags(epid, oldMap, newMap, title, link, authorId, authorName, authorAvatar, 
+					body, date, editDate, editorId, editorName, childCount, parentId, hits, tags);
+		}).collect(Collectors.toMap(fewt -> (FlatEpisode)fewt, fewt -> fewt.tags));
 		
 	}
 
@@ -1465,8 +1440,17 @@ public class DB {
 				generatedId = DB.newMapToIdList(ep.getNewMap()).findFirst().get();
 			}
 			
-			String sql = "SELECT COUNT(*) FROM fbepisodes";
-			if (generatedId != 0) sql += " WHERE newmap='" + EP_PREFIX+Long.toString(generatedId) + "' OR newmap LIKE '" + EP_PREFIX + Long.toString(generatedId) + EP_INFIX + "%" + "'";		
+			String sql = "SELECT COUNT(*) FROM fbepisodes ";
+			
+			if (tagFilter != null) {
+				sql += "INNER JOIN fbepisodetags ON fbepisodetags.episode_generatedid=fbepisodes.generatedid ";
+				sql += "INNER JOIN fbtags ON fbtags.id=fbepisodetags.tag_id ";
+				sql += "WHERE fbtags.shortname='" + tagFilter + "' ";
+				if (generatedId != 0) sql += "AND (newmap='" + EP_PREFIX+Long.toString(generatedId) + "' OR newmap LIKE '" + EP_PREFIX + Long.toString(generatedId) + EP_INFIX + "%" + "')";				
+			} else {
+				if (generatedId != 0) sql += "WHERE newmap='" + EP_PREFIX+Long.toString(generatedId) + "' OR newmap LIKE '" + EP_PREFIX + Long.toString(generatedId) + EP_INFIX + "%" + "'";		
+			}
+						
 			int totalCount = ((BigInteger)(session.createNativeQuery(sql).uniqueResult())).intValue();
 			
 			Map<FlatEpisode, Set<Tag>> alist = getRecentsPage(session, generatedId, page, reverse, tagFilter);
