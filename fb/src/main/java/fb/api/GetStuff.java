@@ -509,12 +509,18 @@ public class GetStuff {
 	@Path("modvoicecomment/{id}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response modvoicecomment(@CookieParam("fbtoken") Cookie fbtoken, @PathParam("id") long id) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA","You must be logged in to do that")).build();
+		}
+		
 		Session sesh = DB.openSession();
 		try {
 			
 			DBComment comment = sesh.get(DBComment.class, id);
-			FlatUser user = new FlatUser(comment.getUser());
-			if (user.level < 10 || !user.id.equals(comment.getEpisode().getAuthor().getId())) {
+			if (user.level < 10 || !user.id.equals(comment.getUser().getId())) {
 				return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","You must be a moderator to do that")).build();
 			}
 			

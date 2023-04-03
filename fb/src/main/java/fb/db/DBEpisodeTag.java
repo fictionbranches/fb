@@ -9,6 +9,7 @@ import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 import org.hibernate.search.annotations.Indexed;
 import org.hibernate.search.annotations.IndexedEmbedded;
@@ -20,6 +21,7 @@ import org.hibernate.search.annotations.IndexedEmbedded;
 @Entity
 @Table(
 	name="fbepisodetags", 
+	uniqueConstraints=@UniqueConstraint(columnNames= {"episode_generatedid", "tag_id"}),
 	indexes = {
 		@Index(columnList = "episode_generatedid"),
 		@Index(columnList = "tag_id"),
