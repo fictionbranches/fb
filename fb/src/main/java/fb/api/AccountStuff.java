@@ -3,20 +3,6 @@ package fb.api;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
-import jakarta.ws.rs.CookieParam;
-import jakarta.ws.rs.FormParam;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.Cookie;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
-
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +20,19 @@ import fb.util.GoogleRECAPTCHA;
 import fb.util.GoogleRECAPTCHA.GoogleCheckException;
 import fb.util.Strings;
 import fb.util.Text;
+import jakarta.ws.rs.CookieParam;
+import jakarta.ws.rs.FormParam;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.Cookie;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
 
 @Path("fb")
 public class AccountStuff {
@@ -395,7 +394,13 @@ public class AccountStuff {
 	@Path("usersearch")
 	@Produces(MediaType.TEXT_HTML)
 	public Response getusersearch(@CookieParam("fbtoken") Cookie fbtoken, @QueryParam("q") String q, @QueryParam("page") String pageString) {
-		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
+		if (!InitWebsite.SEARCHING_ALLOWED) {
+			String response = "Searching is disabled while the database is being indexed.";
+			if (InitWebsite.INDEXER_MONITOR != null) {
+				response += " " + InitWebsite.INDEXER_MONITOR.percent() + "% complete.";
+			}
+			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", response)).build();
+		}
 		if (q==null || q.trim().length()==0) return Response.ok(Accounts.getSearchForm(fbtoken)).build();
 		else {
 			int page;

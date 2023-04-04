@@ -43,6 +43,7 @@ import fb.db.DBEpisodeTag;
 import fb.db.DBTag;
 import fb.db.DBUser;
 import fb.objects.FlatEpisode;
+import fb.util.FBIndexerProgressMonitor;
 import fb.util.Markdown;
 import fb.util.Strings;
 import jakarta.ws.rs.core.UriBuilder;
@@ -70,6 +71,7 @@ public class InitWebsite {
 	 * Gets set to false if no search indexes are detected, then back to true after search indexes have been built
 	 */
 	public static boolean SEARCHING_ALLOWED = true;//NOSONAR
+	public static FBIndexerProgressMonitor INDEXER_MONITOR = null;//NOSONAR
 	
 	/**
 	 * true to check recaptchas

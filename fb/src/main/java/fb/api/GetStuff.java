@@ -423,7 +423,13 @@ public class GetStuff {
 	@Path("search")
 	@Produces(MediaType.TEXT_HTML)
 	public Response getsearch(@CookieParam("fbtoken") Cookie fbtoken) {
-		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
+		if (!InitWebsite.SEARCHING_ALLOWED) {
+			String response = "Searching is disabled while the database is being indexed.";
+			if (InitWebsite.INDEXER_MONITOR != null) {
+				response += " " + InitWebsite.INDEXER_MONITOR.percent() + "% complete.";
+			}
+			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", response)).build();
+		}
 		return Response.ok(Story.getSearchHelp(fbtoken)).build();
 	}
 	
@@ -436,7 +442,13 @@ public class GetStuff {
 			@QueryParam("page") Integer page, 
 			@QueryParam("sort") String sort,
 			@Context UriInfo uriInfo) {
-		if (!InitWebsite.SEARCHING_ALLOWED) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "Searching is disabled while the database is being indexed.")).build();
+		if (!InitWebsite.SEARCHING_ALLOWED) {
+			String response = "Searching is disabled while the database is being indexed.";
+			if (InitWebsite.INDEXER_MONITOR != null) {
+				response += " " + InitWebsite.INDEXER_MONITOR.percent() + "% complete.";
+			}
+			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", response)).build();
+		}
 		if (q!=null && q.length() > 0) {
 			if (page==null) page = 1;
 			if (page < 1) page = 1;

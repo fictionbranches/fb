@@ -91,6 +91,7 @@ import fb.objects.Tag;
 import fb.objects.Theme;
 import fb.objects.User;
 import fb.util.Discord;
+import fb.util.FBIndexerProgressMonitor;
 import fb.util.Strings;
 import fb.util.Text;
 import jakarta.ws.rs.core.Cookie;
@@ -1254,7 +1255,9 @@ public class DB {
 			FullTextSession sesh = Search.getFullTextSession(session);
 			long start = System.nanoTime();
 			LOGGER.warn("Beginning indexing");
-			sesh.createIndexer().startAndWait();
+			FBIndexerProgressMonitor monitor = new FBIndexerProgressMonitor();
+			InitWebsite.INDEXER_MONITOR = monitor;
+			sesh.createIndexer().progressMonitor(monitor).startAndWait();
 			LOGGER.warn("Done indexing " + ((System.nanoTime()-start)/1000000000.0));
 		} catch (InterruptedException e) {
 			LOGGER.error("Interrupted search index", e);
