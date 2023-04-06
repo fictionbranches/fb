@@ -22,7 +22,7 @@ public class Discord {
 	public static synchronized void notifyError(String message) {
 		if (message.length() > 2000) message = message.substring(0,2000);
 		HookMessage form = new HookMessage("FB Errors", message);
-		Discord.sendToDiscordHook(Strings.getDISCORD_NEW_EPISODE_HOOK(), form);
+		Discord.sendToDiscordHook(Strings.getDISCORD_ERROR_HOOK(), form);
 	}
 	
 	public static void notifyNewEpisode(FlatEpisode ep, FlatEpisode root) {
