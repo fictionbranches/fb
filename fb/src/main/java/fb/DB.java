@@ -35,6 +35,7 @@ import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.RegexpQuery;
@@ -1392,7 +1393,7 @@ public class DB {
 			
 			return new FlatEpisodeWithTags(epid, oldMap, newMap, title, link, authorId, authorName, authorAvatar, 
 					body, date, editDate, editorId, editorName, childCount, parentId, hits, tags);
-		}).collect(Collectors.toMap(fewt -> (FlatEpisode)fewt, fewt -> fewt.tags));
+		}).collect(Collectors.toMap(fewt -> (FlatEpisode)fewt, fewt -> fewt.tags, (a,b) -> {throw new NotImplementedException();}, LinkedHashMap::new));
 		
 	}
 

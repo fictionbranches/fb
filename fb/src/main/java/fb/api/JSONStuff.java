@@ -12,6 +12,11 @@ import java.util.TimeZone;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.JoinType;
+import javax.persistence.criteria.Root;
+
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -229,8 +234,12 @@ public class JSONStuff {
 		Session sesh = DB.openSession();
 		try {
 			
-			roots = sesh.createQuery("from DBEpisode ep join fetch ep.lazytags tags where ep.parent is null", DBEpisode.class)
-				.stream()
+			CriteriaBuilder cb = sesh.getCriteriaBuilder();
+			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
+			Root<DBEpisode> root = query.from(DBEpisode.class);			
+			root.fetch("lazytags", JoinType.LEFT);
+			query.select(root).where(cb.isNull(root.get("parent"))).orderBy(cb.asc(root.get("date")));
+			roots = sesh.createQuery(query).stream()
 				.map(FlatEpisodeWithTags::new)
 				.toList();
 			
