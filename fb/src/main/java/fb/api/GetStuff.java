@@ -449,7 +449,7 @@ public class GetStuff {
 			}
 			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", response)).build();
 		}
-		if (q!=null && q.length() > 0) {
+		if (q!=null) {
 			if (page==null) page = 1;
 			if (page < 1) page = 1;
 			if (sort != null && sort.length() == 0) sort = null;

@@ -35,6 +35,7 @@ import fb.util.Markdown;
 import fb.util.Strings;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.Response;
 
 /**
  * Contains the actual logic that controls how the site works
@@ -701,10 +702,10 @@ public class Story {
 				.replace("$EXTRA", "");
 	}
 	
-	public static String searchPost(Cookie token, long generatedId, String search, String page, String sort, MultivaluedMap<String, String> params) {
+	public static String searchPost(Cookie fbtoken, long generatedId, String search, String page, String sort, MultivaluedMap<String, String> params) {
 		FlatUser user;
 		try {
-			user = Accounts.getFlatUser(token);
+			user = Accounts.getFlatUser(fbtoken);
 		} catch (FBLoginException e) {
 			user = null;
 		}
@@ -727,6 +728,7 @@ public class Story {
 		
 		final Map<Tag, Boolean> selectedTags = allTags.stream().collect(Collectors.toMap(tag -> tag, tag -> selectedShortNames.contains(tag.shortName)));
 		
+		if (search.length() == 0 && selectedTags.size() == 0) Response.ok(Story.getSearchForm(fbtoken, generatedId)).build();
 		
 		SearchResultList results;
 		try {

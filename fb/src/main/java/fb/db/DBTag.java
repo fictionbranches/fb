@@ -14,6 +14,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import org.hibernate.search.annotations.Analyze;
+import org.hibernate.search.annotations.Analyzer;
 import org.hibernate.search.annotations.Field;
 import org.hibernate.search.annotations.Indexed;
 import org.hibernate.search.annotations.Store;
@@ -33,15 +34,15 @@ public class DBTag {
 	private long id;	
 	
 	@Column(columnDefinition = "text", unique = true, nullable = false)
-	@Field(index=YES, store=Store.NO, analyze=Analyze.YES)
+	@Field(index=YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String shortName;
 	
 	@Column(columnDefinition = "text")
-	@Field(index=YES, store=Store.NO, analyze=Analyze.YES)
+	@Field(index=YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String longName;
 	
 	@Column(columnDefinition = "text")
-	@Field(index=YES, store=Store.NO, analyze=Analyze.YES)
+	@Field(index=YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
 	private String description;
 	
 	@ManyToOne

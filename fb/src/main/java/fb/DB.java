@@ -1076,17 +1076,16 @@ public class DB {
 			if (ep == null) throw new DBException("Not found: " + generatedId);
 			FullTextSession sesh = Search.getFullTextSession(session);
 			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class).get();
-						
-			RegexpQuery idQuery = new RegexpQuery(new Term("newMap", (ep.getNewMap()+EP_INFIX).toLowerCase()+".*"), RegExp.NONE);
-			Query searchQuery = qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery();
-						
-			MustJunction combinedQueryBuilder = qb.bool()
-					.must(searchQuery)
-					.must(idQuery);
+			
+			MustJunction combinedQuery = qb.bool()
+					.must(new RegexpQuery(new Term("newMap", (ep.getNewMap()+EP_INFIX).toLowerCase()+".*"), RegExp.NONE)); // idQuery
+			if (search.length() > 0) {
+				combinedQuery = combinedQuery.must(qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery()); // searchQuery
+			}
 			
 			for (String shortName : tagsShortNames) {
 				Query tagQuery = qb.keyword().onField("lazytags.tag.shortName").matching(shortName).createQuery();
-				combinedQueryBuilder = combinedQueryBuilder.must(tagQuery);
+				combinedQuery = combinedQuery.must(tagQuery);
 			}
 			
 			try {
@@ -1097,7 +1096,7 @@ public class DB {
 					default -> null;
 				};
 				
-				FullTextQuery q = sesh.createFullTextQuery(combinedQueryBuilder.createQuery(), DBEpisode.class);
+				FullTextQuery q = sesh.createFullTextQuery(combinedQuery.createQuery(), DBEpisode.class);
 				if (sorter != null) q.setSort(sorter);
 				q.setFirstResult(PAGE_SIZE*page);
 				q.setMaxResults(PAGE_SIZE+1);
