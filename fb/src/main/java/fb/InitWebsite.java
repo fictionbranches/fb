@@ -253,9 +253,9 @@ public class InitWebsite {
 				.setTcpNoDelay(true)
 				.setIOStrategy(SimpleDynamicNIOStrategy.getInstance())
 				.setWorkerThreadPoolConfig(ThreadPoolConfig.defaultConfig()
-					.setCorePoolSize(1)
-					.setMaxPoolSize(5)
-					.setQueueLimit(512))
+					.setCorePoolSize(2)
+					.setMaxPoolSize(8)
+					.setQueueLimit(-1))
 				.build();
 		for (NetworkListener nl : server.getListeners()) {
 			LOGGER.info("Set transport for listener: " + nl);
