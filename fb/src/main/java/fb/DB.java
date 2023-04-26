@@ -566,6 +566,7 @@ public class DB {
 					session.createQuery("delete DBNotification nt where nt.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBCommentSub x where x.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					session.createQuery("delete DBModEpisode x where x.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
+					session.createQuery("delete DBEpisodeTag x where x.episode.generatedId=" + ep.getGeneratedId()).executeUpdate();
 					
 					session.createNativeQuery(
 							"""
@@ -2420,6 +2421,11 @@ public class DB {
 		return session.createQuery(query).stream();
 	}
 	
+	/**
+	 * Prunes queues for email changes, password resets, and potential users. Each
+	 * of those is valid for only 24 hours. Calling this function will remove any
+	 * older than 24 hours
+	 */
 	public static void pruneQueues() {
 		Session session = openSession();
 		try {

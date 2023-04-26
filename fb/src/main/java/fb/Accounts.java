@@ -124,10 +124,8 @@ public class Accounts {
 	private static void initAccounts() {
 		readSessionsFromFile();
 		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
-			LOGGER.info("RUNNING SESSION/QUEUE PRUNNER");
 			Accounts.pruneSessions();
 			DB.pruneQueues();
-			LOGGER.info("RAN SESSION/QUEUE PRUNNER");
 		}, 0, 1, TimeUnit.HOURS);
 	}
 	
