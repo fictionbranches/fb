@@ -62,17 +62,12 @@ public class GoogleRECAPTCHA {
 	}
 	
 	/**
-	 * Wraps URLEncoder.encode(String, "UTF-8") to avoid the UnsupportedEncodingException
-	 * UTF-8 will never cause UnsupportedEncodingException
+	 * Wraps URLEncoder.encode(String, StandardCharsets.UTF_8)
 	 * @param s
 	 * @return
 	 */
 	private static String encodeURLComponent(String s) {
-		try {
-			return URLEncoder.encode(s, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			throw new AssertionError("UTF-8 is not supported");
-		}
+		return URLEncoder.encode(s, StandardCharsets.UTF_8);
 	}
 	
 	/**

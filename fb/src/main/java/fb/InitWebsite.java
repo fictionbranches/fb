@@ -7,6 +7,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -211,6 +212,7 @@ public class InitWebsite {
 		ArrayList<Class<?>> list = Stream.of(AccountStuff.class, AddStuff.class,
 				AdminStuff.class, GetStuff.class, LegacyStuff.class, RssStuff.class, JSONStuff.class).collect(Collectors.toCollection(ArrayList::new));
 		if (DEV_MODE) {
+			LOGGER.info("Running in DEV_MODE");
 			list.add(DevStuff.class);
 			list.add(DevStuff.DevStuff2.class);
 		}
@@ -253,14 +255,18 @@ public class InitWebsite {
 				.setTcpNoDelay(true)
 				.setIOStrategy(SimpleDynamicNIOStrategy.getInstance())
 				.setWorkerThreadPoolConfig(ThreadPoolConfig.defaultConfig()
-					.setCorePoolSize(2)
-					.setMaxPoolSize(8)
-					.setQueueLimit(-1))
+					.setCorePoolSize(1)
+					.setMaxPoolSize(5)
+					.setQueueLimit(512)
+					.setTransactionTimeout(30, TimeUnit.SECONDS)
+				)
 				.build();
+		
+		
 		for (NetworkListener nl : server.getListeners()) {
 			LOGGER.info("Set transport for listener: " + nl);
 			nl.setTransport(transport);
-		}
+		}		
 	}
 	
 	private static void enableExceptionLogging() {
