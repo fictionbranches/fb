@@ -1212,6 +1212,24 @@ public class Story {
 	
 	/////////////////////////////////////// utility functions \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	
+	public static String commentListToHTML(List<Comment> comments, boolean parseMarkdown, boolean includeAttribution) {
+		StringBuilder html = new StringBuilder();
+		for (Comment c : comments) {
+			html.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p>");
+			html.append("<p>");
+			if (includeAttribution) {
+				html.append("By ");
+				if (!(c.user.avatar==null||c.user.avatar.trim().length()==0)) html.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" /> ");
+				html.append("<a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a> - \n");
+			}
+			html.append("<a href=/fb/story/" + c.episode.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>\n");
+			if (c.modVoice) html.append(" - <em>This comment is from a site Moderator</em>\n");
+			html.append("</p><p>On " + "<a href=/fb/story/" + c.episode.generatedId + ">" + (escape(c.episode.link)) + "</a></p>\n");
+			html.append("<hr/><hr/>\n");
+		}
+		return html.toString();
+	}
+	
 	/**
 	 * Checks that episode fields are non-empty within appropriate limits
 	 * @param link

@@ -1834,29 +1834,38 @@ public class DB {
 	}
 	
 	private static final int PAGE_SIZE = 100;
-	public static AuthorProfileResult getUserProfile(String userId, int page) throws DBException {
+	public static AuthorProfileResult getUserProfile(String userId, int page, boolean showComments) throws DBException {
 		page-=1;
 		userId = userId.toLowerCase();
 		Session session = openSession();
 		try {
 			DBUser user = session.get(DBUser.class, userId);
 			if (user == null) throw new DBException("User ID " + userId + " does not exist");
-			CriteriaBuilder cb = session.getCriteriaBuilder();
-			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-			Root<DBEpisode> root = query.from(DBEpisode.class);
 			
-			Join<DBEpisode,DBUser> join = root.join("author");
-			Predicate pred = cb.equal(join.get("id"), userId);
-
-			query.select(root).where(pred).orderBy(cb.desc(root.get("date")));
-			
-			List<FlatEpisode> list = session.createQuery(query)
-					.setFirstResult(PAGE_SIZE*page)
-					.setMaxResults(PAGE_SIZE+1).stream()
-					.map(FlatEpisode::new)
-					.collect(Collectors.toCollection(ArrayList::new));
-			boolean hasNext = list.size() > PAGE_SIZE;
-			return new AuthorProfileResult(new FlatUser(user), hasNext?list.subList(0, PAGE_SIZE):list, hasNext);
+			if (!showComments) {
+				CriteriaBuilder cb = session.getCriteriaBuilder();
+				CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
+				Root<DBEpisode> root = query.from(DBEpisode.class);
+				
+				Join<DBEpisode,DBUser> join = root.join("author");
+				Predicate pred = cb.equal(join.get("id"), userId);
+	
+				query.select(root).where(pred).orderBy(cb.desc(root.get("date")));
+				
+				List<FlatEpisode> list = session.createQuery(query)
+						.setFirstResult(PAGE_SIZE*page)
+						.setMaxResults(PAGE_SIZE+1).stream()
+						.map(FlatEpisode::new)
+						.collect(Collectors.toCollection(ArrayList::new));
+				boolean hasNext = list.size() > PAGE_SIZE;
+				return new AuthorProfileResult(new FlatUser(user), hasNext?list.subList(0, PAGE_SIZE):list, null, hasNext);
+			} else {
+				final String query = "SELECT fbcomments.* FROM fbcomments INNER JOIN fbusers ON fbusers.id=fbcomments.user_id "
+						+ "WHERE fbusers.id='"+user.getId()+"' ORDER BY fbcomments.date DESC LIMIT " + (PAGE_SIZE + 1);
+				List<Comment> list = session.createNativeQuery(query, DBComment.class).stream().map(Comment::new).toList();
+				boolean hasNext = list.size() > PAGE_SIZE;
+				return new AuthorProfileResult(new FlatUser(user), null, hasNext?list.subList(0, PAGE_SIZE):list, hasNext);
+			}
 		} finally {
 			closeSession(session);
 		}
@@ -1865,11 +1874,13 @@ public class DB {
 	public static class AuthorProfileResult {
 		public final FlatUser user;
 		public final List<FlatEpisode> episodes;
+		public final List<Comment> comments;
 		public final boolean morePages;
-		public AuthorProfileResult(FlatUser user, List<FlatEpisode> episodes, boolean morePages) {
+		public AuthorProfileResult(FlatUser user, List<FlatEpisode> episodes, List<Comment> comments, boolean morePages) {
 			this.user = user;
 			this.episodes = episodes;
 			this.morePages = morePages;
+			this.comments = comments;
 		}
 	}
 

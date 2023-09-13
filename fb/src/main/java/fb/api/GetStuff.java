@@ -24,7 +24,6 @@ import fb.DB.DBException;
 import fb.InitWebsite;
 import fb.Story;
 import fb.db.DBComment;
-import fb.objects.Comment;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.util.Dates;
@@ -341,16 +340,7 @@ public class GetStuff {
 		html.append("<h1>Recent comments</h1>");
 		html.append("<p>"+prevNext+"</p>");
 		html.append("<hr/><hr/>\n");
-		for (Comment c : crl.comments) {
-			html.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p>");
-			html.append("<p>By ");
-			if (!(c.user.avatar==null||c.user.avatar.trim().length()==0)) html.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" /> ");
-			html.append("<a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a> - \n");
-			html.append("<a href=/fb/story/" + c.episode.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>\n");
-			if (c.modVoice) html.append(" - <em>This comment is from a site Moderator</em>\n");
-			html.append("</p><p>On " + "<a href=/fb/story/" + c.episode.generatedId + ">" + (escape(c.episode.link)) + "</a></p>\n");
-			html.append("<hr/><hr/>\n");
-		}
+		html.append(Story.commentListToHTML(crl.comments, parseMarkdown, true));
 		
 		return Response.ok(Strings.getFile("generic_meta.html", user)
 				.replace("$EXTRA", html.toString())

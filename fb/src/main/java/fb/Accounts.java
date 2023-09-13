@@ -218,7 +218,7 @@ public class Accounts {
 	 * @param fbtoken
 	 * @return HTML user page for id
 	 */
-	public static String getUserPage(String id, Cookie fbtoken, int page) {
+	public static String getUserPage(String id, Cookie fbtoken, int page, boolean showComments, boolean parseMarkdown) {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(fbtoken);
@@ -229,26 +229,40 @@ public class Accounts {
 		id = id.toLowerCase();
 		AuthorProfileResult profileUser;
 		try {
-			profileUser = DB.getUserProfile(id, page);
+			profileUser = DB.getUserProfile(id, page, showComments);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "User ID " + id + " does not exist");
 		}
-		StringBuilder table = new StringBuilder();
-		table.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Date</th><th>Story</th><th>Depth</th></tr>");
-		for (FlatEpisode ep : profileUser.episodes) {
-			String story;
-			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
-			if (rootEp == null) story = "";
-			else story = rootEp.link;
-			table.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + " title='"+escape(ep.body.substring(0, Integer.min(140, ep.body.length())))+"'>" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + 
-					Dates.simpleDateFormat2(ep.date) + 
-					"</td><td class=\"fbtable\">" + escape(story) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>");
+		final String body;
+		String pageCount = "<a href='/fb/user/" + profileUser.user.id + (showComments ? "'>Recent Episodes" : "?comments'>Recent Comments") + "</a><br/>";
+		if (!showComments) {
+			StringBuilder table = new StringBuilder();
+			table.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Date</th><th>Story</th><th>Depth</th></tr>");
+			for (FlatEpisode ep : profileUser.episodes) {
+				String story;
+				FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
+				if (rootEp == null) story = "";
+				else story = rootEp.link;
+				table.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + " title='"+escape(ep.body.substring(0, Integer.min(140, ep.body.length())))+"'>" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + 
+						Dates.simpleDateFormat2(ep.date) + 
+						"</td><td class=\"fbtable\">" + escape(story) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>");
+			}
+			table.append("</table>");
+			body = table.toString();
+			
+			if (page > 1) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page-1) + "\">Previous</a> ";
+			if (profileUser.morePages) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page+1) + "\">Next</a>";
+		} else {
+			body = Story.commentListToHTML(profileUser.comments, parseMarkdown, false);
+			System.out.println(profileUser.comments.size());
+			System.out.println(body);
+			
+			if (page > 1) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page-1) + "\">Previous</a> ";
+			if (profileUser.morePages) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page+1) + "\">Next</a>";
 		}
-		table.append("</table>");
 		String avatar = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + escape(profileUser.user.avatar) + "\" /> ");
 		String avatarMeta = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"/favicon-192x192.png":escape(profileUser.user.avatar);
 		String bio = profileUser.user.bio==null?"":Story.formatBody(profileUser.user.bio);
-		String pageCount = "";
 		
 		String moderator;
 		if (profileUser.user.level > 1) {
@@ -258,8 +272,6 @@ public class Accounts {
 		
 		String date = (profileUser.user.date==null)?"the beforefore times":Dates.outputDateFormat2(profileUser.user.date);
 		
-		if (page > 1) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page-1) + "\">Previous</a> ";
-		if (profileUser.morePages) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page+1) + "\">Next</a>";
 		return Strings.getFile("profilepage.html", user)
 				.replace("$MODERATORSTATUS", moderator)
 				.replace("$DATE", date)
@@ -268,7 +280,7 @@ public class Accounts {
 				.replace("$AVATARURLMETA", avatarMeta)
 				.replace("$AVATARURL", avatar)
 				.replace("$BODY", bio)
-				.replace("$EPISODES", table.toString());
+				.replace("$EPISODES", body);
 	}
 	
 	public static String getMostEpisodes(Cookie token, DB.PopularUserTime time) {

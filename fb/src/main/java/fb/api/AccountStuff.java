@@ -42,21 +42,23 @@ public class AccountStuff {
 	@GET
 	@Path("user/{id}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response user(@PathParam("id") String id, @CookieParam("fbtoken") Cookie fbtoken) {		
-		return Response.ok(Accounts.getUserPage(id,fbtoken, 1)).build();
+	public Response user(@PathParam("id") String id, @CookieParam("fbtoken") Cookie fbtoken, @CookieParam("fbjs") Cookie fbjs, @QueryParam("comments") String comments) {	
+		final boolean parseMarkdown = fbjs==null || !"true".equals(fbjs.getValue());
+		return Response.ok(Accounts.getUserPage(id,fbtoken, 1, comments != null,parseMarkdown)).build();
 	}
 	
 	@GET
 	@Path("user/{id}/{page}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response user(@PathParam("id") String id, @PathParam("page") String page, @CookieParam("fbtoken") Cookie fbtoken) {	
-		int pageInt;
+	public Response user(@PathParam("id") String id, @PathParam("page") String page, @CookieParam("fbtoken") Cookie fbtoken, @CookieParam("fbjs") Cookie fbjs, @QueryParam("comments") String comments) {	
+		final boolean parseMarkdown = fbjs==null || !"true".equals(fbjs.getValue());
+		final int pageInt;
 		try {
 			pageInt = Integer.parseInt(page);
 		} catch (NumberFormatException e) {
 			return Response.seeOther(GetStuff.createURI("/fb/user/" + id)).build();
 		}
-		return Response.ok(Accounts.getUserPage(id,fbtoken, pageInt)).build();
+		return Response.ok(Accounts.getUserPage(id,fbtoken, pageInt, comments != null, parseMarkdown)).build();
 	}
 	
 	/**
