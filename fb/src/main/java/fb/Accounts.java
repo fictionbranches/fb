@@ -254,8 +254,6 @@ public class Accounts {
 			if (profileUser.morePages) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page+1) + "\">Next</a>";
 		} else {
 			body = Story.commentListToHTML(profileUser.comments, parseMarkdown, false);
-			System.out.println(profileUser.comments.size());
-			System.out.println(body);
 			
 			if (page > 1) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page-1) + "\">Previous</a> ";
 			if (profileUser.morePages) pageCount += "<a href=\"/fb/user/" + profileUser.user.id + "/" + (page+1) + "\">Next</a>";

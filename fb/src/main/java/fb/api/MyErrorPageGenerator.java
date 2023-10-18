@@ -60,13 +60,13 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 			}
 			StringBuilder sb = new StringBuilder();
 			sb.append("<p><h1>You ran into an uncaught exception.</h1><br/>\n");
-			sb.append("Please report the entire contents of this page to Phoenix at either our <a href=\"https://discord.gg/eGPxp5A\">Discord server</a> or <a href=/static/irc.html>IRC chat</a><br/></p>\n");
+			sb.append("Please report the entire contents of this page to Phoenix on our <a href=\"https://discord.gg/eGPxp5A\">Discord server</a><br/></p>\n");
 			sb.append("<code>" + sw + "</code>");
 			return Strings.getFile("emptygeneric.html", null).replace("$EXTRA", sb.toString());
 		} catch (IOException e) {
 			StringBuilder sb = new StringBuilder();
 			sb.append("<p>You ran into an uncaught ecxeption.<br/>\n");
-			sb.append("Please report the entire contents of this page to Phoenix at either our <a href=\"https://discord.gg/eGPxp5A\">Discord server</a> or <a href=/static/irc.html>IRC chat</a><br/></p>\n");
+			sb.append("Please report the entire contents of this page to Phoenix on our <a href=\"https://discord.gg/eGPxp5A\">Discord server</a><br/></p>\n");
 			sb.append("<code>" + e.getMessage() + "</code>");
 			return Strings.getFile("emptygeneric.html", null).replace("$EXTRA", sb.toString());
 		}

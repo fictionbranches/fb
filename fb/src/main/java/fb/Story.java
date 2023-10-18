@@ -157,7 +157,7 @@ public class Story {
 					.replace("$VIEWS", Long.toString(child.views))
 					.replace("$UPVOTES", Long.toString(child.upvotes))
 					.replace("$TAGS", tagsHtmlView(child.tags))
-					);
+					+ System.lineSeparator());
 			}
 			childHTML.append(Strings.getString(foot));
 		}
