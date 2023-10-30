@@ -47,6 +47,7 @@ import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.objects.ModEpisode;
 import fb.objects.Notification;
+import fb.objects.RecentUserBlock;
 import fb.objects.User;
 import fb.util.Dates;
 import fb.util.Strings;
@@ -582,6 +583,29 @@ public class Accounts {
 		
 		final String hideImageButton = "Images are currently " + (user.hideImages ? "hidden" : "shown") + ". <a href='/fb/togglehideimages'>Click here to " + (user.hideImages ? "show" : "hide") + " them.</a>";
 		
+		final String blockedUsersHtml;
+		{
+			final List<RecentUserBlock> blockedUsers;
+			final Session session = DB.openSession();
+			try {
+				blockedUsers = session.createQuery("FROM DBRecentUserBlock block JOIN FETCH block.blockingUser JOIN FETCH block.blockedUser WHERE block.blockingUser.id='"+user.id+"' ", DBRecentUserBlock.class)
+					.stream().map(block -> new RecentUserBlock(block)).toList();
+			} finally {
+				DB.closeSession(session);
+			}
+			
+			final StringBuilder html = new StringBuilder("<table><tr><th>User</th><th>Blocked since</th><th></th>\n");
+			for (RecentUserBlock block : blockedUsers) {
+				html.append("<tr><td><a href='/fb/user/"+block.blockedUser.id+"'>"+Text.escape(block.blockedUser.author)+"</a></td>");
+				html.append("<td>"+Dates.plainDate(block.date)+"</td>");
+				html.append("<td><a href='/fb/unblockfromrecents2/"+block.blockedUser.id+"'>Unblock</a></td></tr>\n");
+			}
+			html.append("</table>");
+			
+			blockedUsersHtml = html.toString();
+			
+		}
+		
 		return Strings.getFile("useraccount.html", user)
 				.replace("$COMMENT_SITE_CHECKED", user.commentSite?checked:"")
 				.replace("$COMMENT_MAIL_CHECKED", user.commentMail?checked:"")
@@ -595,6 +619,7 @@ public class Accounts {
 				.replace("$EXTRA", error==null||error.length()==0?"":"ERROR: " + error)
 				.replace("$BODYTEXTWIDTHFORM", widthHTML)
 				.replace("$HIDEIMAGEBUTTON", hideImageButton)
+				.replace("$USERSBLOCKEDFROMRECENTS", blockedUsersHtml)
 				;
 	}
 	

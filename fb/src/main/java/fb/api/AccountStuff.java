@@ -622,16 +622,27 @@ public class AccountStuff {
 	@Path("unblockfromrecents/{id}")
 	@Produces(MediaType.TEXT_HTML)
 	public Response unblockuserfromrecents(@PathParam("id") String blockedUserId, @CookieParam("fbtoken") Cookie fbtoken) {
-
-		final Response res = Response.seeOther(GetStuff.createURI("/fb/user/" + blockedUserId)).build();
+		unblockuserfromrecentsImpl(blockedUserId, fbtoken);
+		return Response.seeOther(GetStuff.createURI("/fb/user/" + blockedUserId)).build();
+	}
+	
+	@GET
+	@Path("unblockfromrecents2/{id}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response unblockuserfromrecents2(@PathParam("id") String blockedUserId, @CookieParam("fbtoken") Cookie fbtoken) {
+		unblockuserfromrecentsImpl(blockedUserId, fbtoken);
+		return Response.seeOther(GetStuff.createURI("/fb/useraccount")).build();
+	}
+	
+	private void unblockuserfromrecentsImpl(String blockedUserId, Cookie fbtoken) {
 		final String blockingUserId = Accounts.getUsernameFromCookie(fbtoken);
-		if (blockingUserId == null) return res;
+		if (blockingUserId == null) return;
 		
 		final Session session = DB.openSession();
 		try {
 			final DBUser blockingUser = DB.getUserById(session, blockingUserId);
 			final DBUser blockedUser = DB.getUserById(session, blockedUserId);
-			if (blockedUser == null || blockingUser == null) return res;
+			if (blockedUser == null || blockingUser == null) return;
 			
 			session.beginTransaction();
 			try {
@@ -644,7 +655,6 @@ public class AccountStuff {
 		} finally {
 			DB.closeSession(session);
 		}
-		return res;
 	}
 
 	
