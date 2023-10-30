@@ -422,7 +422,7 @@ public class Story {
 		
 		RecentsResultList prof;
 		try {
-			prof = DB.getRecents(root, page, reverse, tagFilter);
+			prof = DB.getRecents(root, page, reverse, tagFilter, user);
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
 		}

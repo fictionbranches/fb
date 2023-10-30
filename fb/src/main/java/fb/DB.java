@@ -71,6 +71,7 @@ import fb.db.DBModEpisode;
 import fb.db.DBNotification;
 import fb.db.DBPasswordReset;
 import fb.db.DBPotentialUser;
+import fb.db.DBRecentUserBlock;
 import fb.db.DBSiteSetting;
 import fb.db.DBTag;
 import fb.db.DBTheme;
@@ -186,6 +187,7 @@ public class DB {
 		configuration.addAnnotatedClass(DBCommentSub.class);
 		configuration.addAnnotatedClass(DBTag.class);
 		configuration.addAnnotatedClass(DBEpisodeTag.class);
+		configuration.addAnnotatedClass(DBRecentUserBlock.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -1316,7 +1318,7 @@ public class DB {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private static Map<FlatEpisode, Set<Tag>> getRecentsPage(Session session, long generatedId, int page, boolean reverse, String tagFilter) {
+	private static Map<FlatEpisode, Set<Tag>> getRecentsPage(Session session, long generatedId, int page, boolean reverse, String tagFilter, List<String> blockers) {
 				
 		List<String> whereClausesToAnd = new ArrayList<>();
 		if (generatedId != 0) {
@@ -1325,6 +1327,9 @@ public class DB {
 		}
 		if (tagFilter != null && tagFilter.length() > 0) {
 			whereClausesToAnd.add("EXISTS (SELECT fbepisodetags.id FROM fbepisodetags INNER JOIN fbtags ON fbtags.id=fbepisodetags.tag_id WHERE episode_generatedid=fbepisodes.generatedid AND fbtags.shortname='"+tagFilter+"')");
+		}
+		if (blockers != null && !blockers.isEmpty()) {
+			whereClausesToAnd.add(blockers.stream().map(block -> "fbepisodes.author_id!='" + block + "'").collect(Collectors.joining(" AND ")));
 		}
 		
 		final String whereClause = whereClausesToAnd.isEmpty() ? "" : ("WHERE " + whereClausesToAnd.stream().collect(Collectors.joining(") AND (", "(", ")")));
@@ -1396,21 +1401,6 @@ public class DB {
 		}).collect(Collectors.toMap(fewt -> (FlatEpisode)fewt, fewt -> fewt.tags, (a,b) -> {throw new NotImplementedException();}, LinkedHashMap::new));
 		
 	}
-
-	public static Map<FlatEpisode, Set<Tag>> getRecentsPage(long generatedId, int page, boolean reverse, String tagFilter) throws DBException {
-		Session session = openSession();
-		page -= 1;
-		try {
-			if (generatedId != 0) { // make sure we're using a root episode
-				DBEpisode ep = session.get(DBEpisode.class, generatedId);
-				if (ep == null) throw new DBException("Not found: " + generatedId);
-				generatedId = DB.newMapToIdList(ep.getNewMap()).findFirst().get();
-			}
-			return Collections.unmodifiableMap(getRecentsPage(session, generatedId, page, reverse, tagFilter));
-		} finally {
-			closeSession(session);
-		}
-	}
 	
 	/**
 	 * List of FlatEpisodes, along with a FlatUser and boolean.
@@ -1434,7 +1424,7 @@ public class DB {
 	 * @return
 	 * @throws DBException
 	 */
-	public static RecentsResultList getRecents(long generatedId, int page, boolean reverse, String tagFilter) throws DBException {
+	public static RecentsResultList getRecents(long generatedId, int page, boolean reverse, String tagFilter, FlatUser viewer) throws DBException {
 		Session session = openSession();
 		page-=1;
 		try {
@@ -1443,6 +1433,11 @@ public class DB {
 				if (ep == null) throw new DBException("Not found: " + generatedId);
 				generatedId = DB.newMapToIdList(ep.getNewMap()).findFirst().get();
 			}
+			
+			@SuppressWarnings("unchecked")
+			final List<String> blockers = viewer == null ? List.of() : 
+				((Stream<Object>)(session.createNativeQuery("SELECT blockeduser_id FROM fbrecentuserblocks WHERE blockinguser_id='" + viewer.id + "'")
+					.stream())).map(String.class::cast).toList();
 			
 			String sql = "SELECT COUNT(*) FROM fbepisodes ";
 			
@@ -1454,10 +1449,16 @@ public class DB {
 			} else {
 				if (generatedId != 0) sql += "WHERE newmap='" + EP_PREFIX+Long.toString(generatedId) + "' OR newmap LIKE '" + EP_PREFIX + Long.toString(generatedId) + EP_INFIX + "%" + "'";		
 			}
+			
+			if (!blockers.isEmpty()) {
+				if (tagFilter != null || generatedId != 0) sql += " AND "; // WHERE clause already started
+				else sql += " WHERE "; // begin WHERE clause
+				sql += blockers.stream().map(block -> "fbepisodes.author_id!='" + block + "'").collect(Collectors.joining(" AND "));
+			}
 						
 			int totalCount = ((BigInteger)(session.createNativeQuery(sql).uniqueResult())).intValue();
 			
-			Map<FlatEpisode, Set<Tag>> alist = getRecentsPage(session, generatedId, page, reverse, tagFilter);
+			Map<FlatEpisode, Set<Tag>> alist = getRecentsPage(session, generatedId, page, reverse, tagFilter, blockers);
 									
 			return new RecentsResultList(null, Collections.unmodifiableMap(alist), totalCount/PAGE_SIZE+1);
 		}finally {

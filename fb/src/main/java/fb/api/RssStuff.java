@@ -122,7 +122,7 @@ public class RssStuff {
 		final ArrayList<SyndEntry> entries = new ArrayList<>();
 		Set<FlatEpisode> eps;
 		try {
-			eps = DB.getRecents(story, 1, false, "").episodes.keySet();
+			eps = DB.getRecents(story, 1, false, "", null).episodes.keySet();
 		} catch (DBException e) {
 			LOGGER.info("Couldn't get recents for RSS");
 			return feedToString(feed);

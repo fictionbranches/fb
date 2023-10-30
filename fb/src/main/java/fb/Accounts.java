@@ -20,12 +20,12 @@ import java.util.concurrent.TimeUnit;
 import javax.mail.Authenticator;
 import javax.mail.Message;
 import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.commons.validator.routines.EmailValidator;
+import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -39,6 +39,7 @@ import fb.DB.AuthorSearchResult;
 import fb.DB.DBException;
 import fb.DB.PasswordResetException;
 import fb.db.DBNotification;
+import fb.db.DBRecentUserBlock;
 import fb.objects.Comment;
 import fb.objects.FlaggedComment;
 import fb.objects.FlaggedEpisode;
@@ -233,6 +234,17 @@ public class Accounts {
 		} catch (DBException e) {
 			return Strings.getFile("generic.html", user).replace("$EXTRA", "User ID " + id + " does not exist");
 		}
+		
+		boolean userIsBlocked = false;
+		if (user != null) {
+			Session session = DB.openSession();
+			try {
+				userIsBlocked = null != session.createNativeQuery("SELECT * FROM fbrecentuserblocks WHERE blockinguser_id='" + user.id + "' AND blockeduser_id='" + profileUser.user.id + "'", DBRecentUserBlock.class).uniqueResult();
+			} finally {
+				DB.closeSession(session);
+			}
+		}
+		
 		final String body;
 		String pageCount = "<a href='/fb/user/" + profileUser.user.id + (showComments ? "'>Recent Episodes" : "?comments'>Recent Comments") + "</a><br/>";
 		if (!showComments) {
@@ -267,6 +279,14 @@ public class Accounts {
 			if (profileUser.user.level >= 100) moderator = "<p>Fiction Branches admin</p>";
 			else moderator = "<p>Fiction Branches moderator</p>";
 		} else moderator = "";
+		
+		if (user != null) {
+			if (userIsBlocked) {
+				moderator += "<p><a href='/fb/unblockfromrecents/"+profileUser.user.id+"'>Unblock from Recents</a></p>";
+			} else {
+				moderator += "<p><a href='/fb/blockfromrecents/"+profileUser.user.id+"'>Block from Recents</a></p>";
+			}
+		}
 		
 		String date = (profileUser.user.date==null)?"the beforefore times":Dates.outputDateFormat2(profileUser.user.date);
 		
@@ -1236,7 +1256,7 @@ public class Accounts {
 				return new PasswordAuthentication(Strings.getSMTP_EMAIL(), Strings.getSMTP_PASSWORD());
 			}
 		};
-		Session session = Session.getInstance(props, auth);
+		javax.mail.Session session = javax.mail.Session.getInstance(props, auth);
 		try {
 			MimeMessage msg = new MimeMessage(session);
 			msg.addHeader("Content-type", "text/HTML; charset=UTF-8");

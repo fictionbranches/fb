@@ -1,6 +1,7 @@
 package fb.api;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.stream.Collectors;
 
 import org.hibernate.Session;
@@ -13,6 +14,7 @@ import fb.DB;
 import fb.DB.DBException;
 import fb.InitWebsite;
 import fb.db.DBEpisode;
+import fb.db.DBRecentUserBlock;
 import fb.db.DBUser;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
@@ -580,6 +582,69 @@ public class AccountStuff {
 			DB.closeSession(sesh);
 		}
 		
+	}
+	
+	@GET
+	@Path("blockfromrecents/{id}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response blockuserfromrecents(@PathParam("id") String blockedUserId, @CookieParam("fbtoken") Cookie fbtoken) {
+
+		final Response res = Response.seeOther(GetStuff.createURI("/fb/user/" + blockedUserId)).build();
+		final String blockingUserId = Accounts.getUsernameFromCookie(fbtoken);
+		if (blockingUserId == null) return res;
+		
+		final Session session = DB.openSession();
+		try {
+			final DBUser blockingUser = DB.getUserById(session, blockingUserId);
+			final DBUser blockedUser = DB.getUserById(session, blockedUserId);
+			if (blockedUser == null || blockingUser == null) return res;
+			
+			final DBRecentUserBlock block = new DBRecentUserBlock();
+			block.setBlockedUser(blockedUser);
+			block.setBlockingUser(blockingUser);
+			block.setDate(new Date());
+			
+			session.beginTransaction();
+			try {
+				session.save(block);
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+			}
+			
+		} finally {
+			DB.closeSession(session);
+		}
+		return res;
+	}
+	
+	@GET
+	@Path("unblockfromrecents/{id}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response unblockuserfromrecents(@PathParam("id") String blockedUserId, @CookieParam("fbtoken") Cookie fbtoken) {
+
+		final Response res = Response.seeOther(GetStuff.createURI("/fb/user/" + blockedUserId)).build();
+		final String blockingUserId = Accounts.getUsernameFromCookie(fbtoken);
+		if (blockingUserId == null) return res;
+		
+		final Session session = DB.openSession();
+		try {
+			final DBUser blockingUser = DB.getUserById(session, blockingUserId);
+			final DBUser blockedUser = DB.getUserById(session, blockedUserId);
+			if (blockedUser == null || blockingUser == null) return res;
+			
+			session.beginTransaction();
+			try {
+				session.createNativeQuery("DELETE FROM fbrecentuserblocks WHERE blockeduser_id='"+blockedUser.getId()+"' AND blockinguser_id='"+blockingUser.getId()+"'").executeUpdate();
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+			}
+			
+		} finally {
+			DB.closeSession(session);
+		}
+		return res;
 	}
 
 	
