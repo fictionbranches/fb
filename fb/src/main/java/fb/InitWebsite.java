@@ -18,7 +18,7 @@ import org.glassfish.grizzly.nio.transport.TCPNIOTransport;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransportBuilder;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
-import org.glassfish.grizzly.strategies.SimpleDynamicNIOStrategy;
+import org.glassfish.grizzly.strategies.WorkerThreadIOStrategy;
 import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -243,12 +243,12 @@ public class InitWebsite {
 	
 	private static void setupTCPNIOTransport(HttpServer server) {
 		TCPNIOTransport transport = TCPNIOTransportBuilder.newInstance()
-				.setTcpNoDelay(true)
-				.setIOStrategy(SimpleDynamicNIOStrategy.getInstance())
+				//.setTcpNoDelay(true)
+				.setIOStrategy(WorkerThreadIOStrategy.getInstance())
 				.setWorkerThreadPoolConfig(ThreadPoolConfig.defaultConfig()
-					.setCorePoolSize(1)
-					.setMaxPoolSize(5)
-					.setQueueLimit(512)
+					.setCorePoolSize(5)
+					.setMaxPoolSize(1024)
+					.setQueueLimit(4096)
 					.setTransactionTimeout(30, TimeUnit.SECONDS)
 				)
 				.build();
