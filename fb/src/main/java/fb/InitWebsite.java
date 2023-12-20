@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.ConsoleHandler;
@@ -23,7 +22,6 @@ import org.glassfish.grizzly.strategies.SimpleDynamicNIOStrategy;
 import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -39,10 +37,6 @@ import fb.api.LegacyStuff;
 import fb.api.MyErrorPageGenerator;
 import fb.api.NotFoundExceptionMapper;
 import fb.api.RssStuff;
-import fb.db.DBEpisode;
-import fb.db.DBEpisodeTag;
-import fb.db.DBTag;
-import fb.db.DBUser;
 import fb.objects.FlatEpisode;
 import fb.util.FBIndexerProgressMonitor;
 import fb.util.Markdown;
@@ -95,9 +89,6 @@ public class InitWebsite {
 			case "firstrun":
 				InitDB.cleanStart();
 				break;
-			case "randomtags":
-				randomTags();
-				break;
 			default:
 				System.err.println("Unknown argument: " + args[0] + " (" + args[0].length() + ")");
 				usage();
@@ -106,7 +97,7 @@ public class InitWebsite {
 	
 	@SuppressWarnings("squid:S106")
 	private static void usage() {
-		System.err.println("USAGE: (run | init | count)");
+		System.err.println("USAGE: (run | firstrun | salttest)");
 		System.err.println("If no option is specified, run is default");
 		System.exit(1);
 	}
@@ -335,37 +326,5 @@ public class InitWebsite {
 		sumCheckYes /= 1000000000.0;
 		sumCheckNo /= 1000000000.0;
 		return new double[]{ sumHash / ((double)list.size()), sumCheckYes / ((double)list.size()), sumCheckNo / ((double)list.size()) };
-	}
-	
-	private static void randomTags() {
-		Session sesh = DB.openSession();
-		try {
-			
-			List<DBTag> tags = sesh.createQuery("from DBTag tag", DBTag.class).list();
-			List<DBEpisode> eps = sesh.createQuery("from DBEpisode ep", DBEpisode.class).list();
-			DBUser me = sesh.get(DBUser.class, "phoenix");
-			if (me == null) throw new RuntimeException();
-			
-			@SuppressWarnings("squid:S2119")
-			Random r = new Random();
-			
-			sesh.beginTransaction();
-			try {
-				for (DBEpisode ep : eps) {
-					for (DBTag tag : tags) {
-						if (r.nextDouble() < 0.333) {
-							sesh.save(new DBEpisodeTag(ep, tag, me));
-						}
-					}
-				}
-				sesh.getTransaction().commit();
-			} catch (Exception e) {
-				sesh.getTransaction().rollback();
-				throw new RuntimeException(e);
-			}
-			
-		} finally {
-			DB.closeSession(sesh);
-		}
 	}
 }

@@ -1317,7 +1317,6 @@ public class DB {
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
 	private static Map<FlatEpisode, Set<Tag>> getRecentsPage(Session session, long generatedId, int page, boolean reverse, String tagFilter, List<String> blockers) {
 				
 		List<String> whereClausesToAnd = new ArrayList<>();
@@ -1366,29 +1365,32 @@ public class DB {
 				.replace("$PAGE_SIZE", String.valueOf(PAGE_SIZE))
 				;
 												
-		Map<String, Tag> allTags = DB.getAllTags(session).map(Tag::new).collect(Collectors.toMap(tag -> tag.shortName, tag -> tag));
+		final Map<String, Tag> allTags = DB.getAllTags(session).map(Tag::new).collect(Collectors.toMap(tag -> tag.shortName, tag -> tag));
 		
-		return ((Stream<Object>)session.createNativeQuery(query).stream()).map(x -> {
-			Object[] arr = (Object[])x;
+		@SuppressWarnings("unchecked")
+		final Stream<Object> stream = session.createNativeQuery(query).stream();
+		
+		return stream.map(x -> {
+			final Object[] arr = (Object[])x;
 			
-			long epid = ((BigInteger)arr[0]).longValue();
-			String oldMap = (String)arr[1];
-			String newMap = (String)arr[2];
-			String title = (String)arr[3];
-			String link = (String)arr[4];
-			String authorId = (String)arr[5];
-			String authorName = (String)arr[6];
-			String authorAvatar = (String)arr[7];
-			String body = (String)arr[8];
-			Date date = (Date)arr[9];
-			Date editDate = null;
-			String editorId = null;
-			String editorName = null;
-			int childCount = (int)arr[10];
-			Long parentId = arr[11]==null ? null : ((BigInteger)arr[11]).longValue();
-			long hits = ((BigInteger)arr[12]).longValue();
+			final long epid = ((BigInteger)arr[0]).longValue();
+			final String oldMap = (String)arr[1];
+			final String newMap = (String)arr[2];
+			final String title = (String)arr[3];
+			final String link = (String)arr[4];
+			final String authorId = (String)arr[5];
+			final String authorName = (String)arr[6];
+			final String authorAvatar = (String)arr[7];
+			final String body = (String)arr[8];
+			final Date date = (Date)arr[9];
+			final Date editDate = null;
+			final String editorId = null;
+			final String editorName = null;
+			final int childCount = (int)arr[10];
+			final Long parentId = arr[11]==null ? null : ((BigInteger)arr[11]).longValue();
+			final long hits = ((BigInteger)arr[12]).longValue();
 			
-			String tagNamesStr = (String)arr[13];
+			final String tagNamesStr = (String)arr[13];
 			final Set<Tag> tags;
 			if (tagNamesStr.length() == 0) tags = Set.of();
 			else {
