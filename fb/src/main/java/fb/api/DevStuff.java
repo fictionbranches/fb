@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 
 import javax.imageio.ImageIO;
 
+import org.springframework.stereotype.Component;
+
 import fb.Accounts;
 import fb.Accounts.FBLoginException;
 import fb.DB;
@@ -19,7 +21,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
+@Component
 @Path("")
 public class DevStuff {	
 	

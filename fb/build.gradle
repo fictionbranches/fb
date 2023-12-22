@@ -1,7 +1,10 @@
 plugins {
-  id "com.github.jk1.dependency-license-report" version "1.6"
-    id("com.github.johnrengelman.shadow") version "7.0.0"
+	id "com.github.jk1.dependency-license-report" version "1.6"
+	id("com.github.johnrengelman.shadow") version "7.0.0"
+	id("org.springframework.boot") version "3.2.0"
+	id("io.spring.dependency-management") version "1.1.4"
 }
+
 apply plugin: 'java-library'
 apply plugin:'application'
 apply plugin: 'eclipse'
@@ -32,15 +35,14 @@ tasks.withType(JavaCompile) {
     options.deprecation = true
 }
 dependencies {
-		
+
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-jersey'
+
 	implementation group: 'jakarta.activation', name: 'jakarta.activation-api', version: '2.0.1' // On Java 9+, fails at runtime without this dependency
 	implementation group: 'com.sun.activation', name: 'jakarta.activation', version: '2.0.1' // On Java 9+, fails at runtime without this dependency
 	implementation group: 'javax.validation', name: 'validation-api', version: '2.0.1.Final'
-	
-	
-	implementation (group: 'org.glassfish.jersey.containers', name: 'jersey-container-grizzly2-http', version: '3.0.3') // Grizzly embedded container for Jersey
-	implementation (group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '3.0.3') // Fails at runtime without this dependency
-	
+		
 	implementation group: 'org.hibernate', name: 'hibernate-core', version: '5.6.3.Final' // ORM
 	implementation group: 'org.hibernate', name: 'hibernate-c3p0', version: '5.6.3.Final' // better connection pool
 	implementation group: 'org.hibernate', name: 'hibernate-search-orm', version: '5.11.10.Final' // search engine

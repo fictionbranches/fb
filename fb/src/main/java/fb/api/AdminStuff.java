@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.hibernate.Session;
+import org.springframework.stereotype.Component;
 
 import fb.Accounts;
 import fb.Accounts.FBLoginException;
@@ -38,6 +39,7 @@ import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+@Component
 @Path("fb")
 public class AdminStuff {
 	

@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import com.google.gson.Gson;
 
@@ -44,6 +45,7 @@ import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.UriBuilder;
 import jakarta.ws.rs.core.UriInfo;
 
+@Component
 @Path("fb")
 public class GetStuff {
 	

@@ -1,48 +1,42 @@
 package fb;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.glassfish.grizzly.http.server.HttpServer;
-import org.glassfish.grizzly.http.server.NetworkListener;
-import org.glassfish.grizzly.nio.transport.TCPNIOTransport;
-import org.glassfish.grizzly.nio.transport.TCPNIOTransportBuilder;
-import org.glassfish.grizzly.ssl.SSLContextConfigurator;
-import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
-import org.glassfish.grizzly.strategies.WorkerThreadIOStrategy;
-import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
-import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.security.crypto.bcrypt.BCrypt;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import fb.api.AccountStuff;
 import fb.api.AddStuff;
 import fb.api.AdminStuff;
 import fb.api.CharsetResponseFilter;
 import fb.api.DevStuff;
+import fb.api.ExceptionMappers;
 import fb.api.GetStuff;
 import fb.api.JSONStuff;
 import fb.api.LegacyStuff;
-import fb.api.MyErrorPageGenerator;
-import fb.api.NotFoundExceptionMapper;
 import fb.api.RssStuff;
 import fb.objects.FlatEpisode;
+import fb.services.RssService;
+import fb.services.StoryService;
 import fb.util.FBIndexerProgressMonitor;
 import fb.util.Markdown;
 import fb.util.Strings;
-import jakarta.ws.rs.core.UriBuilder;
 
+@SpringBootApplication
 public class InitWebsite {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
@@ -75,11 +69,14 @@ public class InitWebsite {
 
 	@SuppressWarnings("squid:S106")
 	public static void main(String[] args) {
-		if (args.length == 0) runServer();
-		else if (args[0].trim().length() == 0) runServer();
+		if (args.length == 0) runSpring();
+		else if (args[0].trim().length() == 0) runSpring();
 		else switch (args[0].trim().toLowerCase()) {
 			case "run":
-				runServer();
+				runSpring();
+				break;
+			case "runspring":
+				runSpring();
 				break;
 			case "salttest":
 				saltTest();
@@ -102,61 +99,79 @@ public class InitWebsite {
 		System.exit(1);
 	}
 	
-	private static void runServer() {
-		HttpServer server;
-		{
-			Thread searchIndexer = checkBaseDirAndIndexes();
-			LOGGER.info("Started. Connecting to postgres"); // This line also starts the file watcher threads
-			checkDatabase();
+	private static void runSpring() {
+		LOGGER.info("***** Starting ******");
 		
-			Accounts.bump(); // Force temp accounts to be loaded and account cleaner thread to start
 		
-			Runtime.getRuntime().addShutdownHook(new Thread(()->{
-				Accounts.writeSessionsToFile();
-				DB.closeSessionFactory();
-			}));
-			
-			
-			if (searchIndexer != null) {
-				LOGGER.warn("Starting search indexer");
-				searchIndexer.start();
-				LOGGER.warn("Search indexer started");
-			}
-			
-			Thread jsEngineStarter = new Thread(()->Markdown.formatBody("This call inits the js engine"));
-			jsEngineStarter.setName("jsEngineStarter");
-			jsEngineStarter.start();
-			
-			LOGGER.info("Starting server");
-			
-			int port; try {
-				port = Integer.parseInt(Strings.getBACKEND_PORT());
-			} catch (Exception e) {
-				port = 8080;
-			}
-			
-			server = GrizzlyHttpServerFactory.createHttpServer(
-					UriBuilder.fromUri("https://0.0.0.0/").port(port).build(), jaxrsConfig(), true,
-					new SSLEngineConfigurator(sslConfig()).setClientMode(false), false);
-
-			setupTCPNIOTransport(server);
-
-			enableExceptionLogging();
-
-			// Enable custom error pages
-			server.getServerConfiguration().setDefaultErrorPageGenerator(new MyErrorPageGenerator());
+		
+		
+		Thread searchIndexer = checkBaseDirAndIndexes();
+		
+		
+		
+		
+		
+		LOGGER.info("Started. Connecting to postgres"); // This line also starts the file watcher threads
+		checkDatabase();
+		
+		final List<Thread> threads = new ArrayList<>();
+		threads.add(new Thread(() -> RssService.bump()));
+		threads.add(new Thread(() -> StoryService.bump()));
+		threads.add(new Thread(() -> Markdown.formatBody("This call inits the js engine")));
+		threads.add(new Thread(() -> Accounts.bump()));
+		threads.forEach(Thread::start);
+	
+		Runtime.getRuntime().addShutdownHook(new Thread(()->{
+			Accounts.writeSessionsToFile();
+			DB.closeSessionFactory();
+		}));
+		
+		if (searchIndexer != null) {
+			LOGGER.warn("Starting search indexer");
+			searchIndexer.start();
+			LOGGER.warn("Search indexer started");
 		}
 
-		try {
-			server.start();
-		} catch (IOException e) {
-			LOGGER.error("Failed to start server", e);
-			System.exit(26);
-			throw new RuntimeException(e);
+		threads.forEach(t -> {
+			try {
+				t.join();
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		});
+		
+		SpringApplication.run(InitWebsite.class, new String[0]);
+		LOGGER.info("***** Done starting ******");
+	}
+		
+	@Controller
+	public class MyErrorController implements ErrorController {
+
+		@RequestMapping("/error")
+		public String handleError() {
+			// do something like logging
+			return "error";
 		}
-		LOGGER.info("Server started");
 	}
 	
+	@Component
+	@SuppressWarnings("unused")
+	private static class JerseyConfig extends ResourceConfig {
+		public JerseyConfig() {
+			final ArrayList<Class<?>> list = Stream.of(AccountStuff.class, AddStuff.class, AdminStuff.class, GetStuff.class, LegacyStuff.class, RssStuff.class, JSONStuff.class).collect(Collectors.toCollection(ArrayList::new));
+			if (DEV_MODE) {
+				LOGGER.info("Running in DEV_MODE");
+				list.add(DevStuff.class);
+				list.add(DevStuff.DevStuff2.class);
+			}
+			for (Class<?> c : list) this.register(c);
+			this.register(CharsetResponseFilter.class);
+			this.register(ExceptionMappers.DB.class);
+			this.register(ExceptionMappers.WebGeneric.class);
+			this.register(ExceptionMappers.Generic.class);
+		}
+	}
+		
 	private static void checkDatabase() {
 		LOGGER.info("Checking database");
 		for (FlatEpisode rootEp : DB.getRoots()) {
@@ -197,77 +212,6 @@ public class InitWebsite {
 		DB.closeSessionFactory();
 		System.exit(24);
 		throw new RuntimeException(msg);
-	}
-	
-	private static ResourceConfig jaxrsConfig() {
-		ArrayList<Class<?>> list = Stream.of(AccountStuff.class, AddStuff.class,
-				AdminStuff.class, GetStuff.class, LegacyStuff.class, RssStuff.class, JSONStuff.class).collect(Collectors.toCollection(ArrayList::new));
-		if (DEV_MODE) {
-			LOGGER.info("Running in DEV_MODE");
-			list.add(DevStuff.class);
-			list.add(DevStuff.DevStuff2.class);
-		}
-		ResourceConfig resourceConfig = new ResourceConfig(list.toArray(new Class<?>[0]));
-		resourceConfig.register(CharsetResponseFilter.class);
-		resourceConfig.register(NotFoundExceptionMapper.class);
-		return resourceConfig;
-	}
-	
-	private static SSLContextConfigurator sslConfig() {
-		byte[] keystore;
-		try {
-			InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream("asdf.jks");
-			ArrayList<Byte> keyList = new ArrayList<>();
-			byte[] buff = new byte[4096];
-			while (true) {
-				int bytes = in.read(buff);
-				if (bytes <= 0) break;
-				else for (int i=0; i<bytes; ++i) keyList.add(buff[i]);
-			}
-			keystore = new byte[keyList.size()];
-			for (int i=0; i<keyList.size(); ++i) keystore[i] = keyList.get(i);
-			
-			LOGGER.info("Finished reading " + keystore.length + " bytes into the keystore");
-		} catch (IOException e) {
-			//never happens
-			LOGGER.error("This should never happen", e);
-			System.exit(25);
-			throw new RuntimeException(e);
-		}
-		
-		SSLContextConfigurator ssl = new SSLContextConfigurator();
-		ssl.setKeyStoreBytes(keystore);
-		ssl.setKeyStorePass("password");
-		return ssl;
-	}
-	
-	private static void setupTCPNIOTransport(HttpServer server) {
-		TCPNIOTransport transport = TCPNIOTransportBuilder.newInstance()
-				//.setTcpNoDelay(true)
-				.setIOStrategy(WorkerThreadIOStrategy.getInstance())
-				.setWorkerThreadPoolConfig(ThreadPoolConfig.defaultConfig()
-					.setCorePoolSize(5)
-					.setMaxPoolSize(1024)
-					.setQueueLimit(4096)
-					.setTransactionTimeout(30, TimeUnit.SECONDS)
-				)
-				.build();
-		
-		
-		for (NetworkListener nl : server.getListeners()) {
-			LOGGER.info("Set transport for listener: " + nl);
-			nl.setTransport(transport);
-		}		
-	}
-	
-	private static void enableExceptionLogging() {
-		// Enable exception logging
-		java.util.logging.Logger l = java.util.logging.Logger.getLogger("org.glassfish.grizzly.http.server.HttpHandler");
-		l.setLevel(Level.FINE);
-		l.setUseParentHandlers(false);
-		ConsoleHandler ch = new ConsoleHandler();
-		ch.setLevel(Level.ALL);
-		l.addHandler(ch);
 	}
 	
 	private static void saltTest() {

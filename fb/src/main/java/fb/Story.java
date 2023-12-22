@@ -13,8 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,6 +28,7 @@ import fb.objects.EpisodeWithChildren;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.objects.Tag;
+import fb.services.StoryService;
 import fb.util.Dates;
 import fb.util.Markdown;
 import fb.util.Strings;
@@ -271,7 +270,7 @@ public class Story {
 				
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table class=\"noborder\">\n");
-		for (FlatEpisode ep : Story.getRootEpisodes()) {
+		for (FlatEpisode ep : StoryService.getRootEpisodes()) {
 			sb.append("<h3><a href=/fb/story/" + ep.generatedId + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/rss/" + ep.generatedId + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent?story=" + ep.generatedId + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
 		}
 		sb.append("</table>");
@@ -386,7 +385,7 @@ public class Story {
 		
 		StringBuilder sb = new StringBuilder();
 		
-		for (FlatEpisode ep : Story.getRootEpisodes()) {
+		for (FlatEpisode ep : StoryService.getRootEpisodes()) {
 			sb.append(Strings.getString("search_help_line").replace("$ID", ""+ep.generatedId).replace("$LINK", escape(ep.link)) + "\n");
 		}
 		
@@ -450,7 +449,7 @@ public class Story {
 			String story;
 			FlatEpisode rootEp;
 			if (root==0){
-				rootEp = Story.getRootEpisodeById(rootId);
+				rootEp = StoryService.getRootEpisodeById(rootId);
 				if (rootEp == null) story = "";
 				else story = Strings.getString("recents_table_head_story_column").replace("$TITLE", rootEp.link);
 			} else story = "";
@@ -577,30 +576,6 @@ public class Story {
 		return root;
 	}
 		
-	private static Object rootEpisodesCacheLock = new Object();
-	private static LinkedHashMap<Long,FlatEpisode> rootEpisodesCache2 = new LinkedHashMap<>();
-	static {
-		updateRootEpisodesCache();
-		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(Story::updateRootEpisodesCache, 5, 5, TimeUnit.MINUTES);
-	}
-	
-	public static List<FlatEpisode> getRootEpisodes() {
-		return Story.rootEpisodesCache2.values().stream().toList();
-	}
-	
-	public static FlatEpisode getRootEpisodeById(long generatedId) {
-		return Story.rootEpisodesCache2.get(generatedId);
-	}
-	
-	public static void updateRootEpisodesCache() {
-		synchronized (rootEpisodesCacheLock) {
-			LinkedHashMap<Long, FlatEpisode> newCache = new LinkedHashMap<>();
-			FlatEpisode[] arr = DB.getRoots();
-			for (FlatEpisode root : arr) newCache.put(root.generatedId, root);
-			rootEpisodesCache2 = newCache;
-		}
-	}
-	
 	public static String getOutlineScrollable(Cookie token, long generatedId) {
 		FlatUser user;
 		try {
@@ -830,7 +805,7 @@ public class Story {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table class=\"popular\"><thead><tr><th>Link/Title</th><th><a href=/fb/mosthits>Hits</a></th><th><a href=/fb/mostviews>Views</a></th><th><a href=/fb/mostupvotes>Upvotes</a></th><th>Story</th><th>Tags</th></tr></thead><tbody>\n");
 		for (Episode ep : arr) {
-			FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
+			FlatEpisode rootEp = StoryService.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
 			String story;
 			if (rootEp == null) story = "";
 			else story = rootEp.link;

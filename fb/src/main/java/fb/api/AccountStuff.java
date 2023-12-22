@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import fb.Accounts;
 import fb.Accounts.FBLoginException;
@@ -36,6 +37,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 
+@Component
 @Path("fb")
 public class AccountStuff {
 	

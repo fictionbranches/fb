@@ -92,6 +92,7 @@ import fb.objects.Notification;
 import fb.objects.Tag;
 import fb.objects.Theme;
 import fb.objects.User;
+import fb.services.StoryService;
 import fb.util.Discord;
 import fb.util.FBIndexerProgressMonitor;
 import fb.util.Strings;
@@ -668,7 +669,7 @@ public class DB {
 			return childId;
 		} finally {
 			closeSession(session);
-			Story.updateRootEpisodesCache();
+			StoryService.updateRootEpisodesCache();
 		}
 	}
 	
@@ -3444,7 +3445,7 @@ public class DB {
 			}
 		} finally {
 			closeSession(session);
-			Story.updateRootEpisodesCache();
+			StoryService.updateRootEpisodesCache();
 		}
 	}
 	

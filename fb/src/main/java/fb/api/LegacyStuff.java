@@ -10,10 +10,14 @@ import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import org.springframework.stereotype.Component;
+
 import fb.DB;
 import fb.DB.DBException;
 import fb.objects.FlatEpisode;
 import fb.util.Strings;
+
+@Component
 @Path("fb")
 public class LegacyStuff {
 	

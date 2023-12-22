@@ -253,7 +253,12 @@ public class Accounts {
 			table.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Date</th><th>Story</th><th>Depth</th></tr>");
 			for (FlatEpisode ep : profileUser.episodes) {
 				String story;
-				FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
+				FlatEpisode rootEp;
+				try {
+					rootEp = DB.getFlatEp(DB.newMapToIdList(ep.newMap).findFirst().get());
+				} catch (DBException e) {
+					rootEp = null;
+				}
 				if (rootEp == null) story = "";
 				else story = rootEp.link;
 				table.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + " title='"+escape(ep.body.substring(0, Integer.min(140, ep.body.length())))+"'>" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + 

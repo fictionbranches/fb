@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.Optional;
 
 import org.hibernate.Session;
+import org.springframework.stereotype.Component;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -37,6 +38,7 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 
+@Component
 @Path("fb")
 public class AddStuff {
 		
