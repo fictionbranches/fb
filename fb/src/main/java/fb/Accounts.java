@@ -273,7 +273,6 @@ public class Accounts {
 		}
 		String avatar = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"":("<img class=\"avatarimg\" alt=\"avatar\" src=\"" + escape(profileUser.user.avatar) + "\" /> ");
 		String avatarMeta = (profileUser.user.avatar==null||profileUser.user.avatar.trim().length()==0)?"/favicon-192x192.png":escape(profileUser.user.avatar);
-		String bio = profileUser.user.bio==null?"":Story.formatBody(profileUser.user.bio);
 		
 		String moderator;
 		if (profileUser.user.level > 1) {
@@ -295,10 +294,10 @@ public class Accounts {
 				.replace("$MODERATORSTATUS", moderator)
 				.replace("$DATE", date)
 				.replace("$PAGECOUNT", pageCount)
-				.replace("$AUTHOR", profileUser.user.author)
+				.replace("$AUTHOR", escape(profileUser.user.author))
 				.replace("$AVATARURLMETA", avatarMeta)
 				.replace("$AVATARURL", avatar)
-				.replace("$BODY", bio)
+				.replace("$BODY", profileUser.user.bio==null?"":Story.formatBody(profileUser.user.bio))
 				.replace("$EPISODES", body);
 	}
 	
