@@ -294,7 +294,7 @@ public class Accounts {
 				.replace("$MODERATORSTATUS", moderator)
 				.replace("$DATE", date)
 				.replace("$PAGECOUNT", pageCount)
-				.replace("$AUTHOR", escape(profileUser.user.avatarUnsafe))
+				.replace("$AUTHOR", escape(profileUser.user.authorUnsafe))
 				.replace("$AVATARURLMETA", avatarMeta)
 				.replace("$AVATARURL", avatar)
 				.replace("$BODY", profileUser.user.bioUnsafe==null?"":Story.formatBody(profileUser.user.bioUnsafe))
