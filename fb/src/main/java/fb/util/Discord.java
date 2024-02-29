@@ -4,7 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
@@ -66,7 +66,7 @@ public class Discord {
 			final String postData = new Gson().toJson(data);
 			final byte[] postDataBytes = postData.getBytes(StandardCharsets.UTF_8);
 			
-			final HttpURLConnection conn = (HttpURLConnection) new URL(hookURL).openConnection();
+			final HttpURLConnection conn = (HttpURLConnection) URI.create(hookURL).toURL().openConnection();
 
 			conn.setRequestMethod("POST");
 

@@ -6,9 +6,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.ProtocolException;
-import java.net.URL;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
@@ -85,13 +84,6 @@ public class GoogleRECAPTCHA {
 	 * @return "true" if user passed, "false" if user failed, anything else indicated an error
 	 */
 	public static boolean checkGoogle(String google) throws GoogleCheckException {
-		URL url;
-		try {
-			url = new URL("https://www.google.com/recaptcha/api/siteverify");
-		} catch (MalformedURLException e1) {
-			LOGGER.error("MalformedURLException? Really? wtf ", e1);
-			throw new GoogleCheckException("Tell Phoenix you got recaptcha MalformedURLException");
-		}
 		Map<String, String> params = new LinkedHashMap<>();
 		params.put("secret", Strings.getRECAPTCHA_SECRET());
 		params.put("response", google);
@@ -100,7 +92,7 @@ public class GoogleRECAPTCHA {
 				.collect(Collectors.joining("&")));
 		HttpURLConnection conn;
 		try {
-			conn = (HttpURLConnection) url.openConnection();
+			conn = (HttpURLConnection) URI.create("https://www.google.com/recaptcha/api/siteverify").toURL().openConnection();
 		} catch (IOException e) {
 			LOGGER.error("IOException1? Really? wtf ", e);
 			throw new GoogleCheckException("Tell Phoenix you got recaptcha IOException1");

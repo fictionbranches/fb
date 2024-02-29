@@ -3,7 +3,7 @@ package fb.util;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URL;
+import java.net.URI;
 import java.util.stream.Collectors;
 
 import javax.script.Invocable;
@@ -57,7 +57,7 @@ public class Markdown {
 	}
 
 	private String getMarkdownIt() {
-		try (final BufferedReader scan = new BufferedReader(new InputStreamReader(new URL(MARKDOWN_IT_URL).openStream()))) {
+		try (final BufferedReader scan = new BufferedReader(new InputStreamReader(URI.create(MARKDOWN_IT_URL).toURL().openStream()))) {
 			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
 		} catch (IOException e) {
 			throw new RuntimeException("Unable to download markdown-it.js", e);
