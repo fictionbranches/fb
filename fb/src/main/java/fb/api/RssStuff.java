@@ -163,7 +163,7 @@ public class RssStuff {
 			entry.setTitle(escape("Comment on " + com.episode.link));
 			entry.setLink("https://" + Strings.getDOMAIN() + "/fb/story/" + com.episode.generatedId + "#comment" + com.id);
 			entry.setPublishedDate(com.date);
-			entry.setAuthor(escape(com.user.author));
+			entry.setAuthor(com.user.authorEscape());
 			
 			SyndContent desc = new SyndContentImpl();
 			desc.setType("text/html");

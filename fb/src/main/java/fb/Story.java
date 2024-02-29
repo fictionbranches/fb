@@ -198,7 +198,7 @@ public class Story {
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
 			commentHTML.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p><hr/>\n");
 			if (c.modVoice) commentHTML.append("<span style='border: 1px solid; margin: 2px; padding: 5px; white-space: nowrap;'>This comment is from a site Moderator</span>\n");
-			commentHTML.append("<p>" + ((c.user.avatar==null||c.user.avatar.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a></p>\n");			
+			commentHTML.append("<p>" + ((c.user.avatarUnsafe==null||c.user.avatarUnsafe.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatarUnsafe) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + escape(c.user.authorUnsafe) + "</a></p>\n");			
 			commentHTML.append("<p><a href=/fb/story/" + ep.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>");
 			if (user != null) {
 				if (c.user.id.equals(user.id)) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete</a>");
@@ -1219,8 +1219,8 @@ public class Story {
 			html.append("<p>");
 			if (includeAttribution) {
 				html.append("By ");
-				if (!(c.user.avatar==null||c.user.avatar.trim().length()==0)) html.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatar) + "\" /> ");
-				html.append("<a href=/fb/user/" + c.user.id + ">" + escape(c.user.author) + "</a> - \n");
+				if (!(c.user.avatarUnsafe==null||c.user.avatarUnsafe.trim().length()==0)) html.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatarUnsafe) + "\" /> ");
+				html.append("<a href=/fb/user/" + c.user.id + ">" + escape(c.user.authorUnsafe) + "</a> - \n");
 			}
 			html.append("<a href=/fb/story/" + c.episode.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>\n");
 			if (c.modVoice) html.append(" - <em>This comment is from a site Moderator</em>\n");

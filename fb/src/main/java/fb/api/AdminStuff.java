@@ -560,7 +560,6 @@ public class AdminStuff {
 				.replace("$CREATEDDATE", Dates.outputDateFormat2(new Date(tag.createdDate)))
 				)
 		.collect(Collectors.joining()) + "</table>\n";
-		
 		return Response.ok(Strings.getFile("modtagedit.html", user)
 				.replace("$EXTRA", tagHTML)
 				.replace("$TITLE", "Manage Tags")

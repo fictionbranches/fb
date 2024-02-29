@@ -83,11 +83,11 @@ public class JSONStuff {
 		public final String avatar;
 		public JSONUser(FlatUser user) {
 			this.username = user.id;
-			this.author = user.author;
+			this.author = user.authorUnsafe;
 			this.date = toUTC(user.date);
 			this.level = user.level;
 			this.theme = user.theme.name;
-			this.avatar = user.avatar;
+			this.avatar = user.avatarUnsafe;
 		}
 	}
 	
@@ -267,7 +267,7 @@ public class JSONStuff {
 			}
 			EpisodeWithChildren ep;
 			try {
-				ep = DB.getFullEp(generatedId, (user == null) ? null : user.author);
+				ep = DB.getFullEp(generatedId, (user == null) ? null : user.authorUnsafe);
 			} catch (DBException e1) {
 				return Response.ok(g().toJson(new JSONError("Not found: " + generatedId))).build();
 			}
