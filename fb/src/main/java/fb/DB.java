@@ -2042,10 +2042,9 @@ public class DB {
 						// subber is comment auther
 						// therefore commenter is already subscribed
 						commenterIsSubscribed = true;
+						continue;
 					}
-					
-					if (commenter.getId().equals(ep.getAuthor().getId())) continue; // subber is commenter, don't send them a notification for their own comment
-					
+										
 					DBNotification note = new DBNotification();
 					note.setType(DBNotification.NEW_COMMENT_ON_SUBBED_EPISODE);
 					note.setDate(new Date());
