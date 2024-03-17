@@ -47,10 +47,6 @@ public class Text {
 		}
 	}
 	
-	public static String readTextFile(String path) {
-		return readTextFile(new File(path));
-	}
-	
 	public static String readTextFile(File file) {
 		try (BufferedReader scan = new BufferedReader(new FileReader(file))) {
 			return scan.lines().collect(Collectors.joining(System.lineSeparator()));

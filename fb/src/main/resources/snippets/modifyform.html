@@ -2,7 +2,7 @@
 <head> 
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 <title>Modifying '$TITLE'</title>
-<link rel="stylesheet" href="/static/css/base21.css">
+<link rel="stylesheet" href="/static/css/base21.css?v=$VERSION">
 $STYLE
 <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
 <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
@@ -15,11 +15,11 @@ $STYLE
 <meta property="og:title" content="Modifying '$TITLE'" />
 <meta name="description" content="Modifying '$TITLE'" />
 <meta property="og:description" content="Modifying '$TITLE'" />
-<script  src="/static/formatting0.js"></script>
-<script src=/static/all_pages7.js></script>
+<script  src="/static/formatting.js?v=$VERSION"></script>
+<script src="/static/all_pages.js?v=$VERSION"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js" integrity="sha512-SYfDUYPg5xspsG6OOpXU366G8SZsdHOhqk/icdrYJ2E/WKZxPxze7d2HD3AyXpT7U22PZ5y74xRpqZ6A2bJ+kQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src=/static/markdown.js></script></head>
-<script src=/static/addform3.js></script></head>
+<script src="/static/markdown.js?v=$VERSION"></script></head>
+<script src="/static/addform.js?v=$VERSION"></script></head>
 <body>
 
 <div class="topcorner">
@@ -36,7 +36,7 @@ $ACCOUNT
 		<p>
 			<input type="button" id="formatButton" value="Show Formatting Help"></input><br/>
 			<div id="formattingDiv" style="display:none">
-                <iframe id="formattingFrame" src=/static/formatting3.html frameborder="0" scrolling="no" style="position: relative; width: 100%;"></iframe>
+                <iframe id="formattingFrame" src="/static/formatting.html?v=$VERSION" frameborder="0" scrolling="no" style="position: relative; width: 100%;"></iframe>
 			</div>
 			Body<br/><textarea id="bodytextarea" name= "body" rows= "40" maxlength="100000">$BODY</textarea>
 		</p>

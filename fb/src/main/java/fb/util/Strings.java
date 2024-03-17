@@ -48,8 +48,9 @@ public class Strings {
 	private static String DISCORD_ERROR_HOOK;
 	private static String DONATE_BUTTON;
 	private static String BACKEND_PORT;
-
+	
 	private static final String ERROR_FILE;
+	private static final String VERSION;
 	static {
 		r = new Random();
 
@@ -59,6 +60,8 @@ public class Strings {
 		stringsTxtMap = readInStringsMap();
 
 		ERROR_FILE = filesMap.get("generic.html");
+		
+		VERSION = Long.toHexString(r.nextLong(100000000000l, 1000000000000l));
 	}
 
 	public static void refreshSiteSettings() {
@@ -267,6 +270,7 @@ public class Strings {
 		return html
 				.replace("$DONATEBUTTON", Strings.getDONATE_BUTTON())
 				.replace("$ACCOUNT", account)
+				.replace("$VERSION", VERSION)
 				.replace("$STYLE", themeToCss(user));
 	}
 	

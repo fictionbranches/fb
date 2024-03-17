@@ -2,7 +2,7 @@
 <head> 
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 <title>Add new root episode</title>
-<link rel="stylesheet" href="/static/css/base21.css">
+<link rel="stylesheet" href="/static/css/base21.css?v=$VERSION">
 $STYLE
 <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
 <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
@@ -15,9 +15,9 @@ $STYLE
 <meta property="og:title" content="Add new root episode" />
 <meta name="description" content="Add new root episode" />
 <meta property="og:description" content="Add new root episode" />
-<script  src="/static/formatting0.js"></script>
+<script  src="/static/formatting.js?v=$VERSION"></script>
 
-<script src=/static/all_pages7.js></script></head>
+<script src="/static/all_pages.js?v=$VERSION"></script></head>
 <body>
 
 <div class="topcorner">
@@ -35,7 +35,7 @@ $ACCOUNT
 		<p>
 			<input type="button" id="formatButton" value="Show Formatting Help"></input><br/>
                         <div id="formattingDiv" style="display:none">
-                <iframe id="formattingFrame" src=/static/formatting3.html frameborder="0" scrolling="no" style="position: relative; width: 100%;"></iframe>
+                <iframe id="formattingFrame" src="/static/formatting.html?v=$VERSION" frameborder="0" scrolling="no" style="position: relative; width: 100%;"></iframe>
                         </div>
 
 			Body<br/><textarea name= "body" placeholder="Body" rows= "40"></textarea>
