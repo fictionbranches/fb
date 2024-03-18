@@ -155,6 +155,7 @@ public class InitWebsite {
 			throw new RuntimeException(e);
 		}
 		LOGGER.info("Server started");
+		new Thread(() -> RssStuff.ping()).start();
 	}
 	
 	private static void checkDatabase() {

@@ -101,6 +101,10 @@ public class RssStuff {
 		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(RssStuff::updateFeeds, 1, 1, TimeUnit.HOURS);
 	}
 	
+	public static void ping() {
+		
+	}
+	
 	private static void updateFeeds() {
 		{
 			HashMap<Long,String> list = new HashMap<>();
