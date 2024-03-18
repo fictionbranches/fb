@@ -27,6 +27,7 @@ import fb.db.DBComment;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.util.Dates;
+import fb.util.Markdown;
 import fb.util.Strings;
 import jakarta.ws.rs.CookieParam;
 import jakarta.ws.rs.GET;
@@ -462,7 +463,7 @@ public class GetStuff {
 		return Response.ok(Strings.getFileWithToken("generic_meta.html", fbtoken)
 				.replace("$TITLE", "Fiction Branches FAQ")
 				.replace("$OGDESCRIPTION", "Fiction Branches FAQ")
-				.replace("$EXTRA", Story.formatBody(Strings.getFile("faq.md", null)))).build();
+				.replace("$EXTRA", Markdown.formatBody(Strings.getFile("faq.md", null)))).build();
 	}
 	
 	@GET
@@ -504,7 +505,7 @@ public class GetStuff {
 			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA","You must be logged in to do that")).build();
 		}
 		if (user.level<10) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","You must be a moderator to do that")).build();
-		return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", Story.formatBody(Strings.getFile("modhelp.md", null)))).build();
+		return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA", Markdown.formatBody(Strings.getFile("modhelp.md", null)))).build();
 	}
 	
 	@GET

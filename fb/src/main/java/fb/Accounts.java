@@ -50,6 +50,7 @@ import fb.objects.Notification;
 import fb.objects.RecentUserBlock;
 import fb.objects.User;
 import fb.util.Dates;
+import fb.util.Markdown;
 import fb.util.Strings;
 import fb.util.Text;
 import jakarta.ws.rs.core.Cookie;
@@ -297,7 +298,7 @@ public class Accounts {
 				.replace("$AUTHOR", escape(profileUser.user.authorUnsafe))
 				.replace("$AVATARURLMETA", avatarMeta)
 				.replace("$AVATARURL", avatar)
-				.replace("$BODY", profileUser.user.bioUnsafe==null?"":Story.formatBody(profileUser.user.bioUnsafe))
+				.replace("$BODY", profileUser.user.bioUnsafe==null?"":Markdown.formatBody(profileUser.user.bioUnsafe))
 				.replace("$EPISODES", body);
 	}
 	
@@ -404,7 +405,7 @@ public class Accounts {
 			if (staff.level >= 100) sb.append("<p>Admin</p>\n");
 			else if (staff.level >= 10) sb.append("<p>Moderator</p>\n");
 			sb.append("<p>Member since " + Dates.outputDateFormat2(staff.date) + "</p>\n");
-			sb.append(Story.formatBody(staff.bioUnsafe) + "\n<hr/>\n");
+			sb.append(Markdown.formatBody(staff.bioUnsafe) + "\n<hr/>\n");
 		}
 
 		return Strings.getFile("generic_meta.html", user)
@@ -937,7 +938,7 @@ public class Accounts {
 			StringBuilder commentHTML = sb;
 			Comment c = flag.comment;
 			commentHTML.append("<div class=\"fbcomment\">\n");
-			commentHTML.append("<p>" + Story.formatBody(c.text) + "</p><hr/>");
+			commentHTML.append("<p>" + Markdown.formatBody(c.text) + "</p><hr/>");
 			commentHTML.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatarUnsafe) + "\" /><a href=/fb/user/" + c.user.id + ">" + escape(c.user.authorUnsafe) + "</a><br/>\n");
 			commentHTML.append(Dates.outputDateFormat2(c.date));
 			commentHTML.append("</div>\n");
@@ -1047,10 +1048,10 @@ public class Accounts {
 				sb.append("<p><hr/><h4>Diffed body:</h4> " + out.toString() + "</p>\n");
 			} catch (Exception e) {
 				LOGGER.error("Diff threw an exception", e);
-				sb.append("<p><hr/><h4>New body:</h4> " + Story.formatBody(mod.body) + "</p>\n");
+				sb.append("<p><hr/><h4>New body:</h4> " + Markdown.formatBody(mod.body) + "</p>\n");
 				return Strings.getFile("generic.html", user).replace("$EXTRA","<p>Diff threw an exception: " + e.getMessage() + "</p>" + sb.toString());
 			}
-		} else sb.append("<p><hr/><h4>New body:</h4> " + Story.formatBody(mod.body) + "</p>\n");
+		} else sb.append("<p><hr/><h4>New body:</h4> " + Markdown.formatBody(mod.body) + "</p>\n");
 		return Strings.getFile("generic.html", user).replace("$EXTRA",sb.toString());
 	}
 	

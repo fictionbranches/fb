@@ -22,5 +22,5 @@ function markdownToHTMLNoImage(body) {
 	if (mdit_noimage == null) {
 		mdit_noimage = createMarkdownNoImage();
 	}
-	return mdit.render(body);
+	return mdit_noimage.render(body);
 }

@@ -26,14 +26,15 @@ import com.rometools.rome.io.SyndFeedOutput;
 
 import fb.DB;
 import fb.DB.DBException;
-import fb.Story;
 import fb.objects.Comment;
 import fb.objects.FlatEpisode;
+import fb.util.Markdown;
 import fb.util.Strings;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 
 @Path("fb")
@@ -44,40 +45,40 @@ public class RssStuff {
 	@GET
 	@Path("rss")
 	@Produces("application/rss+xml")
-	public Response getFeed() {
-		String ret = feeds.get(0l);
+	public Response getFeed(@QueryParam("hideImages") boolean hideImages) {
+		final String ret = (hideImages ? feedsNoImage : feeds).get(0l);
 		if (ret == null || ret.length() == 0) return Response.ok(emptyFeed).build();
-		return Response.ok(feeds.get(0l)).build();
+		return Response.ok(ret).build();
 	}
 	
 	@GET
 	@Path("rss/{id}")
 	@Produces("application/rss+xml")
-	public Response getFeedStory(@PathParam("id") String id) {
-		long story;
+	public Response getFeedStory(@PathParam("id") String id, @QueryParam("hideImages") boolean hideImages) {
+		final long story;
 		try {
 			story = Long.parseLong(id);
 		} catch (NumberFormatException e) {
-			return getFeed();
+			return getFeed(hideImages);
 		}
-		String ret = feeds.get(story);
+		final String ret = (hideImages ? feedsNoImage : feeds).get(story);
 		if (ret == null || ret.length() == 0) return Response.ok(emptyFeed).build();
-		return Response.ok(feeds.get(story)).build();
+		return Response.ok(ret).build();
 	}
 	
 	@GET
 	@Path("feed")
 	@Produces("application/rss+xml")
-	public Response getFeedLegacy() {
-		return getFeed();
+	public Response getFeedLegacy(@QueryParam("hideImages") boolean hideImages) {
+		return getFeed(hideImages);
 	}
 	
 	@GET
 	@Path("feed/{id}")
-	public Response getFeedStoryLegacy(@PathParam("id") String id) {
+	public Response getFeedStoryLegacy(@PathParam("id") String id, @QueryParam("hideImages") boolean hideImages) {
 		try {
-			FlatEpisode ep = DB.getEpByOldMap(id);
-			return getFeedStory(""+ep.generatedId);
+			final FlatEpisode ep = DB.getEpByOldMap(id);
+			return getFeedStory(""+ep.generatedId, hideImages);
 		} catch (DBException e) {
 			return Response.ok(emptyFeed).build();
 		}
@@ -86,41 +87,59 @@ public class RssStuff {
 	@GET
 	@Path("commentsfeed")
 	@Produces("application/rss+xml")
-	public Response getCommentsFeed() {
-		return Response.ok(commentsFeed).build();
+	public Response getCommentsFeed(@QueryParam("hideImages") boolean hideImages) {
+		return Response.ok(hideImages ? commentsFeedNoImage : commentsFeed).build();
 	}
 
 	
 	private static String commentsFeed;
 	private static HashMap<Long,String> feeds;
+	private static String commentsFeedNoImage;
+	private static HashMap<Long,String> feedsNoImage;
 	static {
 		updateFeeds();
 		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(RssStuff::updateFeeds, 1, 1, TimeUnit.HOURS);
 	}
 	
 	private static void updateFeeds() {
-		HashMap<Long,String> list = new HashMap<>();
-		list.put(0l, generate(0l));
-		try {
-			for (FlatEpisode root : DB.getRoots()) {
-				long generatedId = root.generatedId;
-				list.put(generatedId, generate(generatedId));
+		{
+			HashMap<Long,String> list = new HashMap<>();
+			list.put(0l, generate(0l, false));
+			try {
+				for (FlatEpisode root : DB.getRoots()) {
+					long generatedId = root.generatedId;
+					list.put(generatedId, generate(generatedId, false));
+				}
+			} finally {
+				feeds = list;
+				LOGGER.info("Updated RSS feeds: %s".formatted(list.keySet().stream().map(Object::toString).collect(Collectors.joining(" "))));
 			}
-		} finally {
-			feeds = list;
-			LOGGER.info("Updated RSS feeds: %s", list.keySet().stream().map(Object::toString).collect(Collectors.joining(" ")));
+			commentsFeed = generateComments(false);
 		}
-		commentsFeed = generateComments();
+		{
+			HashMap<Long,String> list = new HashMap<>();
+			list.put(0l, generate(0l, true));
+			try {
+				for (FlatEpisode root : DB.getRoots()) {
+					long generatedId = root.generatedId;
+					list.put(generatedId, generate(generatedId, true));
+				}
+			} finally {
+				feedsNoImage = list;
+				LOGGER.info("Updated RSS feeds: %s".formatted(list.keySet().stream().map(Object::toString).collect(Collectors.joining(" "))));
+			}
+			commentsFeedNoImage = generateComments(true);
+		}
 	}
 	
-	private static String generate(long story) {
+	private static String generate(long story, boolean hideImages) {
 		final SyndFeed feed = new SyndFeedImpl();
 		feed.setFeedType("rss_2.0");
 		feed.setTitle("Fiction Branches");
 		feed.setLink("https://" + Strings.getDOMAIN());
 		feed.setDescription("Fiction Branches is an online software engine which allows the production of multi-plotted stories.");
 		final ArrayList<SyndEntry> entries = new ArrayList<>();
-		Set<FlatEpisode> eps;
+		final Set<FlatEpisode> eps;
 		try {
 			eps = DB.getRecents(story, 1, false, "", null).episodes.keySet();
 		} catch (DBException e) {
@@ -128,17 +147,17 @@ public class RssStuff {
 			return feedToString(feed);
 		}
 		for (FlatEpisode ep : eps) {
-			SyndEntry entry = new SyndEntryImpl();
+			final SyndEntry entry = new SyndEntryImpl();
 			entry.setTitle(escape(ep.link));
 			entry.setLink("https://" + Strings.getDOMAIN() + "/fb/story/" + ep.generatedId);
 			entry.setPublishedDate(ep.date);
 			entry.setAuthor(escape(ep.authorName));
 			
-			SyndContent desc = new SyndContentImpl();
+			final SyndContent desc = new SyndContentImpl();
 			desc.setType("text/html");
-			StringBuilder body = new StringBuilder();
+			final StringBuilder body = new StringBuilder();
 			body.append("<h1>" + escape(ep.title) + "</h1>\n");
-			body.append(Story.formatBody(ep.body));
+			body.append(hideImages ? Markdown.formatBodyNoImage(ep.body) : Markdown.formatBody(ep.body));
 			desc.setValue(body.toString());
 			entry.setDescription(desc);
 			entries.add(entry);
@@ -150,26 +169,26 @@ public class RssStuff {
 		
 	}
 	
-	private static String generateComments() {
+	private static String generateComments(boolean hideImages) {
 		final SyndFeed feed = new SyndFeedImpl();
 		feed.setFeedType("rss_2.0");
 		feed.setTitle("Fiction Branches");
 		feed.setLink("https://" + Strings.getDOMAIN());
 		feed.setDescription("Fiction Branches is an online software engine which allows the production of multi-plotted stories.");
 		final ArrayList<SyndEntry> entries = new ArrayList<>();
-		List<Comment> coms = DB.getRecentComments(1).comments;
+		final List<Comment> coms = DB.getRecentComments(1).comments;
 		for (Comment com : coms) {
-			SyndEntry entry = new SyndEntryImpl();
+			final SyndEntry entry = new SyndEntryImpl();
 			entry.setTitle(escape("Comment on " + com.episode.link));
 			entry.setLink("https://" + Strings.getDOMAIN() + "/fb/story/" + com.episode.generatedId + "#comment" + com.id);
 			entry.setPublishedDate(com.date);
 			entry.setAuthor(com.user.authorEscape());
 			
-			SyndContent desc = new SyndContentImpl();
+			final SyndContent desc = new SyndContentImpl();
 			desc.setType("text/html");
-			StringBuilder body = new StringBuilder();
+			final StringBuilder body = new StringBuilder();
 			body.append("<h1>" + escape("New comment on '" + com.episode.title + "'") + "</h1>\n");
-			body.append(Story.formatBody(com.text));
+			body.append(hideImages ? Markdown.formatBodyNoImage(com.text) : Markdown.formatBody(com.text));
 			desc.setValue(body.toString());
 			entry.setDescription(desc);
 			entries.add(entry);
@@ -195,7 +214,7 @@ public class RssStuff {
 	}
 	
 	private static String feedToString(SyndFeed feed) {
-		Writer writer = new StringWriter();
+		final Writer writer = new StringWriter();
 		try {
 			new SyndFeedOutput().output(feed, writer);
 		} catch (IOException e) {

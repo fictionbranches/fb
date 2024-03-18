@@ -1,5 +1,6 @@
 package fb;
 
+import static fb.util.Markdown.formatBody;
 import static fb.util.Text.escape;
 
 import java.util.ArrayList;
@@ -31,7 +32,6 @@ import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
 import fb.objects.Tag;
 import fb.util.Dates;
-import fb.util.Markdown;
 import fb.util.Strings;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.MultivaluedMap;
@@ -196,7 +196,7 @@ public class Story {
 		for (Comment c : ep.comments) {
 			commentHTML.append("<div id='comment" + c.id + "' class=\"fbcomment\">\n");
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
-			commentHTML.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p><hr/>\n");
+			commentHTML.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?formatBody(c.text):escape(c.text)) + "</div></p><hr/>\n");
 			if (c.modVoice) commentHTML.append("<span style='border: 1px solid; margin: 2px; padding: 5px; white-space: nowrap;'>This comment is from a site Moderator</span>\n");
 			commentHTML.append("<p>" + ((c.user.avatarUnsafe==null||c.user.avatarUnsafe.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatarUnsafe) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + escape(c.user.authorUnsafe) + "</a></p>\n");			
 			commentHTML.append("<p><a href=/fb/story/" + ep.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>");
@@ -268,14 +268,17 @@ public class Story {
 		} catch (FBLoginException e) {
 			user = null;
 		}
-				
+		final String hideImages = ((user != null) && user.hideImages) ? "?hideImages=true" : "";
+		
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table class=\"noborder\">\n");
 		for (FlatEpisode ep : Story.getRootEpisodes()) {
-			sb.append("<h3><a href=/fb/story/" + ep.generatedId + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/rss/" + ep.generatedId + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent?story=" + ep.generatedId + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
+			sb.append("<h3><a href=/fb/story/" + ep.generatedId + ">" + ep.link + "</a> (" + ep.childCount + ")</h3>" + "<a href=/fb/rss/" + ep.generatedId + hideImages + "><img width=20 height=20 src=/images/rss.png title=\"RSS feed for " + ep.link + "\" /></a>" + " <a href=/fb/recent?story=" + ep.generatedId + ">" + ep.link + "'s recently added episodes</a> " + "<br/><br/>");
 		}
 		sb.append("</table>");
-		return Strings.getFile("welcome.html", user).replace("$EPISODES", sb.toString());
+		return Strings.getFile("welcome.html", user)
+				.replace("$HIDEIMAGES", hideImages)
+				.replace("$EPISODES", sb.toString());
 		
 	}
 	
@@ -358,7 +361,7 @@ public class Story {
 		
 		StringBuilder sb = new StringBuilder("<h1>Announcements</h1>\n<hr/>\n");
 		for (Announcement a : list) {
-			sb.append("<p>" + Story.formatBody(a.body) + "</p>\n");
+			sb.append("<p>" + formatBody(a.body) + "</p>\n");
 			sb.append("<p> - <a href=/fb/user/" + a.authorId + ">" + escape(a.authorName) + "</a> (" + 
 					Dates.simpleDateFormat2(a.date) + 
 					")</p>\n");
@@ -868,7 +871,7 @@ public class Story {
 				.replace("$TITLE", parent.title)
 				.replace("$ID", parentId+"")
 				.replace("$EXTRA", tagsHtmlForm(DB.getAllTags(), true))
-				.replace("$OLDBODY",parseMarkdown?Story.formatBody(parent.body):escape(parent.body));
+				.replace("$OLDBODY",parseMarkdown?formatBody(parent.body):escape(parent.body));
 	}
 	
 	/**
@@ -1215,7 +1218,7 @@ public class Story {
 	public static String commentListToHTML(List<Comment> comments, boolean parseMarkdown, boolean includeAttribution) {
 		StringBuilder html = new StringBuilder();
 		for (Comment c : comments) {
-			html.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?Story.formatBody(c.text):escape(c.text)) + "</div></p>");
+			html.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?formatBody(c.text):escape(c.text)) + "</div></p>");
 			html.append("<p>");
 			if (includeAttribution) {
 				html.append("By ");
@@ -1270,17 +1273,8 @@ public class Story {
 					"$MODERATORSTATUS", "$MODIFY", "$NUMPAGES", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
 					"$PATHTOHERE", "$PREVNEXT", "$RAWBODY", "$RECAPTCHASITEKEY", "$SEARCHTERM", "$SORTORDER", 
 					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS", "$OGDESCRIPTION", 
-					"$HIDEIMAGEBUTTON", "$AVATARURLMETA", "$TAGS", "$USERSBLOCKEDFROMRECENTS", "$VERSION")
+					"$HIDEIMAGEBUTTON", "$AVATARURLMETA", "$TAGS", "$USERSBLOCKEDFROMRECENTS", "$VERSION", "$HIDEIMAGES")
 					.collect(Collectors.toSet())));
 	
-	/**
-	 * Escape body text and convert markdown/formatting to HTML
-	 * @param body unformatted markdown body
-	 * @return HTML formatted body
-	 */
-	public static String formatBody(String body) {
-		return Markdown.formatBody(body);
-	}
-
 	private Story() {}
 }

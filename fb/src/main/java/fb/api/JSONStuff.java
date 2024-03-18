@@ -28,13 +28,13 @@ import fb.Accounts;
 import fb.Accounts.FBLoginException;
 import fb.DB;
 import fb.DB.DBException;
-import fb.Story;
 import fb.db.DBEpisode;
 import fb.objects.Episode;
 import fb.objects.EpisodeWithChildren;
 import fb.objects.FlatEpisodeWithTags;
 import fb.objects.FlatUser;
 import fb.objects.Tag;
+import fb.util.Markdown;
 import jakarta.ws.rs.FormParam;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -68,7 +68,7 @@ public class JSONStuff {
 	@Produces(MediaType.TEXT_HTML)
 	public Response markdownToHTML(@FormParam("body") String body) {
 		LOGGER.info("markdownToHTML API request: " + body.length());
-		return Response.ok(Story.formatBody(body)).build();
+		return Response.ok(Markdown.formatBody(body)).build();
 	}
 	
 	/**
@@ -129,7 +129,7 @@ public class JSONStuff {
 			this.parentId=ep.parentId;
 			this.path = DB.newMapToIdList(ep.newMap).mapToLong(x->x).toArray();
 			this.hits=ep.hits;
-			this.body=sendhtml?Story.formatBody(ep.body):ep.body;
+			this.body=sendhtml?Markdown.formatBody(ep.body):ep.body;
 			this.children = ep.children.stream().map(JSONChildEpisode::new).toList();
 			this.tags = ep.tags.stream().map(tag -> tag.shortName).sorted().toList();
 		}		

@@ -21,13 +21,25 @@ public class Markdown {
 	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
 	private static final Object lock = new Object();
-	public static final Markdown m = new Markdown();
+	private static final Markdown m = new Markdown();
 	
 	public static String formatBody(String body) {
 		body = Text.escape(body);
 		synchronized (lock) {
 			try {
 				return (String) ((Invocable) m.engine).invokeFunction("markdownToHTML", body);
+			} catch (NoSuchMethodException | ScriptException e) {
+				LOGGER.error(e + " " + e.getMessage(), e);
+				return body;
+			}
+		}
+	}
+	
+	public static String formatBodyNoImage(String body) {
+		body = Text.escape(body);
+		synchronized (lock) {
+			try {
+				return (String) ((Invocable) m.engine).invokeFunction("markdownToHTMLNoImage", body);
 			} catch (NoSuchMethodException | ScriptException e) {
 				LOGGER.error(e + " " + e.getMessage(), e);
 				return body;
