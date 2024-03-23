@@ -207,8 +207,7 @@ public class Strings {
 	
 	private static Map<String,String> readInStringsMap() {
 		HashMap<String,String> stringsMap = new HashMap<>();
-		final String rawStrings = Text.readFileFromJar("strings.txt");
-		try (Scanner scan = new Scanner(rawStrings)) {
+		try (Scanner scan = new Scanner(Text.readFileFromJar("strings.txt"))) {
 			while (scan.hasNextLine()) {
 				String line = scan.nextLine();
 				if (line.trim().length() == 0 || line.trim().startsWith("#")) continue;
@@ -231,6 +230,25 @@ public class Strings {
 	}
 		
 	public static String getString(String name) {
+		if (InitWebsite.DEV_MODE) {
+			try (Scanner scan = new Scanner(Text.readFileFromJar("strings.txt"))) {
+				while (scan.hasNextLine()) {
+					String line = scan.nextLine();
+					if (line.trim().length() == 0 || line.trim().startsWith("#")) continue;
+					if (!line.contains("~")) {
+						LOGGER.error("Misformatted strings.txt (uncommented nonempty line with no '~'): " + line);
+						System.exit(1);
+					}
+					String[] arr = line.split("~");
+					if (arr.length != 2) {
+						LOGGER.error("Misformatted strings.txt (too many '~'s " + line + ")");
+						System.exit(2);
+					}
+					if (arr[0].equals(name)) return arr[1];
+				}
+				return "";
+			}
+		}
 		String value = stringsTxtMap.get(name);
 		if (value == null) value = "";
 		return value;

@@ -80,8 +80,16 @@ public class AdminStuff {
 		} catch (FBLoginException e) {
 			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA","You must be logged in to do that")).build();
 		}
-		if (user.level<100) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","You must be an admin to do that")).build();
-		return Response.ok(Strings.getFile("sitesettingsform.html", user).replace("$EXTRA", " ")).build(); 
+		if (user.level<100) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","You must be an admin to do that")).build();		
+		
+		return Response.ok(Strings.getFile("sitesettingsform.html", user)
+				.replace("$SMTP_SERVER", Text.escape(Strings.getSMTP_SERVER()))
+				.replace("$SMTP_ADDRESS", Text.escape(Strings.getSMTP_EMAIL()))
+				.replace("$DOMAIN_NAME", Text.escape(Strings.getDOMAIN()))
+				.replace("$RECAPTCHA_SITEKEY", Text.escape(Strings.getRECAPTCHA_SITEKEY()))
+				.replace("$DISCORD_EPISODE_HOOK", Text.escape(Strings.getDISCORD_NEW_EPISODE_HOOK()))
+				.replace("$DISCORD_ERROR_HOOK", Text.escape(Strings.getDISCORD_ERROR_HOOK()))
+				.replace("$EXTRA", " ")).build(); 
 	}
 	
 	@GET
@@ -251,6 +259,74 @@ public class AdminStuff {
 		
 		return Response.seeOther(GetStuff.createURI("/fb/admin/sitesettings")).build();
 	}
+	
+	@POST
+	@Path("admin/discordepisodehook")
+	@Produces(MediaType.TEXT_HTML)
+	public Response discordEpisodeHook(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("discord_episode_hook") String discord_episode_hook) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA","You must be logged in to do that")).build();
+		}
+		if (user.level<100) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","You must be an admin to do that")).build();
+				
+		Session session = DB.openSession();
+		try {
+			DBSiteSetting rdomain = new DBSiteSetting();
+			rdomain.setKey("discord_new_episode_hook");
+			rdomain.setValue(discord_episode_hook);
+			
+			try {
+				session.beginTransaction();
+				session.merge(rdomain);
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+				return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","Database error: " + e.getMessage())).build();
+			}
+		} finally {
+			DB.closeSession(session);
+		}
+		Strings.refreshSiteSettings();
+		
+		return Response.seeOther(GetStuff.createURI("/fb/admin/sitesettings")).build();
+	}
+	@POST
+	@Path("admin/discorderrorhook")
+	@Produces(MediaType.TEXT_HTML)
+	public Response discordErrorHook(@CookieParam("fbtoken") Cookie fbtoken, @FormParam("discord_error_hook") String discord_error_hook) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			return Response.ok(Strings.getFile("generic.html", null).replace("$EXTRA","You must be logged in to do that")).build();
+		}
+		if (user.level<100) return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","You must be an admin to do that")).build();
+				
+		Session session = DB.openSession();
+		try {
+			DBSiteSetting rdomain = new DBSiteSetting();
+			rdomain.setKey("discord_error_hook");
+			rdomain.setValue(discord_error_hook);
+			
+			try {
+				session.beginTransaction();
+				session.merge(rdomain);
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+				return Response.ok(Strings.getFile("generic.html", user).replace("$EXTRA","Database error: " + e.getMessage())).build();
+			}
+		} finally {
+			DB.closeSession(session);
+		}
+		Strings.refreshSiteSettings();
+		
+		return Response.seeOther(GetStuff.createURI("/fb/admin/sitesettings")).build();
+	}
+
 	
 	@GET
 	@Path("admin/deletearchivetoken/{id}")

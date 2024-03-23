@@ -424,13 +424,8 @@ public class DB {
 				
 				session.getTransaction().commit();
 				
-				if (Strings.getDISCORD_NEW_EPISODE_HOOK() != null && Strings.getDISCORD_NEW_EPISODE_HOOK().length() > 0) {
-					DBEpisode root = session.get(DBEpisode.class, DB.newMapToIdList(child.getNewMap()).findFirst().get());				
-					final FlatEpisode flatEp = new FlatEpisode(child);
-					final FlatEpisode flatRoot = new FlatEpisode(root);
-					
-					new Thread(()->Discord.notifyNewEpisode(flatEp, flatRoot)).start();
-				}
+				new Thread(()->Discord.notifyNewEpisode(childId)).start();
+				
 			} catch (Exception e) {
 				session.getTransaction().rollback();
 				LOGGER.error("addEp rollback", e);

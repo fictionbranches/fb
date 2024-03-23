@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URI;
@@ -115,9 +114,6 @@ public class GoogleRECAPTCHA {
 		Reader in;
 		try {
 			in = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
-		} catch (UnsupportedEncodingException e) {
-			LOGGER.error("UnsupportedEncodingException2? Really? wtf ", e);
-			throw new GoogleCheckException("Tell Phoenix you got recaptcha UnsupportedEncodingException2");
 		} catch (IOException e) {
 			LOGGER.error("IOException3? Really? wtf ", e);
 			throw new GoogleCheckException("Tell Phoenix you got recaptcha IOException3");

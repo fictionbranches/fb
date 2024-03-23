@@ -8,11 +8,14 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
+import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 
+import fb.DB;
+import fb.db.DBEpisode;
 import fb.objects.FlatEpisode;
 
 public class Discord {
@@ -20,12 +23,41 @@ public class Discord {
 	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 		
 	public static synchronized void notifyError(String message) {
+		final String hook = Strings.getDISCORD_NEW_EPISODE_HOOK(); 
+		if (hook == null || hook.strip().length() == 0) {
+			// no hook to send to
+			return;
+		}
 		if (message.length() > 2000) message = message.substring(0,2000);
 		HookMessage form = new HookMessage("FB Errors", message);
-		Discord.sendToDiscordHook(Strings.getDISCORD_ERROR_HOOK(), form);
+		Discord.sendToDiscordHook(hook, form);
 	}
 	
-	public static void notifyNewEpisode(FlatEpisode ep, FlatEpisode root) {
+	public static void notifyNewEpisode(long generatedId) {
+		
+		final String hook = Strings.getDISCORD_NEW_EPISODE_HOOK(); 
+		if (hook == null || hook.strip().length() == 0) {
+			// no hook to send to
+			System.out.println("No hook for " + generatedId);
+			return;
+		}
+		
+		final FlatEpisode ep, root;
+		final Session sesh = DB.openSession();
+		try {
+			DBEpisode dbep = sesh.get(DBEpisode.class, generatedId);
+			if (dbep == null) {
+				LOGGER.error("Not found: " + generatedId);
+				return;
+			}
+			ep = new FlatEpisode(dbep);
+			root = new FlatEpisode(sesh.get(DBEpisode.class, DB.newMapToIdList(dbep.getNewMap()).findFirst().get()));
+		} finally {
+			DB.closeSession(sesh);
+		}
+		
+		System.out.println("Notifying about episode " + ep.generatedId + " " + ep.title + " by " + ep.authorName);
+
 		StringBuilder sb = new StringBuilder();
 		try (Scanner scan = new Scanner(root.link)) {
 			while (scan.hasNext()) {
@@ -58,12 +90,14 @@ public class Discord {
 				avatar,
 				new HookEmbed[]{embed}
 			);
-		sendToDiscordHook(Strings.getDISCORD_NEW_EPISODE_HOOK(), form);
+		sendToDiscordHook(hook, form);
 	}
 	
 	private static void sendToDiscordHook(String hookURL, Object data) {
+		System.out.println("Sending to " + hookURL);
 		try {
 			final String postData = new Gson().toJson(data);
+			System.out.println("Sending " + postData);
 			final byte[] postDataBytes = postData.getBytes(StandardCharsets.UTF_8);
 			
 			final HttpURLConnection conn = (HttpURLConnection) URI.create(hookURL).toURL().openConnection();
@@ -72,7 +106,7 @@ public class Discord {
 
 			conn.setRequestProperty("Content-Type", "application/json");
 			conn.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
-			conn.setRequestProperty("User-Agent", "Fiction Branches Discord Notifier https://fictionbranches.net");
+			conn.setRequestProperty("User-Agent", "Fiction Branches Discord Notifier https://" + Strings.getDOMAIN());
 
 			conn.setDoOutput(true);
 			conn.getOutputStream().write(postDataBytes);

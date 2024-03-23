@@ -25,10 +25,10 @@ $ACCOUNT
 	<form action= "/fb/admin/emailsettings" method="post">
 		<p>Note: backend assumes email address is also SMTP username, and assumes STARTTLS on port 587.<br/>
 		If your email setup will not accept these settings, you will have to modify the source and rebuild.</p>
-		<p>SMTP server: <br/><input type= "text" name= "smtp_server" size="33"></input></p>
-		<p>SMTP email address: <br/><input type= "text" name= "smtp_email" size="33"></input></p>
-		<p>SMTP password: <br/><input type= "password" name= "smtp_password1" size="33"></input></p>
-		<p>confirm password: <br/><input type= "password" name= "smtp_password2" size="33"></input></p>
+		<p>SMTP server: <br/><input type= "text" name= "smtp_server" size="64" value="$SMTP_SERVER"></input></p>
+		<p>SMTP email address: <br/><input type= "text" name= "smtp_email" size="64" value="$SMTP_ADDRESS"></input></p>
+		<p>SMTP password: <br/><input type= "password" name= "smtp_password1" size="64"></input></p>
+		<p>confirm password: <br/><input type= "password" name= "smtp_password2" size="64"></input></p>
 		<input type= "submit" value= "Submit"/>
 	</form>
 	
@@ -36,17 +36,39 @@ $ACCOUNT
 	
 	<h2>Domain</h2>
 	<form action= "/fb/admin/domainsettings" method="post">
-		<p>Domain: <input type= "text" name= "domain_name" size="33" ></input></p>
+		<p>Domain: <input type= "text" name= "domain_name" size="64" value="$DOMAIN_NAME"></input></p>
 		<input type= "submit" value= "Submit"/>
 	</form>
 	<hr/>
 	
 	<h2>RECAPTCHA</h2>
 	<form action= "/fb/admin/recaptchasettings" method="post">
-		<p>Sitekey (public): <input type= "text" name= "recaptcha_sitekey" size="33" ></input></p>
-		<p>Secret (private): <input type= "text" name= "recaptcha_secret" size="33" ></input></p>
+		<p>Sitekey (public): <input type= "text" name= "recaptcha_sitekey" size="64" value="$RECAPTCHA_SITEKEY"></input></p>
+		<p>Secret (private): <input type= "text" name= "recaptcha_secret" size="64" ></input></p>
 		<input type= "submit" value= "Submit"/>
 	</form>
+	<hr/>
+	
+	
+	
+	<h2>Discord webhooks</h2>
+	<form action= "/fb/admin/discordepisodehook" method="post">
+		<p>
+			New episode: 
+			<input type= "text" name= "discord_episode_hook" size="64" value="$DISCORD_EPISODE_HOOK"></input>
+			<input type= "submit" value= "Submit"/>
+		</p>
+	</form>
+	<form action= "/fb/admin/discorderrorhook" method="post">
+		<p>
+			New episode: 
+			<input type= "text" name= "discord_error_hook" size="64" value="$DISCORD_ERROR_HOOK"></input>
+			<input type= "submit" value= "Submit"/>
+		</p>
+	</form>
+
+
+
 <br/><br/><br/>
 $DONATEBUTTON
 </body>
