@@ -3,6 +3,7 @@ package fb;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Random;
@@ -56,7 +57,7 @@ public class InitWebsite {
 	 */
 	public static final String BASE_DIR = "fbstuff";
 	
-	public static final boolean DEV_MODE = new File(BASE_DIR + "/dev_mode").exists();
+	public static final DevLevel DEV_LEVEL = getDevLevel();
 	
 	/**
 	 * set this value to the default (will revert to this value after restarts)
@@ -203,10 +204,12 @@ public class InitWebsite {
 	private static ResourceConfig jaxrsConfig() {
 		ArrayList<Class<?>> list = Stream.of(AccountStuff.class, AddStuff.class,
 				AdminStuff.class, GetStuff.class, LegacyStuff.class, RssStuff.class, JSONStuff.class).collect(Collectors.toCollection(ArrayList::new));
-		if (DEV_MODE) {
+		if (DEV_LEVEL == DevLevel.DEV || DEV_LEVEL == DevLevel.SUPER_DEV) {
 			LOGGER.info("Running in DEV_MODE");
 			list.add(DevStuff.class);
-			list.add(DevStuff.DevStuff2.class);
+			if (DEV_LEVEL == DevLevel.SUPER_DEV) {
+				list.add(DevStuff.SuperDevStuff.class);
+			}
 		}
 		ResourceConfig resourceConfig = new ResourceConfig(list.toArray(new Class<?>[0]));
 		resourceConfig.register(CharsetResponseFilter.class);
@@ -327,5 +330,30 @@ public class InitWebsite {
 		sumCheckYes /= 1000000000.0;
 		sumCheckNo /= 1000000000.0;
 		return new double[]{ sumHash / ((double)list.size()), sumCheckYes / ((double)list.size()), sumCheckNo / ((double)list.size()) };
+	}
+	
+	public static enum DevLevel {
+		RELEASE, DEV, SUPER_DEV
+	}
+	private static DevLevel getDevLevel() {
+		final File dev = new File(BASE_DIR + "/dev_mode");
+		if (!dev.exists()) {
+			LOGGER.info("Running in RELEASE mode");
+			return DevLevel.RELEASE;
+		}
+		String devStr;
+		try {
+			devStr = Files.readString(new File(BASE_DIR + "/dev_mode").toPath());
+		} catch (IOException e) {
+			LOGGER.warn("Error reading " + dev.getAbsolutePath());
+			LOGGER.warn("Running in DEV mode");
+			return DevLevel.DEV;
+		}
+		if (devStr.toLowerCase().strip().startsWith("super")) {
+			LOGGER.warn("Running in SUPER_DEV mode");
+			return DevLevel.SUPER_DEV;
+		}
+		LOGGER.warn("Running in DEV mode");
+		return DevLevel.DEV;
 	}
 }

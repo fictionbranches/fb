@@ -106,34 +106,53 @@ public class RssStuff {
 	}
 	
 	private static void updateFeeds() {
-		{
-			HashMap<Long,String> list = new HashMap<>();
-			list.put(0l, generate(0l, false));
-			try {
-				for (FlatEpisode root : DB.getRoots()) {
-					long generatedId = root.generatedId;
-					list.put(generatedId, generate(generatedId, false));
-				}
-			} finally {
-				feeds = list;
-				LOGGER.info("Updated RSS feeds: %s".formatted(list.keySet().stream().map(Object::toString).collect(Collectors.joining(" "))));
-			}
-			commentsFeed = generateComments(false);
+		
+		final HashMap<Long,String> images = new HashMap<>();
+		final HashMap<Long,String> noImages = new HashMap<>();
+		images.put(0l, generate(0l, false));
+		noImages.put(0l, generate(0l, true));
+				
+		for (long generatedId : DB.getRootIds()) {
+			images.put(generatedId, generate(generatedId, false));
+			noImages.put(generatedId, generate(generatedId, true));
 		}
-		{
-			HashMap<Long,String> list = new HashMap<>();
-			list.put(0l, generate(0l, true));
-			try {
-				for (FlatEpisode root : DB.getRoots()) {
-					long generatedId = root.generatedId;
-					list.put(generatedId, generate(generatedId, true));
-				}
-			} finally {
-				feedsNoImage = list;
-				LOGGER.info("Updated RSS feeds: %s".formatted(list.keySet().stream().map(Object::toString).collect(Collectors.joining(" "))));
-			}
-			commentsFeedNoImage = generateComments(true);
-		}
+		
+		feeds = images;
+		feedsNoImage = noImages;
+		
+		commentsFeed = generateComments(false);
+		commentsFeedNoImage = generateComments(true);
+		
+		LOGGER.info("Updated RSS feeds: %s".formatted(feeds.keySet().stream().map(Object::toString).collect(Collectors.joining(" "))));
+
+//		{
+//			HashMap<Long,String> list = new HashMap<>();
+//			list.put(0l, generate(0l, false));
+//			try {
+//				for (FlatEpisode root : DB.getRoots()) {
+//					long generatedId = root.generatedId;
+//					list.put(generatedId, generate(generatedId, false));
+//				}
+//			} finally {
+//				feeds = list;
+//				LOGGER.info("Updated RSS feeds: %s".formatted(list.keySet().stream().map(Object::toString).collect(Collectors.joining(" "))));
+//			}
+//			commentsFeed = generateComments(false);
+//		}
+//		{
+//			HashMap<Long,String> list = new HashMap<>();
+//			list.put(0l, generate(0l, true));
+//			try {
+//				for (FlatEpisode root : DB.getRoots()) {
+//					long generatedId = root.generatedId;
+//					list.put(generatedId, generate(generatedId, true));
+//				}
+//			} finally {
+//				feedsNoImage = list;
+//				LOGGER.info("Updated RSS feeds: %s".formatted(list.keySet().stream().map(Object::toString).collect(Collectors.joining(" "))));
+//			}
+//			commentsFeedNoImage = generateComments(true);
+//		}
 	}
 	
 	private static String generate(long story, boolean hideImages) {

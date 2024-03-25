@@ -31,7 +31,7 @@ public class DevStuff {
 	}
 	
 	@Path("fb")
-	public static class DevStuff2 {
+	public static class SuperDevStuff {
 		@GET
 		@Path("becomeadmin")
 		@Produces(MediaType.TEXT_HTML)

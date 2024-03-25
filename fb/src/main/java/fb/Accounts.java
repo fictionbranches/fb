@@ -206,11 +206,12 @@ public class Accounts {
 		
 		response.append("<p><a href=/fb/favorites>Favorite episodes</a></p>\n");
 		
-		if (InitWebsite.DEV_MODE) {
+		if (InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.SUPER_DEV) {
 			response.append("<p>");
 			if (user.level != ((byte)1)) response.append("<br/><a href=/fb/becomenormal>Become a normal user</a>");
 			if (user.level != ((byte)10)) response.append("<br/><a href=/fb/becomemod>Become a moderator</a>");
 			if (user.level != ((byte)100)) response.append("<br/><a href=/fb/becomeadmin>Become an admin</a>");
+			response.append("</p>");
 		}		
 		return "<div class=\"loginstuff\">" + response + "</div>";
 	}
@@ -554,7 +555,7 @@ public class Accounts {
 		for (char c : username.toCharArray()) if (!allowedUsernameChars.contains(c)) return htmlForm.replace("$EXTRA", "Username may not contain " + c);
 
 		String createToken = DB.addPotentialUser(username, email, BCrypt.hashpw(password, BCrypt.gensalt(10)), author);
-		if (InitWebsite.DEV_MODE) {
+		if (InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.DEV || InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.SUPER_DEV) {
 			verify(createToken);
 			return Strings.getFile("generic.html",null).replace("$EXTRA", "Since you are in dev mode, your account has been created without email verification required.");
  
@@ -814,7 +815,7 @@ public class Accounts {
 			return Strings.getFile("changeemailform.html", null).replace("$RECAPTCHASITEKEY", Strings.getRECAPTCHA_SITEKEY()).replace("$EXTRA", e.getMessage());
 		}
 		
-		if (InitWebsite.DEV_MODE) {
+		if (InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.DEV || InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.SUPER_DEV) {
 			verifyNewEmail(changeToken, fbtoken);
 			return Strings.getFile("generic.html",null).replace("$EXTRA", "Since you are in dev mode, your email has been changed without email verification required.");
  

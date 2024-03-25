@@ -79,7 +79,7 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 			LOGGER.warn("Skipping Discord notification, less than 1 minute since last request", exception);
 			return;
 		}
-		if (InitWebsite.DEV_MODE) {
+		if (InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.DEV || InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.SUPER_DEV) {
 			LOGGER.warn("Skipping Discord notification, dev mode", exception);
 			return;
 		}

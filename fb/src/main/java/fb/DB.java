@@ -418,7 +418,7 @@ public class DB {
 					note.setEpisode(child);
 					session.save(note);
 				}
-				if (sendMailNotification && !InitWebsite.DEV_MODE) new Thread(()->
+				if (sendMailNotification && InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.RELEASE) new Thread(()->
 					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Text.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Text.escape(parent.getTitle()) + "</a>")
 				).start();
 				
@@ -1623,24 +1623,37 @@ public class DB {
 		return Arrays.stream(arr).map(Long::parseLong);
 	}
 	
-	public static FlatEpisode[] getRoots() {
+	public static List<FlatEpisode> getRoots() {
 		Session session = openSession();
 		try {
-			return getRoots(session).map(FlatEpisode::new).toArray(size->new FlatEpisode[size]);
+			return session.createQuery("""
+					FROM DBEpisode ep
+					JOIN FETCH ep.author
+					JOIN FETCH ep.editor
+					WHERE ep.parent IS NULL
+					""", DBEpisode.class).stream()
+					.map(FlatEpisode::new)
+					.toList();
 		} finally {
 			closeSession(session);
 		}
 	}
 	
-	public static Stream<DBEpisode> getRoots(Session session) {
-		CriteriaBuilder cb = session.getCriteriaBuilder();
-		CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-		Root<DBEpisode> root = query.from(DBEpisode.class);			
-					
-		query.select(root).where(cb.isNull(root.get("parent"))).orderBy(cb.asc(root.get("date")));
-		
-		return session.createQuery(query).stream();
-}
+	public static List<Long> getRootIds() {
+		Session session = openSession();
+		try {
+			return session.createQuery("""
+					FROM DBEpisode ep
+					WHERE ep.parent IS NULL
+					""", DBEpisode.class).stream()
+					.map(ep -> ep.getGeneratedId())
+					.toList();
+		} finally {
+			closeSession(session);
+		}
+	}
+	
+	
 	
 	/**
 	 * Change a user's author name
@@ -2012,7 +2025,7 @@ public class DB {
 					session.save(note);
 				}
 				
-				if (sendMailNotification && !InitWebsite.DEV_MODE) {
+				if (sendMailNotification && InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.RELEASE) {
 					final String email = comment.getEpisode().getAuthor().getEmail();
 					final String authorid = commenter.getId();
 					final String authorauthor = commenter.getAuthor();

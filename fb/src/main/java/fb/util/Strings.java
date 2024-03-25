@@ -230,7 +230,7 @@ public class Strings {
 	}
 		
 	public static String getString(String name) {
-		if (InitWebsite.DEV_MODE) {
+		if (InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.DEV || InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.SUPER_DEV) {
 			try (Scanner scan = new Scanner(Text.readFileFromJar("strings.txt"))) {
 				while (scan.hasNextLine()) {
 					String line = scan.nextLine();
@@ -272,11 +272,10 @@ public class Strings {
 	
 	public static String getFile(String name, FlatUser user) {
 		
-		String account = Accounts.getAccount(user);
-		if (InitWebsite.DEV_MODE) account = "<h3>This site is in dev mode.</h3><p>Any changes you make <em><string>will</strong></em> be deleted.</p>" + account;
-		
+		String account = Accounts.getAccount(user);		
 		String html;
-		if (InitWebsite.DEV_MODE) {
+		if (InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.DEV || InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.SUPER_DEV) {
+			account = "<h3>This site is in dev mode.</h3><p>Any changes you make <em><string>will</strong></em> be deleted.</p>" + account;
 			try {
 				html = Text.readFileFromJar("snippets/" + name);
 			} catch (Exception e) {
