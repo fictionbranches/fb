@@ -598,8 +598,7 @@ public class Story {
 	public static void updateRootEpisodesCache() {
 		synchronized (rootEpisodesCacheLock) {
 			LinkedHashMap<Long, FlatEpisode> newCache = new LinkedHashMap<>();
-			FlatEpisode[] arr = DB.getRoots();
-			for (FlatEpisode root : arr) newCache.put(root.generatedId, root);
+			for (FlatEpisode root : DB.getRoots()) newCache.put(root.generatedId, root);
 			rootEpisodesCache2 = newCache;
 		}
 	}
