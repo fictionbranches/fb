@@ -301,13 +301,14 @@ public class JSONStuff {
 			if (before != null) query += "date < to_timestamp(" + before + ") ";
 			if (before != null && after != null) query += " AND ";
 			if (after != null) query += "date > to_timestamp(" + after + ") ";		
+			
+			query += " LIMIT 100";
 				
 			@SuppressWarnings("unchecked")
 			List<Long> ids = ((Stream<Object>)session.createNativeQuery(query).stream()).map(x -> ((BigInteger)x).longValue()).toList();			
 			episodes = session.createQuery(
 					"FROM DBEpisode ep JOIN FETCH ep.lazytags tags WHERE ep.generatedId IN :ids ORDER BY ep.date " + order, DBEpisode.class)
 					.setParameter("ids", ids)
-					.setMaxResults(100)
 					.stream()
 					.map(FlatEpisodeWithTags::new)
 					.map(JSONSimpleEpisode::new)
