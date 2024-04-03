@@ -12,11 +12,6 @@ import java.util.TimeZone;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.JoinType;
-import javax.persistence.criteria.Root;
-
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -223,7 +218,6 @@ public class JSONStuff {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getRoots(@QueryParam("token") String token) {		
 		
-		List<FlatEpisodeWithTags> roots;
 		FlatUser user;
 		try { 
 			user = Accounts.getFlatUserUsingTokenString(token); 
@@ -231,24 +225,25 @@ public class JSONStuff {
 			user = null;
 		}
 		
-		Session sesh = DB.openSession();
+		List<JSONSimpleEpisode> episodes;
+		final Session sesh = DB.openSession();
 		try {
-			
-			CriteriaBuilder cb = sesh.getCriteriaBuilder();
-			CriteriaQuery<DBEpisode> query = cb.createQuery(DBEpisode.class);
-			Root<DBEpisode> root = query.from(DBEpisode.class);			
-			root.fetch("lazytags", JoinType.LEFT);
-			query.select(root).where(cb.isNull(root.get("parent"))).orderBy(cb.asc(root.get("date")));
-			roots = sesh.createQuery(query).stream()
-				.map(FlatEpisodeWithTags::new)
-				.toList();
-			
+			episodes = sesh.createQuery("""
+					FROM DBEpisode ep
+					JOIN FETCH ep.author
+					JOIN FETCH ep.editor
+					JOIN FETCH ep.parent
+					JOIN FETCH ep.lazytags
+					WHERE ep.parent IS NULL
+					""", DBEpisode.class).stream()
+			.map(FlatEpisodeWithTags::new)
+			.map(JSONSimpleEpisode::new)
+			.toList();			
 		} finally {
 			DB.closeSession(sesh);
 		}
 		
 		HashMap<String,Object> ret = new HashMap<>();
-		List<JSONSimpleEpisode> episodes = roots.stream().map(JSONSimpleEpisode::new).toList();
 		ret.put("episodes",episodes);
 		if (user != null) ret.put("user",new JSONUser(user));
 		return Response.ok(g().toJson(ret)).build();
@@ -312,6 +307,7 @@ public class JSONStuff {
 			episodes = session.createQuery(
 					"FROM DBEpisode ep JOIN FETCH ep.lazytags tags WHERE ep.generatedId IN :ids ORDER BY ep.date " + order, DBEpisode.class)
 					.setParameter("ids", ids)
+					.setMaxResults(100)
 					.stream()
 					.map(FlatEpisodeWithTags::new)
 					.map(JSONSimpleEpisode::new)

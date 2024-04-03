@@ -65,6 +65,13 @@ table.fbchildtable {
 	white-space: normal;
 }
 
+.tableoverflow {
+	word-wrap: break-word;
+	white-space: normal;
+	word-break: break-all;
+	width: 100%;
+}
+
 table.sortable th:not(.sorttable_sorted):not(.sorttable_sorted_reverse):not(.sorttable_nosort):after
 	{
 	content: " \25B4\25BE"
