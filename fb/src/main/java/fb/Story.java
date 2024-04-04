@@ -898,6 +898,7 @@ public class Story {
 		try {
 			final long newId = DB.addEp(generatedId, link, title, body, user.id, new Date());
 			DB.updateTags(newId, user.id, formParams);
+			new Thread(()->DB.notifyAuthorSubscriptions(newId)).start();
 			return newId;
 		} catch (DBException e) {
 			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", e.getMessage()));
@@ -1272,7 +1273,8 @@ public class Story {
 					"$MODERATORSTATUS", "$MODIFY", "$NUMPAGES", "$OLDBODY", "$OLDDONATEBUTTON", "$PAGECOUNT", "$PARENTID", 
 					"$PATHTOHERE", "$PREVNEXT", "$RAWBODY", "$RECAPTCHASITEKEY", "$SEARCHTERM", "$SORTORDER", 
 					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS", "$OGDESCRIPTION", 
-					"$HIDEIMAGEBUTTON", "$AVATARURLMETA", "$TAGS", "$USERSBLOCKEDFROMRECENTS", "$VERSION", "$HIDEIMAGES")
+					"$HIDEIMAGEBUTTON", "$AVATARURLMETA", "$TAGS", "$USERSBLOCKEDFROMRECENTS", "$VERSION", "$HIDEIMAGES",
+					"$USERSAUTHORSUBSCRIPTIONS")
 					.collect(Collectors.toSet())));
 	
 	private Story() {}

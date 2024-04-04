@@ -38,8 +38,10 @@ import fb.DB.AuthorProfileResult;
 import fb.DB.AuthorSearchResult;
 import fb.DB.DBException;
 import fb.DB.PasswordResetException;
+import fb.db.DBAuthorSubscription;
 import fb.db.DBNotification;
 import fb.db.DBRecentUserBlock;
+import fb.objects.AuthorSubscription;
 import fb.objects.Comment;
 import fb.objects.FlaggedComment;
 import fb.objects.FlaggedEpisode;
@@ -239,10 +241,12 @@ public class Accounts {
 		}
 		
 		boolean userIsBlocked = false;
+		boolean userIsSubscribed = false;
 		if (user != null) {
 			Session session = DB.openSession();
 			try {
 				userIsBlocked = null != session.createNativeQuery("SELECT * FROM fbrecentuserblocks WHERE blockinguser_id='" + user.id + "' AND blockeduser_id='" + profileUser.user.id + "'", DBRecentUserBlock.class).uniqueResult();
+				userIsSubscribed = null != session.createQuery("from DBAuthorSubscription a where a.subscribedTo.id='" + profileUser.user.id + "' and a.subscriber.id='" + user.id + "'", DBAuthorSubscription.class).uniqueResult();
 			} finally {
 				DB.closeSession(session);
 			}
@@ -283,6 +287,13 @@ public class Accounts {
 		} else moderator = "";
 		
 		if (user != null) {
+			
+			if (userIsSubscribed) {
+				moderator += "<p><a href='/fb/unsubscribefromauthor/"+profileUser.user.id+"'>Unsubscribe from notifications of new episodes</a></p>";
+			} else {
+				moderator += "<p><a href='/fb/subscribetoauthor/"+profileUser.user.id+"'>Subscribe to notifications of new episodes</a></p>";
+			}
+			
 			if (userIsBlocked) {
 				moderator += "<p><a href='/fb/unblockfromrecents/"+profileUser.user.id+"'>Unblock from Recents</a></p>";
 			} else {
@@ -585,26 +596,47 @@ public class Accounts {
 		final String hideImageButton = "Images are currently " + (user.hideImages ? "hidden" : "shown") + ". <a href='/fb/togglehideimages'>Click here to " + (user.hideImages ? "show" : "hide") + " them.</a>";
 		
 		final String blockedUsersHtml;
+		final String subscribedUsersHtml;
 		{
 			final List<RecentUserBlock> blockedUsers;
+			final List<AuthorSubscription> subscribedToUsers;
 			final Session session = DB.openSession();
 			try {
 				blockedUsers = session.createQuery("FROM DBRecentUserBlock block JOIN FETCH block.blockingUser JOIN FETCH block.blockedUser WHERE block.blockingUser.id='"+user.id+"' ", DBRecentUserBlock.class)
-					.stream().map(block -> new RecentUserBlock(block)).toList();
+						.stream().map(block -> new RecentUserBlock(block)).toList();
+				subscribedToUsers = session.createQuery("FROM DBAuthorSubscription a JOIN FETCH a.subscriber JOIN FETCH a.subscribedTo WHERE a.subscriber.id='"+user.id+"' ", DBAuthorSubscription.class)
+						.stream().map(sub -> new AuthorSubscription(sub)).toList();
 			} finally {
 				DB.closeSession(session);
 			}
 			
-			final StringBuilder html = new StringBuilder("<table><tr><th>User</th><th>Blocked since</th><th></th>\n");
+			final StringBuilder html = new StringBuilder();
+			
+			html.append("<table><tr><th>User</th><th>Blocked since</th><th></th>\n");
 			for (RecentUserBlock block : blockedUsers) {
 				html.append("<tr><td><a href='/fb/user/"+block.blockedUser.id+"'>"+escape(block.blockedUser.authorUnsafe)+"</a></td>");
 				html.append("<td>"+Dates.plainDate(block.date)+"</td>");
 				html.append("<td><a href='/fb/unblockfromrecents2/"+block.blockedUser.id+"'>Unblock</a></td></tr>\n");
 			}
-			html.append("</table>");
-			
+			if (blockedUsers.isEmpty()) {
+				html.append("<tr><td>(empty)</td><td></td><td></td></tr>");
+			}
+			html.append("</table><br/>\n");			
 			blockedUsersHtml = html.toString();
-			
+
+			html.setLength(0);
+			html.append("<table><tr><th>User</th><th>Subscribed since</th><th></th>\n");
+			for (AuthorSubscription sub : subscribedToUsers) {
+				html.append("<tr><td><a href='/fb/user/"+sub.subscribedTo.id+"'>"+escape(sub.subscribedTo.authorUnsafe)+"</a></td>");
+				html.append("<td>"+Dates.plainDate(new Date(sub.date))+"</td>");
+				html.append("<td><a href='/fb/unsubscribefromauthor2/"+sub.subscribedTo.id+"'>Unsubscribe</a></td></tr>\n");
+			}
+			if (subscribedToUsers.isEmpty()) {
+				html.append("<tr><td>(empty)</td><td></td><td></td></tr>");
+			}
+			html.append("</table>\n");
+			subscribedUsersHtml = html.toString();
+
 		}
 		
 		return Strings.getFile("useraccount.html", user)
@@ -621,6 +653,7 @@ public class Accounts {
 				.replace("$BODYTEXTWIDTHFORM", widthHTML)
 				.replace("$HIDEIMAGEBUTTON", hideImageButton)
 				.replace("$USERSBLOCKEDFROMRECENTS", blockedUsersHtml)
+				.replace("$USERSAUTHORSUBSCRIPTIONS", subscribedUsersHtml)
 				;
 	}
 	
@@ -1230,6 +1263,9 @@ public class Accounts {
 				break;
 			case DBNotification.MODIFICATION_RESPONSE:
 				sb.append("<a href=\"/fb/user/" + a.sender.id + "\">" + escape(a.sender.authorUnsafe) + "</a> "+(Boolean.TRUE.equals(a.approved)?"approved":"rejected")+" your request to modify <a href=\"/fb/story/" + a.episode.generatedId + " \">"+escape(a.episode.link)+"</a>");
+				break;
+			case DBNotification.NEW_AUTHOR_SUBSCRIPTION_EPISODE:
+				sb.append("<p><a href=\"/fb/user/" + a.episode.authorId + "\">" + escape(a.episode.authorName) + "</a> wrote a new episode: <a href=\"/fb/story/" + a.episode.generatedId + "\">"+escape(a.episode.link)+"</a></p>\n");
 				break;
 			default:
 				if (a.body != null && a.body.length() > 0) sb.append("<p>" + a.body + "</p>");

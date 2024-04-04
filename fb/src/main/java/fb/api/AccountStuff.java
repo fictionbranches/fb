@@ -13,6 +13,7 @@ import fb.Accounts.FBLoginException;
 import fb.DB;
 import fb.DB.DBException;
 import fb.InitWebsite;
+import fb.db.DBAuthorSubscription;
 import fb.db.DBEpisode;
 import fb.db.DBRecentUserBlock;
 import fb.db.DBUser;
@@ -631,7 +632,7 @@ public class AccountStuff {
 	@Produces(MediaType.TEXT_HTML)
 	public Response unblockuserfromrecents2(@PathParam("id") String blockedUserId, @CookieParam("fbtoken") Cookie fbtoken) {
 		unblockuserfromrecentsImpl(blockedUserId, fbtoken);
-		return Response.seeOther(GetStuff.createURI("/fb/useraccount")).build();
+		return Response.seeOther(GetStuff.createURI("/fb/useraccount#BlockedFromRecents")).build();
 	}
 	
 	private void unblockuserfromrecentsImpl(String blockedUserId, Cookie fbtoken) {
@@ -647,6 +648,79 @@ public class AccountStuff {
 			session.beginTransaction();
 			try {
 				session.createNativeQuery("DELETE FROM fbrecentuserblocks WHERE blockeduser_id='"+blockedUser.getId()+"' AND blockinguser_id='"+blockingUser.getId()+"'").executeUpdate();
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+			}
+			
+		} finally {
+			DB.closeSession(session);
+		}
+	}
+	
+	@GET
+	@Path("subscribetoauthor/{id}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response subscribetoauthor(@PathParam("id") String subscribedToUserId, @CookieParam("fbtoken") Cookie fbtoken) {
+
+		final Response res = Response.seeOther(GetStuff.createURI("/fb/user/" + subscribedToUserId)).build();
+		final String subscriberId = Accounts.getUsernameFromCookie(fbtoken);
+		if (subscriberId == null) return res;
+		
+		final Session session = DB.openSession();
+		try {
+			final DBUser subscriber = DB.getUserById(session, subscriberId);
+			final DBUser subscribedTo = DB.getUserById(session, subscribedToUserId);
+			if (subscribedTo == null || subscriber == null) return res;
+			
+			final DBAuthorSubscription sub = new DBAuthorSubscription();
+			sub.setSubscribedTo(subscribedTo);
+			sub.setSubscriber(subscriber);
+			sub.setCreatedDate(System.currentTimeMillis());
+			
+			session.beginTransaction();
+			try {
+				session.save(sub);
+				session.getTransaction().commit();
+			} catch (Exception e) {
+				session.getTransaction().rollback();
+			}
+			
+		} finally {
+			DB.closeSession(session);
+		}
+		return res;
+	}
+	
+	@GET
+	@Path("unsubscribefromauthor/{id}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response unsubscribefromauthor(@PathParam("id") String subscribedToUserId, @CookieParam("fbtoken") Cookie fbtoken) {
+		unsubscribefromauthorImpl(subscribedToUserId, fbtoken);
+		return Response.seeOther(GetStuff.createURI("/fb/user/" + subscribedToUserId)).build();
+	}
+	
+	@GET
+	@Path("unsubscribefromauthor2/{id}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response unsubscribefromauthor2(@PathParam("id") String subscribedToUserId, @CookieParam("fbtoken") Cookie fbtoken) {
+		unsubscribefromauthorImpl(subscribedToUserId, fbtoken);
+		return Response.seeOther(GetStuff.createURI("/fb/useraccount#SubscribedToUsers")).build();
+	}
+	
+	private void unsubscribefromauthorImpl(String subscribedToUserId, Cookie fbtoken) {
+		final String subscriberUserId = Accounts.getUsernameFromCookie(fbtoken);
+		if (subscriberUserId == null) return;
+		
+		final Session session = DB.openSession();
+		try {
+			final DBUser subscriber = DB.getUserById(session, subscriberUserId);
+			final DBUser subscribedTo = DB.getUserById(session, subscribedToUserId);
+			if (subscribedTo == null || subscriber == null) return;
+			
+			session.beginTransaction();
+			try {
+				session.createNativeQuery("DELETE FROM fbauthorsubscriptions WHERE subscribedto_id='"+subscribedTo.getId()+"' AND subscriber_id='"+subscriber.getId()+"'").executeUpdate();
 				session.getTransaction().commit();
 			} catch (Exception e) {
 				session.getTransaction().rollback();

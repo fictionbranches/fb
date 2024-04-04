@@ -60,6 +60,14 @@ public class Notification {
 			this.sender = new FlatUser(note.getSender());
 			this.approved = note.getApproved();
 			break; 
+		case DBNotification.NEW_AUTHOR_SUBSCRIPTION_EPISODE:
+			this.comment = null;
+			this.episode = new FlatEpisode(note.getEpisode());
+			this.parentEpisode = null;
+			this.body = null;
+			this.sender = null;
+			this.approved = null;
+			break;
 		default:
 			this.episode = null;
 			this.parentEpisode = null;

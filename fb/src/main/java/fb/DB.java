@@ -58,6 +58,7 @@ import org.springframework.security.crypto.bcrypt.BCrypt;
 import fb.db.DBAnnouncement;
 import fb.db.DBAnnouncementView;
 import fb.db.DBArchiveToken;
+import fb.db.DBAuthorSubscription;
 import fb.db.DBComment;
 import fb.db.DBCommentSub;
 import fb.db.DBEmailChange;
@@ -188,6 +189,7 @@ public class DB {
 		configuration.addAnnotatedClass(DBTag.class);
 		configuration.addAnnotatedClass(DBEpisodeTag.class);
 		configuration.addAnnotatedClass(DBRecentUserBlock.class);
+		configuration.addAnnotatedClass(DBAuthorSubscription.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -432,6 +434,43 @@ public class DB {
 				throw new DBException("Database error", e);
 			}
 			return childId;
+		} finally {
+			closeSession(session);
+		}
+	}
+	
+	public static void notifyAuthorSubscriptions(long newEpId) {
+		final Session session = openSession();
+		try {
+			
+			final DBEpisode ep = session.get(DBEpisode.class, newEpId);
+			if (ep == null) return;
+			final DBUser author = ep.getAuthor();
+			
+			final List<DBUser> subscribers = session.createQuery(
+					"from DBAuthorSubscription a join fetch a.subscriber where a.subscribedTo.id='" + author.getId() + "'", 
+					DBAuthorSubscription.class)
+					.stream().map(da -> da.getSubscriber()).toList();
+			
+			session.beginTransaction();
+			try {
+				
+				for (DBUser sub : subscribers) {
+					DBNotification note = new DBNotification();
+					note.setDate(new Date());
+					note.setUser(sub);
+					note.setRead(false);
+					note.setType(DBNotification.NEW_AUTHOR_SUBSCRIPTION_EPISODE);
+					note.setEpisode(ep);
+					session.save(note);
+				}
+				
+				session.getTransaction().commit();
+			} catch (Exception ex) {
+				LOGGER.warn("Failed to send author subscription notifications", ex);
+				session.getTransaction().rollback();
+			}
+			
 		} finally {
 			closeSession(session);
 		}
@@ -1631,6 +1670,7 @@ public class DB {
 					JOIN FETCH ep.author
 					JOIN FETCH ep.editor
 					WHERE ep.parent IS NULL
+					ORDER BY ep.date ASC
 					""", DBEpisode.class).stream()
 					.map(FlatEpisode::new)
 					.toList();

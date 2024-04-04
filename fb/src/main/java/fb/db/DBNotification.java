@@ -125,6 +125,19 @@ public class DBNotification {
 	 */
 	@Transient
 	public static final String MODIFICATION_RESPONSE="modification_response";
+	
+	/**
+	 * new_author_subscription_episode:
+	 *   id
+	 *   date
+	 *   user
+	 *   read
+	 *   type
+	 *   
+	 *   episode
+	 */
+	@Transient
+	public static final String NEW_AUTHOR_SUBSCRIPTION_EPISODE="new_author_subscription_episode";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
