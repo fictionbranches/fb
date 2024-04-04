@@ -256,13 +256,13 @@ public class Accounts {
 		String pageCount = "<a href='/fb/user/" + profileUser.user.id + (showComments ? "'>Recent Episodes" : "?comments'>Recent Comments") + "</a><br/>";
 		if (!showComments) {
 			StringBuilder table = new StringBuilder();
-			table.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Date</th><th>Story</th><th>Depth</th></tr>");
+			table.append("<table class=\"fbtable\"><tr><th class='tableoverflow'>Episode</th><th>Date</th><th>Story</th><th>Depth</th></tr>");
 			for (FlatEpisode ep : profileUser.episodes) {
 				String story;
 				FlatEpisode rootEp = Story.getRootEpisodeById(DB.newMapToIdList(ep.newMap).findFirst().get());
 				if (rootEp == null) story = "";
 				else story = rootEp.link;
-				table.append("<tr class=\"fbtable\"><td class=\"fbtable\">" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + " title='"+escape(ep.body.substring(0, Integer.min(140, ep.body.length())))+"'>" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + 
+				table.append("<tr class=\"fbtable\"><td class='fbtable tableoverflow'" + (ep.title.trim().equalsIgnoreCase(ep.link.trim().toLowerCase())?"":(escape(ep.title) + "<br/>")) + "<a href=/fb/story/" + ep.generatedId + " title='"+escape(ep.body.substring(0, Integer.min(140, ep.body.length())))+"'>" + escape(ep.link) + "</a></td><td class=\"fbtable\">" + 
 						Dates.simpleDateFormat2(ep.date) + 
 						"</td><td class=\"fbtable\">" + escape(story) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>");
 			}
