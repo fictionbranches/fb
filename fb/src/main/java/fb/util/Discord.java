@@ -38,7 +38,6 @@ public class Discord {
 		final String hook = Strings.getDISCORD_NEW_EPISODE_HOOK(); 
 		if (hook == null || hook.strip().length() == 0) {
 			// no hook to send to
-			System.out.println("No hook for " + generatedId);
 			return;
 		}
 		
@@ -56,8 +55,6 @@ public class Discord {
 			DB.closeSession(sesh);
 		}
 		
-		System.out.println("Notifying about episode " + ep.generatedId + " " + ep.title + " by " + ep.authorName);
-
 		StringBuilder sb = new StringBuilder();
 		try (Scanner scan = new Scanner(root.link)) {
 			while (scan.hasNext()) {
@@ -94,10 +91,8 @@ public class Discord {
 	}
 	
 	private static void sendToDiscordHook(String hookURL, Object data) {
-		System.out.println("Sending to " + hookURL);
 		try {
 			final String postData = new Gson().toJson(data);
-			System.out.println("Sending " + postData);
 			final byte[] postDataBytes = postData.getBytes(StandardCharsets.UTF_8);
 			
 			final HttpURLConnection conn = (HttpURLConnection) URI.create(hookURL).toURL().openConnection();
