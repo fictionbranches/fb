@@ -14,6 +14,13 @@ $STYLE
 <meta property="og:image" content="$AVATARURLMETA" />
 <meta property="og:title" content="$AUTHOR's profile" />
 <meta property="og:site_name" content="Fiction Branches" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js" integrity="sha512-SYfDUYPg5xspsG6OOpXU366G8SZsdHOhqk/icdrYJ2E/WKZxPxze7d2HD3AyXpT7U22PZ5y74xRpqZ6A2bJ+kQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="/static/markdown.js?v=$VERSION"></script>
+<script src="/static/markdown_html.js?v=$VERSION"></script>
+
+<meta name="description" content="$RAWBODY" />
+<meta property="og:description" content="$RAWBODY" />
 <script src="/static/all_pages.js?v=$VERSION"></script></head>
 <body>
 
@@ -28,7 +35,7 @@ $ACCOUNT
 	$MODERATORSTATUS
 	<p>Member since $DATE</p>
 	<hr />
-	<div class="fbepisodebody"><p>$BODY</p></div>
+	<div class="fbepisodebody $MARKDOWNSTATUS">$BODY</div>
 	<hr />
 	$PAGECOUNT
 	<hr />

@@ -310,7 +310,9 @@ public class Accounts {
 				.replace("$AUTHOR", escape(profileUser.user.authorUnsafe))
 				.replace("$AVATARURLMETA", avatarMeta)
 				.replace("$AVATARURL", avatar)
-				.replace("$BODY", profileUser.user.bioUnsafe==null?"":Markdown.formatBody(profileUser.user.bioUnsafe))
+				.replace("$BODY", profileUser.user.bioUnsafe==null?"":(parseMarkdown?Markdown.formatBody(profileUser.user.bioUnsafe):escape(profileUser.user.bioUnsafe)))
+				.replace("$MARKDOWNSTATUS", parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")
+				.replace("$RAWBODY", profileUser.user.bioUnsafe==null?"":escape(profileUser.user.bioUnsafe))
 				.replace("$EPISODES", body);
 	}
 	
