@@ -487,11 +487,11 @@ public class Story {
 				tagsHTML.append(tag.shortName + " ");
 				tagSelected = true;
 			} else {
-				tagsHTML.append(recentsTablePrevNextItem(root, 1, reverse, tag.shortName, false, tag.shortName));
+				tagsHTML.append(recentsTablePrevNextItem(root, 1, reverse, tag.shortName, false, tag.shortName, tag.longName));
 			}
 		}
 		if (tagSelected) {
-			tagsHTML.append(recentsTablePrevNextItem(root, 1, reverse, null, false, "Unselect All"));
+			tagsHTML.append(recentsTablePrevNextItem(root, 1, reverse, null, false, "Unselect All", null));
 		}
 		return tagsHTML.toString();
 	}
@@ -502,38 +502,38 @@ public class Story {
 		if (prof.numPages <= 8) {
 			for (int i = 1; i <= prof.numPages; ++i) {
 				if (i == page) prevNext.append(i + " ");
-				else prevNext.append(recentsTablePrevNextItem(root, i, reverse, tag, true, null));
+				else prevNext.append(recentsTablePrevNextItem(root, i, reverse, tag, true, null, null));
 			}
 		} else {
 			if (page <= 3) { // 1 2 3 4 ... n
 				for (int i = 1; i <= 4; ++i) {
 					if (i == page) prevNext.append(i + " ");
-					else prevNext.append(recentsTablePrevNextItem(root, i, reverse, tag, true, null));
+					else prevNext.append(recentsTablePrevNextItem(root, i, reverse, tag, true, null, null));
 				}
 				prevNext.append("... ");
-				prevNext.append(recentsTablePrevNextItem(root, prof.numPages, reverse, tag, true, null));
+				prevNext.append(recentsTablePrevNextItem(root, prof.numPages, reverse, tag, true, null, null));
 			} else if (page >= prof.numPages - 3) { // 1 ... n-3 n-2 n-1 n
-				prevNext.append(recentsTablePrevNextItem(root, 1, reverse, tag, true, null));
+				prevNext.append(recentsTablePrevNextItem(root, 1, reverse, tag, true, null, null));
 				prevNext.append("... ");
 				for (int i = prof.numPages - 3; i <= prof.numPages; ++i) {
 					if (i == page) prevNext.append(i + " ");
-					else prevNext.append(recentsTablePrevNextItem(root, i, reverse, tag, true, null));
+					else prevNext.append(recentsTablePrevNextItem(root, i, reverse, tag, true, null, null));
 				}
 			} else { // 1 ... x-2 x-1 x x+1 x+2 ... n
-				prevNext.append(recentsTablePrevNextItem(root, 1, reverse, tag, true, null));
+				prevNext.append(recentsTablePrevNextItem(root, 1, reverse, tag, true, null, null));
 				prevNext.append("... ");
 				for (int i = page - 2; i <= page + 2; ++i) {
 					if (i == page) prevNext.append(i + " ");
-					else prevNext.append(recentsTablePrevNextItem(root, i , reverse, tag, true, null));
+					else prevNext.append(recentsTablePrevNextItem(root, i , reverse, tag, true, null, null));
 				}
 				prevNext.append("... ");
-				prevNext.append(recentsTablePrevNextItem(root, prof.numPages, reverse, tag, true, null));
+				prevNext.append(recentsTablePrevNextItem(root, prof.numPages, reverse, tag, true, null, null));
 			}
 		}
 
 		prevNext.append("</div></p><p>");
 
-		prevNext.append(recentsTablePrevNextItem(root, page, !reverse, tag, false, reverse ? "Recent episodes" : "Oldest episodes"));
+		prevNext.append(recentsTablePrevNextItem(root, page, !reverse, tag, false, reverse ? "Recent episodes" : "Oldest episodes", null));
 		return prevNext.toString();
 	}
 	
@@ -547,9 +547,9 @@ public class Story {
 	 * @param name display name of item, or null to use page number as name
 	 * @return
 	 */
-	private static String recentsTablePrevNextItem(int root, int page, boolean reverse, String tag, boolean mono, Object name) {
+	private static String recentsTablePrevNextItem(int root, int page, boolean reverse, String tag, boolean mono, Object name, String hover) {
 		if (tag != null && tag.length() == 0) tag = null;
-		return "<a " + (mono ? "class=\"monospace\" " : "") + "href=?story=" + root + "&page=" + page + (reverse ? "&reverse" : "") + recentsTableTagParam(tag) + ">" + (name==null?page:name) + "</a> ";
+		return "<a " + (mono ? "class=\"monospace\" " : "") + (hover!=null ? "title='"+escape(hover)+"'" : "") + "href=?story='" + root + "&page=" + page + (reverse ? "&reverse" : "") + recentsTableTagParam(tag) + "'>" + (name==null?page:name) + "</a> ";
 	}
 	
 	private static String recentsTableTagParam(String tag) {
