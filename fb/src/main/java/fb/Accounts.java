@@ -590,7 +590,7 @@ public class Accounts {
 				"  <input type=\"radio\" name=\"bodytextwidth\" value=\"900\" "+(user.bodyTextWidth==900?"checked":"")+" /> Medium (900px)<br/>\n" + 
 				"  <input type=\"radio\" name=\"bodytextwidth\" value=\"1440\" "+(user.bodyTextWidth==1440?"checked":"")+" /> Wide (1600px)<br/>\n" + 
 				"  <input type=\"radio\" name=\"bodytextwidth\" value=\"0\" "+(user.bodyTextWidth==0?"checked":"")+" /> Unconstrained<br/>\n" + 
-				"  <input type= \"submit\" value= \"Submit\"/>\n" + 
+				"  <input type= \"submit\" value= \"Update body text width\"/>\n" + 
 				"</form>\n" + 
 				"<p>(Text will fit to window if window is narrower than selection.)</p>"
 				;
