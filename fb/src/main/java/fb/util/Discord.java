@@ -30,10 +30,10 @@ public class Discord {
 		}
 		if (message.length() > 2000) message = message.substring(0,2000);
 		HookMessage form = new HookMessage("FB Errors", message);
-		Discord.sendToDiscordHook(hook, form);
+		Discord.sendToDiscordHook(hook, form, Strings.getDOMAIN());
 	}
 	
-	public static void notifyNewEpisode(long generatedId) {
+	public static void notifyNewEpisode(long generatedId, String domainName) {
 		
 		final String hook = Strings.getDISCORD_NEW_EPISODE_HOOK(); 
 		if (hook == null || hook.strip().length() == 0) {
@@ -67,7 +67,7 @@ public class Discord {
 		String desc = String.format(
 				"By [%s](%s)%n%n", 
 				ep.authorName, 
-				"https://" + Strings.getDOMAIN() + "/fb/user/" + ep.authorId
+				"https://" + domainName + "/fb/user/" + ep.authorId
 			) + ep.body;
 		
 		if (desc.length() > 500) desc = desc.substring(0,500) + "...";
@@ -75,7 +75,7 @@ public class Discord {
 		HookEmbed embed = new HookEmbed(
 				ep.title.substring(0,Integer.min(ep.title.length(), 256)), 
 				desc, 
-				"https://"+Strings.getDOMAIN() + "/fb/story/" + ep.generatedId, 
+				"https://"+domainName + "/fb/story/" + ep.generatedId, 
 				0x4e98fc
 			);
 		
@@ -87,10 +87,10 @@ public class Discord {
 				avatar,
 				new HookEmbed[]{embed}
 			);
-		sendToDiscordHook(hook, form);
+		sendToDiscordHook(hook, form, domainName);
 	}
 	
-	private static void sendToDiscordHook(String hookURL, Object data) {
+	private static void sendToDiscordHook(String hookURL, Object data, String domainName) {
 		try {
 			final String postData = new Gson().toJson(data);
 			final byte[] postDataBytes = postData.getBytes(StandardCharsets.UTF_8);
@@ -101,7 +101,7 @@ public class Discord {
 
 			conn.setRequestProperty("Content-Type", "application/json");
 			conn.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
-			conn.setRequestProperty("User-Agent", "Fiction Branches Discord Notifier https://" + Strings.getDOMAIN());
+			conn.setRequestProperty("User-Agent", "Fiction Branches Discord Notifier https://" + domainName);
 
 			conn.setDoOutput(true);
 			conn.getOutputStream().write(postDataBytes);

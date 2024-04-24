@@ -357,7 +357,7 @@ public class DB {
 	 * @return generatedid of newly added episode
 	 * @throws DBException if parent ep or author does not exist, or if new keystring is too long
 	 */
-	public static long addEp(long parentId, String link, String title, String body, String authorId, Date date) throws DBException {
+	public static long addEp(long parentId, String link, String title, String body, String authorId, Date date, String domainName) throws DBException {
 		Session session = openSession();
 		try {
 			DBEpisode parent = session.get(DBEpisode.class, parentId);
@@ -421,12 +421,12 @@ public class DB {
 					session.save(note);
 				}
 				if (sendMailNotification && InitWebsite.DEV_LEVEL == InitWebsite.DevLevel.RELEASE) new Thread(()->
-					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + child.getAuthor().getId() + "\">" + Text.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+Strings.getDOMAIN()+"/fb/story/" + parent.getGeneratedId() +">" + Text.escape(parent.getTitle()) + "</a>")
+					Accounts.sendEmail(parent.getAuthor().getEmail(), "Someone added a new child to your episode", "<a href=\"https://"+domainName+"/fb/user/" + child.getAuthor().getId() + "\">" + Text.escape(child.getAuthor().getAuthor()) + "</a> wrote a <a href=\"https://"+domainName+"/fb/story/" + child.getGeneratedId() + "\">new child episode</a> of <a href=https://"+domainName+"/fb/story/" + parent.getGeneratedId() +">" + Text.escape(parent.getTitle()) + "</a>")
 				).start();
 				
 				session.getTransaction().commit();
 				
-				new Thread(()->Discord.notifyNewEpisode(childId)).start();
+				new Thread(()->Discord.notifyNewEpisode(childId, domainName)).start();
 				
 			} catch (Exception e) {
 				session.getTransaction().rollback();
@@ -2018,7 +2018,7 @@ public class DB {
 	 * @return id of newly created comment
 	 * @throws DBException
 	 */
-	public static long addComment(long generatedId, String authorId, String commentText) throws DBException {
+	public static long addComment(long generatedId, String authorId, String commentText, String domainName) throws DBException {
 		Date commentDate = new Date();
 		Session session = openSession();
 		try {
@@ -2074,7 +2074,7 @@ public class DB {
 					final long gid = generatedId;
 					new Thread(()-> // send the email
 						Accounts.sendEmail(email, "Someone commented on your episode", 
-								"<a href=\"https://"+Strings.getDOMAIN()+"/fb/user/" + authorid + "\">" + Text.escape(authorauthor) + "</a> left a <a href=\"https://"+Strings.getDOMAIN()+"/fb/story/" + gid + "#comment" + cid + "\">comment</a> on " + Text.escape(epTitle))
+								"<a href=\"https://"+domainName+"/fb/user/" + authorid + "\">" + Text.escape(authorauthor) + "</a> left a <a href=\"https://"+domainName+"/fb/story/" + gid + "#comment" + cid + "\">comment</a> on " + Text.escape(epTitle))
 					).start();
 				}
 				

@@ -96,9 +96,9 @@ public class AddStuff {
 		final String link = formParams.getFirst("link");
 		final String title = formParams.getFirst("title");
 		final String body = formParams.getFirst("body");
-
+		
 		try {
-			long childID = Story.addPost(generatedId, link, title, body, fbtoken, formParams);
+			long childID = Story.addPost(generatedId, link, title, body, fbtoken, formParams, uriInfo.getBaseUri().getHost());
 			return Response.seeOther(GetStuff.createURI("/fb/story/" + childID)).build();
 		} catch (EpisodeException e) {
 			return Response.ok(e.getMessage()).build();
@@ -141,12 +141,12 @@ public class AddStuff {
 	@POST
 	@Path("addcommentpost/{generatedId}")
 	@Produces(MediaType.TEXT_HTML)
-	public Response addcommentpost(@PathParam("generatedId") long generatedId, @FormParam("body") String body,
+	public Response addcommentpost(@Context UriInfo uriInfo, @PathParam("generatedId") long generatedId, @FormParam("body") String body,
 			@CookieParam("fbtoken") Cookie fbtoken) {
 		if (InitWebsite.READ_ONLY_MODE) return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", "This site is currently in read-only mode.")).build();
 
 		try {
-			long commentID = Story.commentPost(generatedId, body, fbtoken);
+			long commentID = Story.commentPost(generatedId, body, fbtoken, uriInfo.getBaseUri().getHost());
 			return Response.seeOther(GetStuff.createURI("/fb/story/" + generatedId + "#comment"+commentID)).build();
 		} catch (EpisodeException e) {
 			return Response.ok(e.getMessage()).build();

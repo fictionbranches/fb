@@ -882,7 +882,7 @@ public class Story {
 	 * @return ID of new episode
 	 * @throws EpisodeException if there's any error, e.getMessage() will contain HTML page for error
 	 */
-	public static long addPost(long generatedId, String link, String title, String body, Cookie token, MultivaluedMap<String, String> formParams) throws EpisodeException {
+	public static long addPost(long generatedId, String link, String title, String body, Cookie token, MultivaluedMap<String, String> formParams, String domainName) throws EpisodeException {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -896,7 +896,7 @@ public class Story {
 		String errors = checkEpisode(link, title, body);
 		if (errors != null) throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", errors));
 		try {
-			final long newId = DB.addEp(generatedId, link, title, body, user.id, new Date());
+			final long newId = DB.addEp(generatedId, link, title, body, user.id, new Date(), domainName);
 			DB.updateTags(newId, user.id, formParams);
 			new Thread(()->DB.notifyAuthorSubscriptions(newId)).start();
 			return newId;
@@ -1105,7 +1105,7 @@ public class Story {
 	 * @return id of new comment
 	 * @throws EpisodeException
 	 */
-	public static long commentPost(long generatedId, String comment, Cookie token) throws EpisodeException {
+	public static long commentPost(long generatedId, String comment, Cookie token, String domainName) throws EpisodeException {
 		FlatUser user;
 		try {
 			user = Accounts.getFlatUser(token);
@@ -1125,7 +1125,7 @@ public class Story {
 		if (!list.isEmpty()) throw new EpisodeException(Strings.getFile("generic.html",user).replace("$EXTRA", "Comment text may not contain the following: " + list.stream().collect(Collectors.joining(" "))));
 		
 		try {
-			return DB.addComment(generatedId, user.id, comment);
+			return DB.addComment(generatedId, user.id, comment, domainName);
 		} catch (DBException e) {
 			throw new EpisodeException(Strings.getFile("failure.html", user).replace("$EXTRA", e.getMessage()));
 		}
