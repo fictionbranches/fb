@@ -549,7 +549,7 @@ public class Story {
 	 */
 	private static String recentsTablePrevNextItem(int root, int page, boolean reverse, String tag, boolean mono, Object name, String hover) {
 		if (tag != null && tag.length() == 0) tag = null;
-		return "<a " + (mono ? "class=\"monospace\" " : "") + (hover!=null ? "title='"+escape(hover)+"'" : "") + "href=?story='" + root + "&page=" + page + (reverse ? "&reverse" : "") + recentsTableTagParam(tag) + "'>" + (name==null?page:name) + "</a> ";
+		return "<a " + (mono ? "class=\"monospace\" " : "") + (hover!=null ? "title='"+escape(hover)+"'" : "") + "href='?story=" + root + "&page=" + page + (reverse ? "&reverse" : "") + recentsTableTagParam(tag) + "'>" + (name==null?page:name) + "</a> ";
 	}
 	
 	private static String recentsTableTagParam(String tag) {
