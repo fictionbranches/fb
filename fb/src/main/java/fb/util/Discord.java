@@ -23,7 +23,7 @@ public class Discord {
 	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 		
 	public static synchronized void notifyError(String message) {
-		final String hook = Strings.getDISCORD_NEW_EPISODE_HOOK(); 
+		final String hook = Strings.getDISCORD_ERROR_HOOK(); 
 		if (hook == null || hook.strip().length() == 0) {
 			// no hook to send to
 			return;
