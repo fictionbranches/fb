@@ -6,9 +6,13 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 @Entity
-@Table(name="fbauthorsubscriptions")
+@Table(
+	name="fbauthorsubscriptions",
+	uniqueConstraints=@UniqueConstraint(columnNames={"subscriber_id", "subscribedto_id"})
+)
 public class DBAuthorSubscription {
 	
 	@Id
