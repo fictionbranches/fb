@@ -87,6 +87,14 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 			LOGGER.warn("Skipping Discord notification, no hook", exception);
 			return;
 		}
+		
+		if (exception instanceof IllegalStateException) {
+			if (requestURL.toLowerCase().endsWith("/fb/loginpost") || requestURL.toLowerCase().endsWith("/fb/createaccountpost")) {
+				LOGGER.warn("Skipping Discord notification, IllegalStateException", exception);
+				return;
+			}
+		}
+		
 		try {
 			StringBuilder message = new StringBuilder();
 			message.append("Error on page " + requestURL + "\n");
