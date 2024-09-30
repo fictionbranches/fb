@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.script.Invocable;
@@ -16,7 +17,10 @@ import org.slf4j.LoggerFactory;
 
 public class Markdown {
 	
-	private static final String MARKDOWN_IT_URL = "https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js";
+	private static final List<String> MARKDOWN_IT_URLs = List.of(
+			"https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js",
+			"https://unpkg.com/markdown-it-center-text@1.0.4/dist/markdown-it-center-text.min.js"
+		);
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 	
@@ -59,7 +63,9 @@ public class Markdown {
 			}
 			try {
 				LOGGER.info("Got js engine in " + (((double) (System.nanoTime() - start)) / 1000000000.0));
-				engine.eval(getMarkdownIt());
+				for (String url : MARKDOWN_IT_URLs) {
+					engine.eval(getJavascript(url));
+				}
 				engine.eval(Text.readFileFromJar("static_html/static/markdown.js"));
 				LOGGER.info("js engine init in " + (((double) (System.nanoTime() - start)) / 1000000000.0));
 			} catch (ScriptException e) {
@@ -68,8 +74,8 @@ public class Markdown {
 		}
 	}
 
-	private String getMarkdownIt() {
-		try (final BufferedReader scan = new BufferedReader(new InputStreamReader(URI.create(MARKDOWN_IT_URL).toURL().openStream()))) {
+	private String getJavascript(String url) {
+		try (final BufferedReader scan = new BufferedReader(new InputStreamReader(URI.create(url).toURL().openStream()))) {
 			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
 		} catch (IOException e) {
 			throw new RuntimeException("Unable to download markdown-it.js", e);
