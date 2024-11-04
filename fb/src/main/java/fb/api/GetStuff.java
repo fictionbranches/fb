@@ -450,6 +450,50 @@ public class GetStuff {
 	}
 	
 	@GET
+	@Path("searchbyauthor/{authorId}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response searchbyauthorform(@CookieParam("fbtoken") Cookie fbtoken, 
+			@PathParam("authorId") String authorId, 
+			@QueryParam("q") String q, 
+			@QueryParam("page") Integer page, 
+			@QueryParam("sort") String sort,
+			@Context UriInfo uriInfo) {
+		if (!InitWebsite.SEARCHING_ALLOWED) {
+			String response = "Searching is disabled while the database is being indexed.";
+			if (InitWebsite.INDEXER_MONITOR != null) {
+				response += " " + InitWebsite.INDEXER_MONITOR.percent() + "% complete.";
+			}
+			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", response)).build();
+		}
+		if (q!=null) {
+			if (page==null) page = 1;
+			if (page < 1) page = 1;
+			if (sort != null && sort.length() == 0) sort = null;
+			return Response.ok(Accounts.searchPost(fbtoken, authorId, q, Integer.toString(page), sort, uriInfo.getQueryParameters())).build();
+		} 
+		return Response.ok(Accounts.getSearchForm(fbtoken, authorId)).build();
+	}
+	
+	@GET
+	@Path("qwer/{authorId}")
+	@Produces(MediaType.TEXT_HTML)
+	public Response qwer(@PathParam("authorId") String authorId, @CookieParam("fbtoken") Cookie fbtoken) {
+		Session sesh = DB.openSession();
+		try {
+			fb.db.DBUser user = DB.getUserById(sesh, authorId);
+			String response;
+			if (user == null) {
+				response = "User id not found: " + authorId;
+			} else {
+				response = "User " + user.getId() + " aka " + user.getAuthor() + " has virtual id " + user.getVirtualId();
+			}
+			return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", response)).build();
+		} finally {
+			DB.closeSession(sesh);
+		}
+	}
+	
+	@GET
 	@Path("formatting")
 	@Produces(MediaType.TEXT_HTML)
 	public Response formatting(@CookieParam("fbtoken") Cookie fbtoken) {

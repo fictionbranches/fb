@@ -248,7 +248,7 @@ public class Story {
 				.replace("$TAGS", tagsHtmlView(ep.tags));
 	}
 	
-	private static String tagsHtmlView(Set<Tag> tags) {
+	public static String tagsHtmlView(Set<Tag> tags) {
 		if (tags == null || tags.isEmpty()) return "";
 		return tags.stream()
 				.sorted()
@@ -699,7 +699,7 @@ public class Story {
 		return Strings.getFile("searchform.html", user)
 				.replace("$SEARCHTERM", "")
 				.replace("$TITLE", "Searching '" + escape(ep.title) + "'")
-				.replace("$ID", ""+generatedId)
+				.replace("$FORMPATH", "/fb/search/"+generatedId)
 				.replace("$TAGS", Story.tagsHtmlForm(DB.getAllTags(), false))
 				.replace("$EXTRA", "");
 	}
@@ -770,7 +770,7 @@ public class Story {
 		return Strings.getFile("searchform.html", user)
 				.replace("$SEARCHTERM", escape(search))
 				.replace("$TITLE", "Search results")
-				.replace("$ID", ""+generatedId)
+				.replace("$FORMPATH", "/fb/search/"+generatedId)
 				.replace("$TAGS", Story.tagsHtmlForm(selectedTags, false))
 				.replace("$EXTRA", sb.toString());
 	}
@@ -1044,7 +1044,7 @@ public class Story {
 		}	
 	}
 	
-	private static String tagsHtmlForm(Map<Tag, Boolean> tags, boolean vertical) {
+	public static String tagsHtmlForm(Map<Tag, Boolean> tags, boolean vertical) {
 		return tags.entrySet().stream()
 				.sorted(Comparator.comparing(e -> e.getKey()))
 				.map(e -> tagHtmlForm(e.getKey(), e.getValue(), vertical))
@@ -1062,7 +1062,7 @@ public class Story {
 				escape(tag.shortName + (vertical ? (" - " + tag.longName) : ""))) + (vertical ? "" : "</span>");
 	}
 	
-	private static String tagsHtmlForm(Collection<Tag> tags, boolean vertical) {
+	public static String tagsHtmlForm(Collection<Tag> tags, boolean vertical) {
 		return tagsHtmlForm((Map<Tag, Boolean>) tags.stream().collect(Collectors.toMap(e->e, e->false, (a,b)->a||b, LinkedHashMap::new)), vertical);
 	}
 	
@@ -1274,7 +1274,7 @@ public class Story {
 					"$PATHTOHERE", "$PREVNEXT", "$RAWBODY", "$RECAPTCHASITEKEY", "$SEARCHTERM", "$SORTORDER", 
 					"$STORY", "$STYLE", "$THEMES", "$TIMELIMIT", "$TITLE", "$TOKEN", "$UPVOTES", "$VIEWS", "$OGDESCRIPTION", 
 					"$HIDEIMAGEBUTTON", "$AVATARURLMETA", "$TAGS", "$USERSBLOCKEDFROMRECENTS", "$VERSION", "$HIDEIMAGES",
-					"$USERSAUTHORSUBSCRIPTIONS")
+					"$USERSAUTHORSUBSCRIPTIONS", "$FORMPATH")
 					.collect(Collectors.toSet())));
 	
 	private Story() {}

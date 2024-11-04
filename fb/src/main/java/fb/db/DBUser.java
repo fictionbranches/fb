@@ -9,6 +9,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Formula;
 import org.hibernate.search.annotations.Analyze;
 import org.hibernate.search.annotations.Analyzer;
 import org.hibernate.search.annotations.Field;
@@ -20,7 +21,7 @@ import org.hibernate.search.annotations.Store;
 @Table(name="fbusers")
 @Indexed
 public class DBUser {
-		
+	
 	@Id
 	private String id;
 	
@@ -62,6 +63,10 @@ public class DBUser {
 	
 	@Column(columnDefinition = "int default 900") 
 	private int bodyTextWidth;
+	
+	@Formula("(select id)")
+	@Field(index=Index.YES, store=Store.NO, analyze=Analyze.YES, analyzer=@Analyzer(definition = "fbAnalyzer"))
+	private String virtualId;
 
 	public String getId() {
 		return id;
@@ -197,6 +202,14 @@ public class DBUser {
 
 	public void setHideImages(boolean hideImages) {
 		this.hideImages = hideImages;
+	}
+
+	public String getVirtualId() {
+		return virtualId;
+	}
+
+	public void setVirtualId(String virtualId) {
+		this.virtualId = virtualId;
 	}
 
 	public boolean equals(Object o) {

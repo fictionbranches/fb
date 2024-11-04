@@ -58,6 +58,7 @@ public class DBEpisode {
 	private long viewCount;
 		
 	@ManyToOne
+	@IndexedEmbedded
 	private DBUser author;
 	
 	@Field

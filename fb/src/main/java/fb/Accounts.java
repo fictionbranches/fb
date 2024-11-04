@@ -11,11 +11,14 @@ import java.io.StringReader;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.mail.Authenticator;
 import javax.mail.Message;
@@ -38,6 +41,7 @@ import fb.DB.AuthorProfileResult;
 import fb.DB.AuthorSearchResult;
 import fb.DB.DBException;
 import fb.DB.PasswordResetException;
+import fb.DB.SearchResultList;
 import fb.db.DBAuthorSubscription;
 import fb.db.DBNotification;
 import fb.db.DBRecentUserBlock;
@@ -50,12 +54,15 @@ import fb.objects.FlatUser;
 import fb.objects.ModEpisode;
 import fb.objects.Notification;
 import fb.objects.RecentUserBlock;
+import fb.objects.Tag;
 import fb.objects.User;
 import fb.util.Dates;
 import fb.util.Markdown;
 import fb.util.Strings;
 import fb.util.Text;
 import jakarta.ws.rs.core.Cookie;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.Response;
 
 public class Accounts {
 	
@@ -298,6 +305,10 @@ public class Accounts {
 				moderator += "<p><a href='/fb/unblockfromrecents/"+profileUser.user.id+"'>Unblock from Recents</a></p>";
 			} else {
 				moderator += "<p><a href='/fb/blockfromrecents/"+profileUser.user.id+"'>Block from Recents</a></p>";
+			}
+			
+			if (profileUser.episodes.size() >= 10) {
+				moderator += "<p><a href='/fb/searchbyauthor/"+profileUser.user.id+"'>🔍Search episodes by "+profileUser.user.authorEscape()+"</a></p>";
 			}
 		}
 		
@@ -1337,6 +1348,109 @@ public class Accounts {
 			return false;
 		}
 		return true;
+	}
+	
+	public static String getSearchForm(Cookie token, String authorId) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(token);
+		} catch (FBLoginException e) {
+			user = null;
+		}
+		if (user == null) return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("must_be_logged_in"));
+		FlatUser author;
+		try {
+			author = DB.getFlatUser(authorId);
+		} catch (DBException e) {
+			return Strings.getFile("generic.html", user).replace("$EXTRA", "Not found: " + authorId);
+		}
+		return Strings.getFile("searchform.html", user)
+				.replace("$SEARCHTERM", "")
+				.replace("$TITLE", "Searching episodes by '" + author.authorEscape() + "'")
+				.replace("$FORMPATH", "/fb/searchbyauthor/"+authorId)
+				.replace("$TAGS", Story.tagsHtmlForm(DB.getAllTags(), false))
+				.replace("$EXTRA", "");
+	}
+	
+	public static String searchPost(Cookie fbtoken, String authorId, String search, String page, String sort, MultivaluedMap<String, String> params) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			user = null;
+		}
+		if (user == null) return Strings.getFile("generic.html", user).replace("$EXTRA", Strings.getString("must_be_logged_in"));
+		int pageNum;
+		try {
+			pageNum = Integer.parseInt(page);
+			if (pageNum < 1) pageNum = 1;
+		} catch (NumberFormatException e) {
+			pageNum = 1;
+		}
+		
+		final Set<Tag> allTags = DB.getAllTags();
+		
+		final Set<String> selectedShortNames = allTags
+				.stream()
+				.map(tag -> tag.shortName)
+				.filter(params::containsKey)
+				.collect(Collectors.toCollection(HashSet::new));
+		
+		final Map<Tag, Boolean> selectedTags = allTags.stream().collect(Collectors.toMap(tag -> tag, tag -> selectedShortNames.contains(tag.shortName)));
+		
+		if (search.length() == 0 && selectedTags.size() == 0) Response.ok(Accounts.getSearchForm(fbtoken, authorId)).build();
+		
+		SearchResultList results;
+		try {
+			results = DB.searchByAuthor(authorId, search, pageNum, sort==null?"":sort, selectedShortNames);
+		} catch (DBException e) {
+			return Strings.getFile("generic.html", user).replace("$EXTRA", e.getMessage());
+		} 
+		Map<FlatEpisode, Set<Tag>> result = results.episodes;
+		
+		StringBuilder sb = new StringBuilder();
+		if (pageNum > 1) sb.append(searchButton(authorId,"Prev", search, pageNum-1, sort, selectedShortNames));
+		if (results.morePages) sb.append(searchButton(authorId,"Next", search, pageNum+1, sort, selectedShortNames));
+		if (sb.length() > 0) {
+			String asdf = sb.toString();
+			sb = new StringBuilder("<p>" + asdf + "</p>");
+		}
+		String prevNext = sb.toString();
+		if (!result.isEmpty()) {
+			sb.append("<table class=\"fbtable\"><tr><th>Episode</th><th>Tags</th><th>Author</th><th>Date</th><th>Depth</th></tr>");
+			for (Map.Entry<FlatEpisode, Set<Tag>> e : result.entrySet()) {
+				final FlatEpisode ep = e.getKey();
+				final Set<Tag> tags = e.getValue();
+				final String row = 
+						"<tr class=\"fbtable\">" + 
+							"<td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(escape(ep.title) + "<br/>")) + 
+								"<a href=/fb/story/" + ep.generatedId + " title='" + escape(ep.body.substring(0, Integer.min(140, ep.body.length()))) + "'>" + escape(ep.link) + "</a></td>" + 
+							"<td class='fbtable'>" + Story.tagsHtmlView(tags) + "</td>" + 
+							"<td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + escape(ep.authorName) + "</a></td>" + 
+							"<td class=\"fbtable\">" + Dates.simpleDateFormat2(ep.date) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>\n";
+				sb.append(row);
+			}
+			sb.append("</table>");
+		} else {
+			sb.append("No results");
+		}
+		sb.append(prevNext);
+		return Strings.getFile("searchform.html", user)
+				.replace("$SEARCHTERM", escape(search))
+				.replace("$TITLE", "Search results")
+				.replace("$FORMPATH", "/fb/searchbyauthor/"+authorId)
+				.replace("$TAGS", Story.tagsHtmlForm(selectedTags, false))
+				.replace("$EXTRA", sb.toString());
+	}
+	
+	private static String searchButton(String authorId, String name, String search, int page, String sort, Set<String> tagShortNames) {
+		return "<form class=\"simplebutton\" action=\"/fb/searchbyauthor/"+authorId+"\" method=\"get\">\n" + 
+				"  <input type=\"hidden\" name=\"q\" value=\""+escape(search)+"\" />\n" + 
+				"  <input type=\"hidden\" name=\"page\" value=\""+page+"\" />\n" + 
+				(sort == null ? "" : "  <input type=\"hidden\" name=\"sort\" value=\""+sort+"\" />\n") + 
+				"  <input class=\"simplebutton\" type=\"submit\" value=\""+name+"\" />\n" + 
+				tagShortNames.stream().map(tagShortName -> "<input type='hidden' name='"+tagShortName+"' value='' />").collect(Collectors.joining("\n")) + 
+				"</form>";
 	}
 	
 	private static HashSet<Character> allowedUsernameChars;

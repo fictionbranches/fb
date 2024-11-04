@@ -1116,53 +1116,87 @@ public class DB {
 			
 			MustJunction combinedQuery = qb.bool()
 					.must(new RegexpQuery(new Term("newMap", (ep.getNewMap()+EP_INFIX).toLowerCase()+".*"), RegExp.NONE)); // idQuery
-			if (search.length() > 0) {
-				combinedQuery = combinedQuery.must(qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery()); // searchQuery
-			}
-			
-			for (String shortName : tagsShortNames) {
-				Query tagQuery = qb.keyword().onField("lazytags.tag.shortName").matching(shortName).createQuery();
-				combinedQuery = combinedQuery.must(tagQuery);
-			}
-			
-			try {
-				
-				Sort sorter = switch (sort) {
-					case "newest" -> new Sort(new SortField("date", SortField.Type.LONG, true));
-					case "oldest" -> new Sort(new SortField("date", SortField.Type.LONG, false));
-					default -> null;
-				};
-				
-				FullTextQuery q = sesh.createFullTextQuery(combinedQuery.createQuery(), DBEpisode.class);
-				if (sorter != null) q.setSort(sorter);
-				q.setFirstResult(PAGE_SIZE*page);
-				q.setMaxResults(PAGE_SIZE+1);
-				
-				@SuppressWarnings("unchecked")
-				List<FlatEpisode> list = ((Stream<Object>)(q.stream()))
-					.map(e -> (DBEpisode)e)
-					.map(e->new FlatEpisode(e))
-					.collect(Collectors.toCollection(ArrayList::new));	
-								
-				final boolean hasNext = list.size() > PAGE_SIZE;
-				if (hasNext) {
-					list = list.subList(0, PAGE_SIZE);
-				}
-				
-				Map<Long, Set<Tag>> tags = DB.getTagsForEpisodes(sesh, list.stream().map(e -> e.generatedId).collect(Collectors.toSet()));
-				
-				Map<FlatEpisode, Set<Tag>> map = new LinkedHashMap<>();
-				
-				for (FlatEpisode e : list) {
-					map.put(e, tags.get(e.generatedId));
-				}
-				
-				return new SearchResultList(map, hasNext);
-			} catch (Exception e) {
-				throw new RuntimeException("Search exception on id " + generatedId + " with search query \"" + search + "\" -- "  + e + " -- " + e.getMessage(), e);
-			}
+			return searchImpl(sesh, qb, combinedQuery, search, page, sort, tagsShortNames, ""+generatedId);
 		} finally {
 			closeSession(session);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param generatedId
+	 * @param search
+	 * @param page
+	 * @param sort
+	 * @param tagsShortNames these are NOT checked against the DB. Ensure they are valid before passing them in
+	 * @return
+	 * @throws DBException
+	 */
+	public static SearchResultList searchByAuthor(String authorId, String search, int page, String sort, Set<String> tagsShortNames) throws DBException {
+		Session session = openSession();
+		page-=1;
+		try {
+			DBUser author = session.get(DBUser.class, authorId);
+			if (author == null) throw new DBException("Not found: " + authorId);
+			
+			FullTextSession sesh = Search.getFullTextSession(session);
+			QueryBuilder qb = sesh.getSearchFactory().buildQueryBuilder().forEntity(DBEpisode.class).get();
+			
+			MustJunction combinedQuery = qb.bool()
+					.must(qb.keyword().onField("author.virtualId").matching(authorId).createQuery()); // idQuery
+
+			return searchImpl(sesh, qb, combinedQuery, search, page, sort, tagsShortNames, authorId);
+			
+		} finally {
+			closeSession(session);
+		}
+	}
+	
+	private static SearchResultList searchImpl(FullTextSession sesh, QueryBuilder qb, MustJunction combinedQuery, String search, int page, String sort, Set<String> tagsShortNames, String searchId) throws DBException {
+		if (search.length() > 0) {
+			combinedQuery = combinedQuery.must(qb.simpleQueryString().onFields("title","link","body").matching(search).createQuery()); // searchQuery
+		}
+		
+		for (String shortName : tagsShortNames) {
+			Query tagQuery = qb.keyword().onField("lazytags.tag.shortName").matching(shortName).createQuery();
+			combinedQuery = combinedQuery.must(tagQuery);
+		}
+		
+		try {
+			
+			Sort sorter = switch (sort) {
+				case "newest" -> new Sort(new SortField("date", SortField.Type.LONG, true));
+				case "oldest" -> new Sort(new SortField("date", SortField.Type.LONG, false));
+				default -> null;
+			};
+			
+			FullTextQuery q = sesh.createFullTextQuery(combinedQuery.createQuery(), DBEpisode.class);
+			if (sorter != null) q.setSort(sorter);
+			q.setFirstResult(PAGE_SIZE*page);
+			q.setMaxResults(PAGE_SIZE+1);
+			
+			@SuppressWarnings("unchecked")
+			List<FlatEpisode> list = ((Stream<Object>)(q.stream()))
+				.map(e -> (DBEpisode)e)
+				.map(e->new FlatEpisode(e))
+				.collect(Collectors.toCollection(ArrayList::new));	
+							
+			final boolean hasNext = list.size() > PAGE_SIZE;
+			if (hasNext) {
+				list = list.subList(0, PAGE_SIZE);
+			}
+			
+			Map<Long, Set<Tag>> tags = DB.getTagsForEpisodes(sesh, list.stream().map(e -> e.generatedId).collect(Collectors.toSet()));
+			
+			Map<FlatEpisode, Set<Tag>> map = new LinkedHashMap<>();
+			
+			for (FlatEpisode e : list) {
+				map.put(e, tags.get(e.generatedId));
+			}
+			
+			return new SearchResultList(map, hasNext);
+		} catch (Exception e) {
+			throw new RuntimeException("Search exception on id " + searchId + " with search query \"" + search + "\" -- "  + e + " -- " + e.getMessage(), e);
 		}
 	}
 		
