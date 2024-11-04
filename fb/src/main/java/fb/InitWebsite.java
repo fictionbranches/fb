@@ -1,6 +1,8 @@
 package fb;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -42,6 +44,7 @@ import fb.objects.FlatEpisode;
 import fb.util.FBIndexerProgressMonitor;
 import fb.util.Markdown;
 import fb.util.Strings;
+import fb.util.Text;
 import jakarta.ws.rs.core.UriBuilder;
 
 public class InitWebsite {
@@ -68,6 +71,11 @@ public class InitWebsite {
 	 */
 	public static boolean SEARCHING_ALLOWED = true;//NOSONAR
 	public static FBIndexerProgressMonitor INDEXER_MONITOR = null;//NOSONAR
+	
+	/**
+	 * Increment each time search index definitions need to be updated
+	 */
+	public static final int SEARCH_INDEX_VERSION = 1;
 	
 	/**
 	 * true to check recaptchas
@@ -178,20 +186,64 @@ public class InitWebsite {
 			bye("Base dir " + baseDir.getAbsolutePath() + " does not exist and could not be created");
 		}
 		File indexDir = new File(InitWebsite.BASE_DIR + "/search-indexes");
+		File indexVersion = new File(InitWebsite.BASE_DIR + "/search-indexes-version");
 		if (indexDir.exists() && indexDir.isFile()) {
 			bye("Search index directory " + indexDir.getAbsolutePath() + " is a file");
-		} else if (!indexDir.exists() || indexDir.list().length==0) {
-			InitWebsite.SEARCHING_ALLOWED = false;
-			Thread t = new Thread(()->{
-				DB.doSearchIndex();
-				InitWebsite.SEARCHING_ALLOWED = true;
-			});
-			t.setName("SearchIndexerThread");
-			LOGGER.warn("Started search indexer thread");
-			return t;
 		}
+				
+		if (!indexDir.exists() || indexDir.list().length==0 || !indexVersion.exists() || !indexVersion.isFile()) {
+			return redoSearchIndexes(indexDir, indexVersion);
+		}
+		
+		if (!indexVersion.isFile()) {
+			bye("Search index version " + indexVersion.getAbsolutePath() + " is not a file");
+		}
+		
+		int currentVersion;
+		try {
+			currentVersion = Integer.parseInt(Text.readTextFile(indexVersion));
+		} catch (Exception e) {
+			currentVersion = -1;
+		}
+		if (currentVersion < InitWebsite.SEARCH_INDEX_VERSION) {
+			return redoSearchIndexes(indexDir, indexVersion);
+		}
+		
 		LOGGER.info("Finished check base dir");
 		return null;
+	}
+	
+	private static Thread redoSearchIndexes(File indexDir, File indexVersion) {
+		InitWebsite.SEARCHING_ALLOWED = false;
+		
+		if (indexDir.exists()) {
+			int num = 0;
+			
+			File oldIndexDir;
+			do {
+				++num;
+				oldIndexDir = new File(InitWebsite.BASE_DIR + "/search-indexes-" + num);
+			} while (oldIndexDir.exists());
+			
+			indexDir.renameTo(oldIndexDir);
+		}
+		
+		if (indexVersion.exists()) {
+			indexVersion.delete();
+		}
+				
+		Thread t = new Thread(()->{
+			DB.doSearchIndex();
+			try (BufferedWriter out = new BufferedWriter(new FileWriter(indexVersion))) {
+				out.write(String.valueOf(InitWebsite.SEARCH_INDEX_VERSION));
+			} catch (IOException e) {
+				bye("Failed to write search index version: " + e.getMessage());
+			}
+			InitWebsite.SEARCHING_ALLOWED = true;
+		});
+		t.setName("SearchIndexerThread");
+		LOGGER.warn("Started search indexer thread");
+		return t;
 	}
 	
 	private static void bye(String msg) {
