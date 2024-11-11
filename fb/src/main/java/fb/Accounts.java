@@ -307,7 +307,7 @@ public class Accounts {
 				moderator += "<p><a href='/fb/blockfromrecents/"+profileUser.user.id+"'>Block from Recents</a></p>";
 			}
 			
-			if (profileUser.episodes.size() >= 10) {
+			if (profileUser.episodes != null && profileUser.episodes.size() >= 10) {
 				moderator += "<p><a href='/fb/searchbyauthor/"+profileUser.user.id+"'>🔍Search episodes by "+profileUser.user.authorEscape()+"</a></p>";
 			}
 		}
