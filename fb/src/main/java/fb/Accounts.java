@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringReader;
+import java.time.Duration;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -20,13 +21,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import javax.mail.Authenticator;
-import javax.mail.Message;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
-
 import org.apache.commons.validator.routines.EmailValidator;
 import org.hibernate.Session;
 import org.slf4j.Logger;
@@ -36,6 +30,7 @@ import org.springframework.security.crypto.bcrypt.BCrypt;
 import com.github.difflib.text.DiffRow;
 import com.github.difflib.text.DiffRowGenerator;
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 
 import fb.DB.AuthorProfileResult;
 import fb.DB.AuthorSearchResult;
@@ -43,8 +38,11 @@ import fb.DB.DBException;
 import fb.DB.PasswordResetException;
 import fb.DB.SearchResultList;
 import fb.db.DBAuthorSubscription;
+import fb.db.DBFailedLoginAttempt;
+import fb.db.DBLoginBan;
 import fb.db.DBNotification;
 import fb.db.DBRecentUserBlock;
+import fb.db.DBUser;
 import fb.objects.AuthorSubscription;
 import fb.objects.Comment;
 import fb.objects.FlaggedComment;
@@ -60,6 +58,12 @@ import fb.util.Dates;
 import fb.util.Markdown;
 import fb.util.Strings;
 import fb.util.Text;
+import jakarta.mail.Authenticator;
+import jakarta.mail.Message;
+import jakarta.mail.PasswordAuthentication;
+import jakarta.mail.Transport;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
@@ -100,9 +104,13 @@ public class Accounts {
 		if (dir.exists()) {
 			if (dir.isDirectory()) {
 				for (File f : dir.listFiles()) {
-					UserSession sesh = new Gson().fromJson(Text.readTextFile(f), UserSession.class);
-					String token = f.getName();
-					active.put(token, sesh);
+					try {
+						UserSession sesh = new Gson().fromJson(Text.readTextFile(f), UserSession.class);
+						String token = f.getName();
+						active.put(token, sesh);
+					} catch (JsonParseException e) {
+						continue;
+					}
 				}
 			} else LOGGER.error("Session directory " + SESSION_PATH + " exists but is a file");
 		} else LOGGER.error("Session directory " + SESSION_PATH + " does not exist");
@@ -116,7 +124,7 @@ public class Accounts {
 	private static void pruneSessions() {
 		final long now = System.currentTimeMillis();
 		final long sevenDaysMillis = 24l*7l*60l*60l*1000l;
-		active.entrySet().removeIf(e->now - e.getValue().lastActive().getTime() > sevenDaysMillis);
+		active.entrySet().removeIf(e->now - e.getValue().lastActive() > sevenDaysMillis);
 	}
 	
 	public static void bump() {
@@ -148,16 +156,16 @@ public class Accounts {
 	 */
 	public static class UserSession { 
 		public final String userID;
-		private Date lastActive;
+		private long lastActive;
 		public UserSession(String userID) {
 			this.userID = userID;
-			this.lastActive = new Date();
+			this.lastActive = System.currentTimeMillis();
 		}
-		public Date lastActive() {
+		public long lastActive() {
 			return lastActive;
 		}
 		public void ping() {
-			lastActive = new Date();
+			lastActive = System.currentTimeMillis();
 		}
 	}
 	
@@ -504,22 +512,104 @@ public class Accounts {
 	 * @param email email address
 	 * @param password plaintext password
 	 * @return login token to be added as cookie
-	 * @throws FBLoginException if email or password is wrong (e.getMessage() contains HTML)
+	 * @throws FBLoginException if email or password is wrong (e.getMessage() contains error message)
 	 */
-	public static String login(String email, String password) throws FBLoginException {
-		FlatUser user;
+	public static String login(String email, String password, String ipAddress) throws FBLoginException {
+		final long now = System.currentTimeMillis();
+		final Session session = DB.openSession();
 		try {
-			email = email.toLowerCase();
-			user = email.contains("@") ? DB.getFlatUserByEmail(email) : DB.getFlatUser(email);
-			if (!DB.checkPassword(user.id, password)) throw new FBLoginException(Strings.getFile("loginform.html", null).replace("$EXTRA", "Incorrect username/email or password, or username/email does not exist"));
-		} catch (DBException e) {
-			throw new FBLoginException(Strings.getFile("loginform.html", null).replace("$EXTRA", "Incorrect username/email or password, or username/email does not exist"));
+			if (!canAttemptLogin(ipAddress, now, session)) {
+				throw new FBLoginException("Too many failed attempts, try again later");
+			}
+			
+			DBUser user;
+			try {
+				email = email.toLowerCase();
+				user = email.contains("@") ? DB.getUserByEmail(session, email) : DB.getUserById(session, email);
+				if (user == null) 
+					throw new DBException("");
+				if (!DB.checkPassword(user.getId(), password, session)) 
+					throw new DBException("");
+			} catch (DBException e) {
+				recordFailedLoginAttempt(ipAddress, now, session);
+				throw new FBLoginException("Incorrect username/email or password, or username/email does not exist");
+			}
+			
+			String newToken = newToken(active);
+			active.put(newToken, new UserSession(user.getId()));
+			
+			return newToken;
+		} finally {
+			DB.closeSession(session);
+		}
+	}
+		
+	private static boolean canAttemptLogin(String ipAddress, long now, Session session) {
+		try {
+			// check if already banned
+			DBLoginBan ban = session.get(DBLoginBan.class, ipAddress);
+			if (ban != null && ban.getUntil() >= now) {
+				return false;
+			}
+			return true;			
+		} finally {
+			cleanupFailedLogins(now, session);
+		}
+	}
+	
+	private static void recordFailedLoginAttempt(String ipAddress, long now, Session session) {
+		DBFailedLoginAttempt attempt = new DBFailedLoginAttempt();
+		attempt.setIp(ipAddress);
+		attempt.setTimestamp(now);
+		try {
+			session.beginTransaction();
+			session.save(attempt);
+			session.getTransaction().commit();
+		} catch (Exception e) {
+			session.getTransaction().rollback();
 		}
 		
-		String newToken = newToken(active);
-		active.put(newToken, new UserSession(user.id));
+		// check if needs to be banned, more than 10 failed attempts in last 10 minutes
+		long attemptsInLastTenMinutes = session.createQuery("select count(*) from DBFailedLoginAttempt a where a.ip='"+ipAddress+"' and a.timestamp>"+(now-Duration.ofMinutes(10).toMillis()), Long.class).uniqueResult();
+		if (attemptsInLastTenMinutes >= 10) {
+			DBLoginBan ban = session.get(DBLoginBan.class, ipAddress);
+			if (ban == null) {
+				
+				ban = new DBLoginBan();
+				ban.setIp(ipAddress);
+				ban.setBanCount(1);
+				ban.setUntil(now + Duration.ofHours(1).toMillis());
+				try {
+					session.beginTransaction();
+					session.save(ban);
+					session.getTransaction().commit();
+				} catch (Exception e) {
+					session.getTransaction().rollback();
+				}
+				
+			} else {
+				ban.setBanCount(ban.getBanCount() + 1);
+				ban.setUntil(now + Duration.ofHours(ban.getBanCount()).toMillis());
+				try {
+					session.beginTransaction();
+					session.merge(ban);
+					session.getTransaction().commit();
+				} catch (Exception e) {
+					session.getTransaction().rollback();
+				}
+			}
+		}
 		
-		return newToken;
+	}
+	
+	private static void cleanupFailedLogins(long now, Session session) {
+		try {
+			session.beginTransaction();
+			session.createQuery("delete DBFailedLoginAttempt a where a.timestamp<"+(now-Duration.ofDays(1).toMillis())).executeUpdate();
+			session.getTransaction().commit();
+		} catch (Exception e) {
+			session.getTransaction().rollback();
+		}
 	}
 	
 	public static void logout(Cookie fbtoken) {
@@ -1331,7 +1421,7 @@ public class Accounts {
 				return new PasswordAuthentication(Strings.getSMTP_EMAIL(), Strings.getSMTP_PASSWORD());
 			}
 		};
-		javax.mail.Session session = javax.mail.Session.getInstance(props, auth);
+		jakarta.mail.Session session = jakarta.mail.Session.getInstance(props, auth);
 		try {
 			MimeMessage msg = new MimeMessage(session);
 			msg.addHeader("Content-type", "text/HTML; charset=UTF-8");

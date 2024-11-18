@@ -2,8 +2,10 @@ package fb.api;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
 
+import org.glassfish.grizzly.http.server.Request;
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +25,8 @@ import fb.util.GoogleRECAPTCHA;
 import fb.util.GoogleRECAPTCHA.GoogleCheckException;
 import fb.util.Strings;
 import fb.util.Text;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import jakarta.ws.rs.CookieParam;
 import jakarta.ws.rs.FormParam;
 import jakarta.ws.rs.GET;
@@ -33,6 +37,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Cookie;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
@@ -76,6 +81,26 @@ public class AccountStuff {
 		return Response.seeOther(GetStuff.createURI("/fb")).build();
 	}
 	
+    @Inject
+    private Provider<Request> grizzlyRequestProvider;
+    private String getIpAddress(HttpHeaders headers) {
+    	try {
+    		List<String> ip = headers.getRequestHeader("x-real-ip");
+	    	if (ip != null && !ip.isEmpty())
+	    		return ip.get(0);
+			if (grizzlyRequestProvider != null)
+				return grizzlyRequestProvider.get().getRemoteAddr();
+		} catch (Exception e) {}
+    	return "";
+    }
+    
+	@GET
+	@Path("myip")
+	@Produces(MediaType.TEXT_HTML)
+	public Response myip(@Context HttpHeaders headers, @CookieParam("fbtoken") Cookie fbtoken) {
+		return Response.ok(Strings.getFileWithToken("generic.html", fbtoken).replace("$EXTRA", getIpAddress(headers))).build();
+	}
+		
 	@GET
 	@Path("logout")
 	@Produces(MediaType.TEXT_HTML)
@@ -95,29 +120,29 @@ public class AccountStuff {
 	@POST
 	@Path("loginpost")
 	@Produces(MediaType.TEXT_HTML)
-	public Response loginpost(@Context UriInfo uriInfo, @FormParam("email") String email, @FormParam("password") String password,
+	public Response loginpost(@Context HttpHeaders headers, @Context UriInfo uriInfo, @FormParam("email") String email, @FormParam("password") String password,
 			@FormParam("g-recaptcha-response") String google) {
 		LOGGER.info(password, google);
 		LOGGER.info("Login attempt: %s", email);
 		try {
-			String token = Accounts.login(email, password);
+			String token = Accounts.login(email, password, getIpAddress(headers));
 			return Response.seeOther(GetStuff.createURI("/fb")).cookie(GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost())).build();
 		} catch (FBLoginException e){
-			return Response.ok(Strings.getFileWithToken("generic.html", null).replace("$EXTRA", "Incorrect username/email or password, or username/email does not exist")).build();
+			return Response.ok(Strings.getFileWithToken("generic.html", null).replace("$EXTRA", Text.escape(e.getMessage()))).build();
 		}
 	}
 	
 	@POST
 	@Path("loginpost2")
-	@Produces(MediaType.TEXT_HTML)
-	public Response loginpost2(@Context UriInfo uriInfo, @FormParam("email") String email, @FormParam("password") String password) {
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response loginpost2(@Context HttpHeaders headers, @Context UriInfo uriInfo, @FormParam("email") String email, @FormParam("password") String password) {
 		
 		LOGGER.info("Login2 attempt: " + email);
 		try {
-			String token = Accounts.login(email, password);
+			String token = Accounts.login(email, password, getIpAddress(headers));
 			return Response.ok("loggedin").cookie(GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost())).build();
 		} catch (FBLoginException e){
-			return Response.ok("incorrect").build();
+			return Response.ok(e.getMessage()).build();
 		}
 	}
 	

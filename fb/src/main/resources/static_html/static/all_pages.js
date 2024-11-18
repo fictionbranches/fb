@@ -12,6 +12,7 @@ $(document).ready(function(event) {
 		event.preventDefault();
 	});
 	$("#loginForm").submit(function( event ) {
+		$("#loginButton").attr('disabled', true);
 		var emailString = $("#loginEmail").val();
 		var passwordString = $("#loginPassword").val();
 		var req = new XMLHttpRequest();
@@ -23,6 +24,7 @@ $(document).ready(function(event) {
 				location.reload();
 			} else {
 				$("#loginResultDiv").html("<br/>" + resultString);
+				$("#loginButton").attr('disabled', false);
 			}
 		}
 		req.send("email="+encodeURIComponent(emailString)+"&password="+encodeURIComponent(passwordString)); 

@@ -65,9 +65,11 @@ import fb.db.DBEmailChange;
 import fb.db.DBEpisode;
 import fb.db.DBEpisodeTag;
 import fb.db.DBEpisodeView;
+import fb.db.DBFailedLoginAttempt;
 import fb.db.DBFavEp;
 import fb.db.DBFlaggedComment;
 import fb.db.DBFlaggedEpisode;
+import fb.db.DBLoginBan;
 import fb.db.DBModEpisode;
 import fb.db.DBNotification;
 import fb.db.DBPasswordReset;
@@ -190,6 +192,8 @@ public class DB {
 		configuration.addAnnotatedClass(DBEpisodeTag.class);
 		configuration.addAnnotatedClass(DBRecentUserBlock.class);
 		configuration.addAnnotatedClass(DBAuthorSubscription.class);
+		configuration.addAnnotatedClass(DBLoginBan.class);
+		configuration.addAnnotatedClass(DBFailedLoginAttempt.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
@@ -2004,17 +2008,28 @@ public class DB {
 	 * @throws DBException if id not found
 	 */
 	public static boolean checkPassword(String id, String password) throws DBException {
-		String hashedPassword;
 		Session session = openSession();
 		try {
-			DBUser user = getUserById(session, id);
-			if (user == null) throw new DBException("User does not exist");
-			if (user.getEmail() == null) throw new DBException("You may not log in to a legacy account");
-			hashedPassword = user.getPassword();
-			return checkPasswordImpl(hashedPassword, password);
+			return checkPassword(id, password, session);
 		} finally {
 			closeSession(session);
 		}
+	}
+	
+	/**
+	 * Checks a plaintext password against the stored hash
+	 * @param id id of user
+	 * @param password plaintext possible password
+	 * @return true if password matches, else false
+	 * @throws DBException if id not found
+	 */
+	public static boolean checkPassword(String id, String password, Session session) throws DBException {
+		String hashedPassword;
+		DBUser user = getUserById(session, id);
+		if (user == null) throw new DBException("User does not exist");
+		if (user.getEmail() == null) throw new DBException("You may not log in to a legacy account");
+		hashedPassword = user.getPassword();
+		return checkPasswordImpl(hashedPassword, password);
 	}
 	
 	/**
