@@ -12,8 +12,12 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
+import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import fb.DB;
+import fb.db.DBFileCache;
 
 public class Markdown {
 	
@@ -73,8 +77,52 @@ public class Markdown {
 			}
 		}
 	}
-
+	
 	private String getJavascript(String url) {
+		final Session session = DB.openSession();
+		try {
+			if (url == null || url.length() == 0) return "";
+			DBFileCache cache = session.get(DBFileCache.class, url);
+			if (cache == null) {
+				cache = new DBFileCache();
+				cache.setKey(url);
+				try {
+					session.beginTransaction();
+					session.save(cache);
+					session.getTransaction().commit();
+				} catch (Exception e) {
+					session.getTransaction().rollback();
+					LOGGER.warn("Unable to download " + url, e);
+					return "";
+				}
+			}
+			
+			if (cache.getValue() == null || cache.getValue().length() == 0) {
+				cache.setKey(url);
+				cache.setValue(getJavascriptImpl(url));
+				
+				try {
+					session.beginTransaction();
+					session.merge(cache);
+					session.getTransaction().commit();
+				} catch (Exception e) {
+					session.getTransaction().rollback();
+					LOGGER.warn("Unable to download " + url, e);
+					return "";
+				}				
+			}
+			
+			return cache.getValue();
+			
+		} catch (Exception e) {
+			LOGGER.warn("Unable to download " + url, e);
+			return "";
+		} finally {
+			DB.closeSession(session);
+		}
+	}
+
+	private String getJavascriptImpl(String url) {
 		try (final BufferedReader scan = new BufferedReader(new InputStreamReader(URI.create(url).toURL().openStream()))) {
 			return scan.lines().collect(Collectors.joining(System.lineSeparator()));
 		} catch (IOException e) {

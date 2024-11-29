@@ -67,6 +67,7 @@ import fb.db.DBEpisodeTag;
 import fb.db.DBEpisodeView;
 import fb.db.DBFailedLoginAttempt;
 import fb.db.DBFavEp;
+import fb.db.DBFileCache;
 import fb.db.DBFlaggedComment;
 import fb.db.DBFlaggedEpisode;
 import fb.db.DBLoginBan;
@@ -194,6 +195,7 @@ public class DB {
 		configuration.addAnnotatedClass(DBAuthorSubscription.class);
 		configuration.addAnnotatedClass(DBLoginBan.class);
 		configuration.addAnnotatedClass(DBFailedLoginAttempt.class);
+		configuration.addAnnotatedClass(DBFileCache.class);
 		
 		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
 		try {
