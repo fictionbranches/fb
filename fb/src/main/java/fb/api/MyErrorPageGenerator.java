@@ -6,6 +6,7 @@ import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import org.glassfish.grizzly.http.server.ErrorPageGenerator;
 import org.glassfish.grizzly.http.server.Request;
@@ -89,8 +90,16 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 		}
 		
 		if (exception instanceof IllegalStateException) {
-			if (requestURL.toLowerCase().endsWith("/fb/loginpost") || requestURL.toLowerCase().endsWith("/fb/createaccountpost")) {
-				LOGGER.warn("Skipping Discord notification, IllegalStateException", exception);
+//			if (requestURL.toLowerCase().endsWith("/fb/loginpost")
+//					|| requestURL.toLowerCase().endsWith("/fb/createaccountpost")
+//					|| requestURL.toLowerCase().endsWith("/fb/passwordresetpost")
+//					) {
+//				LOGGER.warn("Skipping Discord notification, IllegalStateException", exception);
+//				return;
+//			}
+			final String message = "The @FormParam is utilized when the content type of the request entity is not application/x-www-form-urlencoded";
+			if (exception.getMessage().contains(message) || Text.traceToLines(exception).stream().collect(Collectors.joining("\n")).contains(message)) {
+				Discord.notifyError(requestURL + " - " + message);
 				return;
 			}
 		}
