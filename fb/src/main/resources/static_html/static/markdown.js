@@ -1,6 +1,6 @@
 function createMarkdownBase() {
 	var md = markdownit('commonmark',{breaks: true}).use(markdownitCentertext);
-	md.enable(['table']);
+	md.enable(['table','strikethrough']);
 	return md;
 }
 
@@ -18,12 +18,6 @@ function createMarkdownNoImage() {
 
 var mdit = createMarkdown();
 function markdownToHTML(body) {
-	if (typeof console === 'object') {
-		console.log("Rendering body");
-		console.log(body);
-		console.log("fixed body:");
-		console.log(body.replace('-&gt;', '->').replace('&lt;-', '<-'));
-	}
 	return mdit.render(body.replace('-&gt;', '->').replace('&lt;-', '<-'));
 }
 
@@ -32,5 +26,5 @@ function markdownToHTMLNoImage(body) {
 	if (mdit_noimage == null) {
 		mdit_noimage = createMarkdownNoImage();
 	}
-	return mdit_noimage.render(body);
+	return mdit_noimage.render(body.replace('-&gt;', '->').replace('&lt;-', '<-'));
 }
