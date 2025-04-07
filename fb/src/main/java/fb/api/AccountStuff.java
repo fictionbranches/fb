@@ -1,5 +1,6 @@
 package fb.api;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -39,6 +40,7 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 
@@ -126,7 +128,7 @@ public class AccountStuff {
 		LOGGER.info("Login attempt: %s", email);
 		try {
 			String token = Accounts.login(email, password, getIpAddress(headers));
-			return Response.seeOther(GetStuff.createURI("/fb")).cookie(GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost())).build();
+			return Response.seeOther(GetStuff.createURI("/fb")).cookie(newLoginCookie(token, uriInfo)).build();
 		} catch (FBLoginException e){
 			return Response.ok(Strings.getFileWithToken("generic.html", null).replace("$EXTRA", Text.escape(e.getMessage()))).build();
 		}
@@ -140,10 +142,14 @@ public class AccountStuff {
 		LOGGER.info("Login2 attempt: " + email);
 		try {
 			String token = Accounts.login(email, password, getIpAddress(headers));
-			return Response.ok("loggedin").cookie(GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost())).build();
+			return Response.ok("loggedin").cookie(newLoginCookie(token, uriInfo)).build();
 		} catch (FBLoginException e){
 			return Response.ok(e.getMessage()).build();
 		}
+	}
+	
+	private NewCookie newLoginCookie(String token, UriInfo uriInfo) {
+		return GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost(), Duration.ofDays(14), true);
 	}
 	
 	/**

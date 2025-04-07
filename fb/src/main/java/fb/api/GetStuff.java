@@ -4,6 +4,7 @@ import static fb.util.Text.escape;
 
 import java.math.BigInteger;
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -74,22 +75,17 @@ public class GetStuff {
 		return uri;
 	}
 	
-	public static NewCookie newCookie(String name, String value, String domain) {
+	public static NewCookie newCookie(String name, String value, String domain, Duration maxAge, boolean httpOnly) {
 		NewCookie ret;
 		try {
-			Calendar cal = Calendar.getInstance();
-			cal.add(Calendar.YEAR, 100);
-			Date d = cal.getTime();
-			ret = new NewCookie(name, 
-				value, 
-				"/", 
-				domain, 
-				1, 
-				"fbtoken", 
-				Integer.MAX_VALUE, 
-				d, 
-				true, 
-				true);
+			ret = new NewCookie.Builder(name)
+			.value(value)
+			.path("/")
+			.domain(domain)
+			.maxAge((int)Long.min(maxAge.toSeconds(), Integer.MAX_VALUE))
+			.secure(true)
+			.httpOnly(httpOnly)
+			.build();
 		} catch (Exception e) {
 			LOGGER.error("newCookie exception", e);
 			throw new RuntimeException(e);
@@ -175,7 +171,12 @@ public class GetStuff {
 		if (sort != null) {
 			ResponseBuilder ret = Response.seeOther(createURI("/fb/story/" + generatedId + "#children"));
 			ret = switch (sort.toLowerCase()) {
-				case "oldest", "newest", "mostfirst", "leastfisrt", "random" -> ret.cookie(newCookie("fbchildsort", sort.toLowerCase(), uriInfo.getRequestUri().getHost()));
+				case "oldest", "newest", "mostfirst", "leastfisrt", "random" -> ret.cookie(newCookie(
+						"fbchildsort", 
+						sort.toLowerCase(), 
+						uriInfo.getRequestUri().getHost(),
+						Duration.ofDays(400),
+						false));
 				default -> ret;
 			};
 			return ret.build();
