@@ -32,6 +32,10 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 	public String generate(Request request, int status, String reasonPhrase, String description,
 			Throwable exception) {
 				
+		return generateErrorPage(exception, request, status, reasonPhrase, description);
+	}
+	
+	public static String generateErrorPage(Throwable exception, Request request, Integer status, String reasonPhrase, String description) {
 		if (exception instanceof URISyntaxException || exception instanceof IllegalArgumentException) {
 			
 			String mess = exception.getMessage();
@@ -44,15 +48,17 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 		}
 		
 		LOGGER.warn("************NEW ERROR PAGE*****************");
-		LOGGER.warn(String.format("Error page URL\t%s", request.getRequestURL()));
-		LOGGER.warn(String.format("Error page request\t%s", request));
-		LOGGER.warn(String.format("Error page status \t%s", status));
-		LOGGER.warn(String.format("Error page reason \t%s", reasonPhrase));
-		LOGGER.warn(String.format("Error page descrip\t%s", description));
+		if (request != null) {
+			LOGGER.warn(String.format("Error page URL\t%s", request.getRequestURL()));
+			LOGGER.warn(String.format("Error page request\t%s", request));
+		}
+		if (status != null) LOGGER.warn(String.format("Error page status \t%s", status));
+		if (reasonPhrase != null) LOGGER.warn(String.format("Error page reason \t%s", reasonPhrase));
+		if (description != null) LOGGER.warn(String.format("Error page descrip\t%s", description));
 		if (exception != null) LOGGER.warn(String.format("Error page exceptn\t%s", exception.getMessage()));
 		else LOGGER.warn(String.format("Error page exceptn\t%s", "null"));
 		
-		final String requestURL = request.getRequestURL().toString();
+		final String requestURL = request == null ? null : request.getRequestURL().toString();
 		if (exception != null) new Thread(()->notifyDiscord(requestURL, status, reasonPhrase, description, exception)).start();
 		
 		try (StringWriter sw = new StringWriter()) {
@@ -75,7 +81,7 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 	
 	private static AtomicLong lastError = new AtomicLong(0l);
 	
-	private static synchronized void notifyDiscord(String requestURL, int status, String reasonPhrase, String description, Throwable exception) {
+	private static synchronized void notifyDiscord(String requestURL, Integer status, String reasonPhrase, String description, Throwable exception) {
 		if (System.currentTimeMillis() - lastError.get() < (10000l /*1 minute*/)) {
 			LOGGER.warn("Skipping Discord notification, less than 1 minute since last request", exception);
 			return;
@@ -99,17 +105,19 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 //			}
 			final String message = "The @FormParam is utilized when the content type of the request entity is not application/x-www-form-urlencoded";
 			if (exception.getMessage().contains(message) || Text.traceToLines(exception).stream().collect(Collectors.joining("\n")).contains(message)) {
-				Discord.notifyError(requestURL + " - " + message);
+				if (requestURL != null) Discord.notifyError(requestURL + " - " + message);
+				else Discord.notifyError("Error - " + message);
 				return;
 			}
 		}
 		
 		try {
 			StringBuilder message = new StringBuilder();
-			message.append("Error on page " + requestURL + "\n");
-			message.append("Status: " + status + "\n");
+			if (requestURL != null) message.append("Error on page " + requestURL + "\n");
+			if (status != null) message.append("Status: " + status + "\n");
 			if (reasonPhrase != null) message.append("Reason: " + reasonPhrase + "\n");
 			if (description != null) message.append("Description: " + description + "\n");
+			if (exception != null) message.append("Exception: " + exception + " - " + exception.getMessage() + "\n");
 			lastError.set(System.currentTimeMillis());
 			Discord.notifyError(message.toString());
 

@@ -1,6 +1,8 @@
 $(document).ready(function(event) {
-		
-	if (document.cookie.indexOf("fbjs=") < 0) document.cookie = "fbjs=true; max-age=" + (60 * 60 * 24 * 365 * 100);
+	
+	const fbjs = "fbjs";
+	document.cookie = `${fbjs}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+	document.cookie = `${fbjs}=true; Path=/; max-age=${60 * 60 * 24 * 7}`;
 	
 	$("#logoutButton").submit(function( event ) {
 		var req = new XMLHttpRequest();
