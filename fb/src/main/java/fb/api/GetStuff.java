@@ -75,22 +75,25 @@ public class GetStuff {
 		return uri;
 	}
 	
-	public static NewCookie newCookie(String name, String value, String domain, Duration maxAge, boolean httpOnly) {
-		NewCookie ret;
-		try {
-			ret = new NewCookie.Builder(name)
+	public static NewCookie newCookie(String name, String value, UriInfo uriInfo, Duration maxAge, boolean httpOnly) {
+		return newCookieBuilder(name, value, uriInfo, httpOnly)
+			.maxAge((int)Long.min(maxAge.toSeconds(), Integer.MAX_VALUE))
+			.build();
+	}
+	
+	public static NewCookie newCookie(String name, String value, UriInfo uriInfo, Date expiry, boolean httpOnly) {
+		return newCookieBuilder(name, value, uriInfo, httpOnly)
+			.expiry(expiry)
+			.build();
+	}
+	
+	private static NewCookie.Builder newCookieBuilder(String name, String value, UriInfo uriInfo, boolean httpOnly) {
+		return new NewCookie.Builder(name)
 			.value(value)
 			.path("/")
-			.domain(domain)
-			.maxAge((int)Long.min(maxAge.toSeconds(), Integer.MAX_VALUE))
+			.domain(uriInfo.getRequestUri().getHost())
 			.secure(true)
-			.httpOnly(httpOnly)
-			.build();
-		} catch (Exception e) {
-			LOGGER.error("newCookie exception", e);
-			throw new RuntimeException(e);
-		}
-		return ret;
+			.httpOnly(httpOnly);
 	}
 	
 	/**
@@ -174,7 +177,7 @@ public class GetStuff {
 				case "oldest", "newest", "mostfirst", "leastfisrt", "random" -> ret.cookie(newCookie(
 						"fbchildsort", 
 						sort.toLowerCase(), 
-						uriInfo.getRequestUri().getHost(),
+						uriInfo,
 						Duration.ofDays(400),
 						false));
 				default -> ret;

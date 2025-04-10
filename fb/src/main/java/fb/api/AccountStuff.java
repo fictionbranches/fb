@@ -149,7 +149,7 @@ public class AccountStuff {
 	}
 	
 	private NewCookie newLoginCookie(String token, UriInfo uriInfo) {
-		return GetStuff.newCookie("fbtoken", token, uriInfo.getRequestUri().getHost(), Duration.ofDays(14), true);
+		return GetStuff.newCookie("fbtoken", token, uriInfo, Duration.ofDays(14), true);
 	}
 	
 	/**

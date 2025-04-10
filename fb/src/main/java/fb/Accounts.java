@@ -157,9 +157,10 @@ public class Accounts {
 	public static class UserSession { 
 		public final String userID;
 		private long lastActive;
+		public final long firstIssued;
 		public UserSession(String userID) {
 			this.userID = userID;
-			this.lastActive = System.currentTimeMillis();
+			firstIssued = lastActive = System.currentTimeMillis();
 		}
 		public long lastActive() {
 			return lastActive;
@@ -483,10 +484,22 @@ public class Accounts {
 	 * @return
 	 */
 	public static String getUsernameFromCookie(Cookie token) {
+		UserSession sesh = getUserSessionFromCookie(token);
+		if (sesh == null) return null;
+		return sesh.userID;
+	}
+	
+	/**
+	 * Get UserSession instance from session token, or null if sesh does not exist
+	 * @param token
+	 * @return
+	 */
+	public static UserSession getUserSessionFromCookie(Cookie token) {
 		if (token == null) return null;
 		UserSession sesh = active.get(token.getValue());
 		if (sesh == null) return null;
-		return sesh.userID;
+		sesh.ping();
+		return sesh;
 	}
 	
 	/**
@@ -535,13 +548,18 @@ public class Accounts {
 				throw new FBLoginException("Incorrect username/email or password, or username/email does not exist");
 			}
 			
-			String newToken = newToken(active);
-			active.put(newToken, new UserSession(user.getId()));
+			String newToken = newTokenForUser(user.getId());
 			
 			return newToken;
 		} finally {
 			DB.closeSession(session);
 		}
+	}
+	
+	public static String newTokenForUser(String username) {
+		String newToken = newToken(active);
+		active.put(newToken, new UserSession(username));
+		return newToken;
 	}
 		
 	private static boolean canAttemptLogin(String ipAddress, long now, Session session) {
