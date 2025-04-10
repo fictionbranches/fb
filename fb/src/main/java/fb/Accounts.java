@@ -123,7 +123,7 @@ public class Accounts {
 	 */
 	private static void pruneSessions() {
 		final long now = System.currentTimeMillis();
-		final long sevenDaysMillis = 24l*7l*60l*60l*1000l;
+		final long sevenDaysMillis = Duration.ofDays(7).toMillis();
 		active.entrySet().removeIf(e->now - e.getValue().lastActive() > sevenDaysMillis);
 	}
 	

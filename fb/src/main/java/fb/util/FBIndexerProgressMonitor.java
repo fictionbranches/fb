@@ -1,7 +1,7 @@
 package fb.util;
 
 import java.text.DecimalFormat;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.hibernate.search.batchindexing.MassIndexerProgressMonitor;
@@ -63,7 +63,7 @@ public class FBIndexerProgressMonitor implements MassIndexerProgressMonitor {
 	}
 	
 	private void printStatusMessage(long startTime, long totalTodoCount, long doneCount) {
-		long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+		long elapsedMs = Duration.ofNanos(System.nanoTime() - startTime).toMillis();
 		LOGGER.info("Indexed " + doneCount + " entities in " + elapsedMs + " ms");
 		float estimateSpeed = doneCount * 1000f / elapsedMs;
 		float estimatePercentileComplete = doneCount * 100f / totalTodoCount;

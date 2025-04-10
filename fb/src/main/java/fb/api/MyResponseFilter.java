@@ -25,7 +25,7 @@ public class MyResponseFilter implements ContainerResponseFilter {
 		final var name = "fbtoken";
 		var oldCookie = requestContext.getCookies().get(name);
 		var session = Accounts.getUserSessionFromCookie(oldCookie);
-		if (session != null && System.currentTimeMillis() - session.firstIssued > Duration.ofDays(13).toMillis()) {
+		if (session != null && System.currentTimeMillis() - session.firstIssued > Duration.ofDays(5).toMillis()) {
 			var c = Calendar.getInstance();
 			c.setTimeZone(TimeZone.getTimeZone("UTC"));
 			c.set(1970, 1, 1);

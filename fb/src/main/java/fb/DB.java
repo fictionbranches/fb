@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -3082,7 +3083,7 @@ public class DB {
 	
 	public static List<Episode> popularEpisodes(PopularEpisode pop) {
 		PopularEpisodeContainer puc = popularEpisodesMap.get(pop);
-		if (puc == null || (System.currentTimeMillis()-puc.timestamp) > (1000*60*5)) { // if it has never been requested, or was last requested more than 5 minutes ago, reload it
+		if (puc == null || (System.currentTimeMillis()-puc.timestamp) > (Duration.ofMinutes(5).toMillis())) { // if it has never been requested, or was last requested more than 5 minutes ago, reload it
 			puc = new PopularEpisodeContainer(popularEpisodesReal(pop));
 			popularEpisodesMap.put(pop,puc);
 		}
@@ -3202,7 +3203,7 @@ public class DB {
 	public static List<User> popularUsers(PopularUser pop, PopularUserTime time) {
 		PopularUserEnumContainer puec = new PopularUserEnumContainer(pop, time);
 		PopularUserContainer puc = popularUsersMap.get(puec);
-		if (puc == null || (System.currentTimeMillis()-puc.timestamp) > (1000*60*5)) { // if it has never been requested, or was last requested more than 5 minutes ago, reload it
+		if (puc == null || (System.currentTimeMillis()-puc.timestamp) > (Duration.ofMinutes(5).toMillis())) { // if it has never been requested, or was last requested more than 5 minutes ago, reload it
 			puc = new PopularUserContainer(popularUsersReal(pop, time));
 			popularUsersMap.put(puec,puc);
 		}

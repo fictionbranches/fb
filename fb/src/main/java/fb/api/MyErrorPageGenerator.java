@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -82,7 +83,7 @@ public class MyErrorPageGenerator implements ErrorPageGenerator {
 	private static AtomicLong lastError = new AtomicLong(0l);
 	
 	private static synchronized void notifyDiscord(String requestURL, Integer status, String reasonPhrase, String description, Throwable exception) {
-		if (System.currentTimeMillis() - lastError.get() < (10000l /*1 minute*/)) {
+		if (System.currentTimeMillis() - lastError.get() < (Duration.ofMinutes(1).toMillis())) {
 			LOGGER.warn("Skipping Discord notification, less than 1 minute since last request", exception);
 			return;
 		}
