@@ -174,7 +174,7 @@ public class GetStuff {
 		if (sort != null) {
 			ResponseBuilder ret = Response.seeOther(createURI("/fb/story/" + generatedId + "#children"));
 			ret = switch (sort.toLowerCase()) {
-				case "oldest", "newest", "mostfirst", "leastfisrt", "random" -> ret.cookie(newCookie(
+				case "oldest", "newest", "mostfirst", "leastfirst", "random" -> ret.cookie(newCookie(
 						"fbchildsort", 
 						sort.toLowerCase(), 
 						uriInfo,

@@ -57,6 +57,7 @@ public class Text {
 	}
 	
 	public static String escape(String string) {
+		if (string == null) return "";
 		return StringEscapeUtils.escapeHtml4(string).replace("'", "&#39;");
 	}
 	
