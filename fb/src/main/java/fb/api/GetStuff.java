@@ -8,7 +8,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.hibernate.Session;
@@ -27,6 +29,7 @@ import fb.Story;
 import fb.db.DBComment;
 import fb.objects.FlatEpisode;
 import fb.objects.FlatUser;
+import fb.objects.Tag;
 import fb.util.Dates;
 import fb.util.Markdown;
 import fb.util.Strings;
@@ -736,6 +739,40 @@ public class GetStuff {
 				.replace("$INPUTDATA", inputData)				
 				.replace("$STARTDATE", start)				
 				.replace("$ENDDATE", end)				
+				).build();
+	}
+	
+	@GET
+	@Path("taginfo")
+	@Produces(MediaType.TEXT_HTML)
+	public Response taginfo(@CookieParam("fbtoken") Cookie fbtoken) {
+		FlatUser user;
+		try {
+			user = Accounts.getFlatUser(fbtoken);
+		} catch (FBLoginException e) {
+			user = null;
+		}
+		
+		final var tags = DB.getAllTags();
+		
+		String tagHTML = "<h2>Tag Info</h2>\n<table><tr><th>Short</th><th>Long</th><th>Description</th></tr>\n" + tags.stream()
+		.map(tag -> """
+				<tr id='row_$TAGID'> <!-- z -->
+					<td id='td_short_$TAGID'><span id='span_short_$TAGID'><a href='/fb/recent?tag=$SHORTNAME'>$SHORTNAME</a></span></td>
+					<td id='td_long_$TAGID'><span id='span_long_$TAGID'>$LONGNAME</span></td> <!-- a --> 
+					<td id='td_desc_$TAGID'><span id='span_desc_$TAGID'>$DESCRIPTION</span></td>
+				</tr> <!-- f --> 
+				"""
+				.replace("$TAGID", Long.toString(tag.id))
+				.replace("$SHORTNAME", escape(tag.shortName))
+				.replace("$LONGNAME", escape(tag.longName))
+				.replace("$DESCRIPTION", escape(tag.description))
+				)
+		.collect(Collectors.joining()) + "</table>\n";
+		return Response.ok(Strings.getFile("generic_meta.html", user)
+				.replace("$EXTRA", tagHTML)
+				.replace("$TITLE", "Tag Info")
+				.replace("$OGDESCRIPTION", "A list of tags on the site, and what each tag means")
 				).build();
 	}
 	
