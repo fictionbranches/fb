@@ -175,7 +175,7 @@ public class JSONStuff {
 		public final Long parentId;
 		public final long rootId;
 		public final long hits;
-		public final List<String> tags;
+		public List<String> tags;
 		public JSONSimpleEpisode(FlatEpisodeWithTags ep) {
 			this.id = ep.generatedId;
 			this.title=ep.title;
@@ -232,13 +232,24 @@ public class JSONStuff {
 					FROM DBEpisode ep
 					JOIN FETCH ep.author
 					JOIN FETCH ep.editor
-					JOIN FETCH ep.parent
-					JOIN FETCH ep.lazytags
 					WHERE ep.parent IS NULL
 					""", DBEpisode.class).stream()
+					.toList().stream()
 			.map(FlatEpisodeWithTags::new)
 			.map(JSONSimpleEpisode::new)
-			.toList();			
+			.toList();
+			
+			var rootIds = episodes.stream()
+					.map(e -> e.id)
+					.collect(Collectors.toSet());
+			var tags = DB.getTagsForEpisodes(sesh, rootIds);
+			for (var ep : episodes) {
+				var tagsForEp = tags.get(ep.id);
+				if (tagsForEp == null) 
+					continue;
+				ep.tags = tagsForEp.stream().map(tag -> tag.shortName).sorted().toList();
+			}
+
 		} finally {
 			DB.closeSession(sesh);
 		}
