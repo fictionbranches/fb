@@ -198,7 +198,7 @@ public class Story {
 			commentHTML.append("<a name=\"comment"+c.id+"\">\n");
 			commentHTML.append("<p><div class=\"" + (parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown") + "\">" + (parseMarkdown?formatBody(c.text):escape(c.text)) + "</div></p><hr/>\n");
 			if (c.modVoice) commentHTML.append("<span style='border: 1px solid; margin: 2px; padding: 5px; white-space: nowrap;'>This comment is from a site Moderator</span>\n");
-			commentHTML.append("<p>" + ((c.user.avatarUnsafe==null||c.user.avatarUnsafe.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatarUnsafe) + "\" />"))+" <a href=/fb/user/" + c.user.id + ">" + escape(c.user.authorUnsafe) + "</a></p>\n");			
+			commentHTML.append("<p>" + ((c.user.avatarUnsafe==null||c.user.avatarUnsafe.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatarUnsafe) + "\" />"))+" <a title='" + c.user.id + "' href='/fb/user/" + c.user.id + "'>" + escape(c.user.authorUnsafe) + "</a></p>\n");			
 			commentHTML.append("<p><a href=/fb/story/" + ep.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>");
 			if (user != null) {
 				if (c.user.id.equals(user.id)) commentHTML.append(" - <a href=/fb/deletecomment/" + c.id + ">Delete</a>");
@@ -362,7 +362,7 @@ public class Story {
 		StringBuilder sb = new StringBuilder("<h1>Announcements</h1>\n<hr/>\n");
 		for (Announcement a : list) {
 			sb.append("<p>" + formatBody(a.body) + "</p>\n");
-			sb.append("<p> - <a href=/fb/user/" + a.authorId + ">" + escape(a.authorName) + "</a> (" + 
+			sb.append("<p> - <a title='" + a.authorId + "' href='/fb/user/" + a.authorId + "'>" + escape(a.authorName) + "</a> (" + 
 					Dates.simpleDateFormat2(a.date) + 
 					")</p>\n");
 			if (!a.read) sb.append("<p><a href=/fb/markannouncementread/" + a.id + ">Mark read</a></p>\n");
@@ -622,11 +622,11 @@ public class Story {
 	public static String epToOutlineHTML(long generatedId, String link, String authorUsername, String authorName, int depth, int minDepth) {
 		StringBuilder sb = new StringBuilder();
 		for (int i=minDepth; i<depth; ++i) sb.append("&nbsp;");
-		return sb.toString() + depth + ". <a href=\"/fb/story/" + generatedId + "\" target=\"_blank\" >" + escape(link) + "</a> (<a href='/fb/user/" + authorUsername + "' class='author'>" + escape(authorName) + "</a>)<br/>\n";
+		return sb.toString() + depth + ". <a href=\"/fb/story/" + generatedId + "\" target=\"_blank\" >" + escape(link) + "</a> (<a title='" + authorUsername + "' href='/fb/user/" + authorUsername + "' class='author'>" + escape(authorName) + "</a>)<br/>\n";
 	}
 	
 	public static String epLine(FlatEpisode ep) {
-		return "<a href='/fb/story/" + ep.generatedId + "'>" + escape(ep.link) + "</a> (<a href='/fb/user/" + ep.authorId + "' class='author'>" + escape(ep.authorName) + "</a>)<br/>\n";
+		return "<a href='/fb/story/" + ep.generatedId + "'>" + escape(ep.link) + "</a> (<a title='" + ep.authorId + "' href='/fb/user/" + ep.authorId + "' class='author'>" + escape(ep.authorName) + "</a>)<br/>\n";
 	}
 	
 	public static String getPath(Cookie token, long generatedId) {
@@ -668,7 +668,7 @@ public class Story {
 		StringBuilder sb = new StringBuilder();
 		for (FlatEpisode child : path) if (child != null){ 
 			sb.append("<h1><a href=/fb/story/" + child.generatedId + ">" + escape(child.title) + "</a></h1>");
-			sb.append("<p><a href=/fb/user/" + child.authorId + ">" + escape(child.authorName) + "</a> " + 
+			sb.append("<p><a title='" + child.authorId + "' href='/fb/user/" + child.authorId + "'>" + escape(child.authorName) + "</a> " + 
 					Dates.simpleDateFormat2(child.date) + "</p>");
 			sb.append("<div class=\"fbepisodebody "+(parseMarkdown?"fbparsedmarkdown":"fbrawmarkdown")+"\">" + (parseMarkdown?formatBody(child.body):escape(child.body)) + "</div><hr/>\n");
 		}
@@ -758,7 +758,7 @@ public class Story {
 							"<td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(escape(ep.title) + "<br/>")) + 
 								"<a href=/fb/story/" + ep.generatedId + " title='" + escape(ep.body.substring(0, Integer.min(140, ep.body.length()))) + "'>" + escape(ep.link) + "</a></td>" + 
 							"<td class='fbtable'>" + Story.tagsHtmlView(tags) + "</td>" + 
-							"<td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + escape(ep.authorName) + "</a></td>" + 
+							"<td class=\"fbtable\"><a title='" + ep.authorId + "' href='/fb/user/" + ep.authorId + "'>" + escape(ep.authorName) + "</a></td>" + 
 							"<td class=\"fbtable\">" + Dates.simpleDateFormat2(ep.date) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>\n";
 				sb.append(row);
 			}
@@ -1223,7 +1223,7 @@ public class Story {
 			if (includeAttribution) {
 				html.append("By ");
 				if (!(c.user.avatarUnsafe==null||c.user.avatarUnsafe.trim().length()==0)) html.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatarUnsafe) + "\" /> ");
-				html.append("<a href=/fb/user/" + c.user.id + ">" + escape(c.user.authorUnsafe) + "</a> - \n");
+				html.append("<a title='" + c.user.id + "' href='/fb/user/" + c.user.id + "'>" + escape(c.user.authorUnsafe) + "</a> - \n");
 			}
 			html.append("<a href=/fb/story/" + c.episode.generatedId + "#comment" + c.id + ">" + (Dates.outputDateFormat2(c.date)) + "</a>\n");
 			if (c.modVoice) html.append(" - <em>This comment is from a site Moderator</em>\n");

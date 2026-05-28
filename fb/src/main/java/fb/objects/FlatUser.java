@@ -52,12 +52,11 @@ public class FlatUser {
 	}
 	
 	public String htmlLink() {
-//		return String.format("<a href='/fb/user/%s'>%s</a>", id, authorEscape());
 		return htmlLink(this.id, this.authorUnsafe);
 	}
 	
 	public static String htmlLink(String id, String author) {
-		return String.format("<a href='/fb/user/%s'>%s</a>", id, Text.escape(author));
+		return String.format("<a title='%s' href='/fb/user/%s'>%s</a>", id, id, Text.escape(author));
 	}
 	
 	public String authorEscape() {

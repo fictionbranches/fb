@@ -879,18 +879,18 @@ public class DB {
 								.isPresent();
 						if (session.createQuery("from DBEpisodeView ev where ev.episode.generatedId=" + ep.getGeneratedId() + " and ev.user.id='" + username + "'").uniqueResultOptional().isEmpty()) {
 							try {
-							session.beginTransaction();
-							DBEpisodeView ev = new DBEpisodeView();
-							ev.setEpisode(ep);
-							ev.setUser(user);
-							ev.setDate(new Date());
-							session.save(ev);
-							session.getTransaction().commit();
-							session.beginTransaction();
-						} catch (Exception e) {
-							session.getTransaction().rollback();
+								session.beginTransaction();
+								DBEpisodeView ev = new DBEpisodeView();
+								ev.setEpisode(ep);
+								ev.setUser(user);
+								ev.setDate(new Date());
+								session.save(ev);
+								session.getTransaction().commit();
+								session.beginTransaction();
+							} catch (Exception e) {
+								session.getTransaction().rollback();
+							}
 						}
-					}
 					}
 				}
 				

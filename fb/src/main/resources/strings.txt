@@ -26,13 +26,13 @@ story_downvote~Upvoted! <a href=/fb/story/$ID?vote=down>Undo upvote</a>
 story_favorite~<a href=/fb/story/$ID?favorite=up>Favorite this episode</a>
 story_unfavorite~Favorited! <a href=/fb/story/$ID?favorite=down>Undo favorite</a>
 
-story_editor~<br/>Episode last modified by <a href='/fb/user/$EDITORID' rel='editor'>$EDITORNAME</a> on $EDITDATE
+story_editor~<br/>Episode last modified by <a title='$EDITORID' href='/fb/user/$EDITORID' rel='editor'>$EDITORNAME</a> on $EDITDATE
 
 
 
 story_childtable_head_advanced~<table class="fbchildtable sortable"><thead><tr><th class="leftcolumn fbchildtable sorttable_nosort">Next episode</th><th class="fbchildtablenumeric">Children</th><th class="fbchildtablenumeric">Date</th><th class="fbchildtable">Author</th><th class="fbchildtablenumeric">Upvotes</th><th class="fbchildtablenumeric">Views</th><th class="fbchildtablenumeric">Hits</th><th class="fbchildtable sorttable_nosort">Tags</th></tr></thead><tbody>
 
-story_childtable_row_advanced~<tr><td class="leftcolumn fbchildtable"><a href='$ID' rel='child'>$LINK</a></td><td class="fbchildtablenumeric" sorttable_customkey="-$CHILDCOUNT">$CHILDCOUNT</td><td class="fbchildtablenumeric" sorttable_customkey="$COMPLETEDATE">$DATE</td><td class="fbchildtable" sorttable_customkey="$AUTHORNAME"><a href="/fb/user/$AUTHORID">$AUTHORNAME</a></td><td class="fbchildtablenumeric" sorttable_customkey="-$UPVOTES">$UPVOTES</td><td class="fbchildtablenumeric" sorttable_customkey="-$VIEWS">$VIEWS</td><td class="fbchildtablenumeric" sorttable_customkey="-$HITS">$HITS</td><td class="fbchildtablenumeric">$TAGS</td></tr>
+story_childtable_row_advanced~<tr><td class="leftcolumn fbchildtable"><a href='$ID' rel='child'>$LINK</a></td><td class="fbchildtablenumeric" sorttable_customkey="-$CHILDCOUNT">$CHILDCOUNT</td><td class="fbchildtablenumeric" sorttable_customkey="$COMPLETEDATE">$DATE</td><td class="fbchildtable" sorttable_customkey="$AUTHORNAME"><a title="$AUTHORID" href="/fb/user/$AUTHORID">$AUTHORNAME</a></td><td class="fbchildtablenumeric" sorttable_customkey="-$UPVOTES">$UPVOTES</td><td class="fbchildtablenumeric" sorttable_customkey="-$VIEWS">$VIEWS</td><td class="fbchildtablenumeric" sorttable_customkey="-$HITS">$HITS</td><td class="fbchildtablenumeric">$TAGS</td></tr>
 
 story_childtable_foot_advanced~</tbody></table>
 
@@ -61,8 +61,8 @@ search_help_line~<a href=/fb/search/$ID>Search $LINK</a><br/>
 recents_table_head~<table class="fbtable"><tr><th class="">Episode</th><th>Author</th><th>Date</th><th>Depth</th><th>Tags</th></tr>
 recents_table_head_story_head~<table class="fbtable"><tr><th class="">Episode</th><th>Author</th><th>Date</th><th>Story</th><th>Depth</th><th>Tags</th></tr>
 recents_table_head_story_column~<td class="fbtable">$TITLE</td>
-recents_table_row_same_linktitle~<tr class='hentry'><td class="fbtable"><a class='url entry-title' href='/fb/story/$ID' title='$BODY'>$LINK</a></td><td class="fbtable"><span='author'><a href=/fb/user/$AUTHORID>$AUTHORNAME</a></span></td><td class="fbtable"><time class='published'>$DATE</time></td>$STORY<td class="textalignright">$EPISODEDEPTH</td><td>$TAGS</td></tr>
-recents_table_row_different_linktitle~<tr class='hentry'><td class="fbtable">$TITLE<br/><a class='url entry-title' href='/fb/story/$ID' title='$BODY'>$LINK</a></td><td class="fbtable"><span='author'><a href=/fb/user/$AUTHORID>$AUTHORNAME</a></span></td><td class="fbtable"><time class='published'>$DATE</time></td>$STORY<td class="textalignright">$EPISODEDEPTH</td><td>$TAGS</td></tr>
+recents_table_row_same_linktitle~<tr class='hentry'><td class="fbtable"><a class='url entry-title' href='/fb/story/$ID' title='$BODY'>$LINK</a></td><td class="fbtable"><span='author'><a title='$AUTHORID' href='/fb/user/$AUTHORID'>$AUTHORNAME</a></span></td><td class="fbtable"><time class='published'>$DATE</time></td>$STORY<td class="textalignright">$EPISODEDEPTH</td><td>$TAGS</td></tr>
+recents_table_row_different_linktitle~<tr class='hentry'><td class="fbtable">$TITLE<br/><a class='url entry-title' href='/fb/story/$ID' title='$BODY'>$LINK</a></td><td class="fbtable"><span='author'><a title='$AUTHORID' href='/fb/user/$AUTHORID'>$AUTHORNAME</a></span></td><td class="fbtable"><time class='published'>$DATE</time></td>$STORY<td class="textalignright">$EPISODEDEPTH</td><td>$TAGS</td></tr>
 
 #### favorites
 favorites_selector~<select id="fbtableorder"><option value="">Change sort order</option><option value="/fb/favorites?sort=newfav">Recently favorited (default)</option><option value="/fb/favorites?sort=oldfav">Oldest favorited</option><option value="/fb/favorites?sort=newest">Recently written</option><option value="/fb/favorites?sort=oldest">Oldest written</option></select>

@@ -269,7 +269,7 @@ public class Accounts {
 		}
 		
 		final String body;
-		String pageCount = "<a href='/fb/user/" + profileUser.user.id + (showComments ? "'>Recent Episodes" : "?comments'>Recent Comments") + "</a><br/>\n";
+		String pageCount = "<a title='" + profileUser.user.id + "' href='/fb/user/" + profileUser.user.id + (showComments ? "'>Recent Episodes" : "?comments'>Recent Comments") + "</a><br/>\n";
 		if (!showComments) {
 			StringBuilder table = new StringBuilder();
 			table.append("<table class=\"fbtable\"><tr><th class=''>Episode</th><th>Date</th><th>Story</th><th>Depth</th></tr>\n");
@@ -416,7 +416,7 @@ public class Accounts {
 		String timeParam = popularTimeParam(time);
 		sb.append("<table class=\"popular\"><thead><tr><th>Author</th><th><a href=/fb/leaderboardepisodes?time="+timeParam+">Episodes</a></th><th><a href=/fb/leaderboardhits?time="+timeParam+">Hits</a></th><th><a href=/fb/leaderboardviews?time="+timeParam+">Views</a></th><th><a href=/fb/leaderboardupvotes?time="+timeParam+">Upvotes</a></th></tr></thead><tbody>\n");
 		for (User user : arr) {
-			sb.append("<tr><td><a href=/fb/user/" + user.username + ">" + user.authorEscape() + "</a></td><td>" + user.episodes + "</td><td>" + user.hits + "</td><td>" + user.views + "</td><td>" + user.upvotes + "</td></tr>\n");
+			sb.append("<tr><td><a title='" + user.username + "' href='/fb/user/" + user.username + "'>" + user.authorEscape() + "</a></td><td>" + user.episodes + "</td><td>" + user.hits + "</td><td>" + user.views + "</td><td>" + user.upvotes + "</td></tr>\n");
 		}
 		sb.append("</tbody></table>\n");
 		return sb.toString();
@@ -435,7 +435,7 @@ public class Accounts {
 		
 		for (FlatUser staff : DB.getStaff()) {
 			String avatar = (staff.avatarUnsafe==null||staff.avatarUnsafe.trim().length()==0)?"":("<img class=\"avatarsmall\" alt=\"avatar\" src=\"" + escape(staff.avatarUnsafe) + "\" /> ");
-			sb.append("<h3>" + avatar + "<a href=/fb/user/" + staff.id + ">" + escape(staff.authorUnsafe) + "</a></h3>\n");
+			sb.append("<h3>" + avatar + "<a title='" + staff.id + "' href='/fb/user/" + staff.id + "'>" + escape(staff.authorUnsafe) + "</a></h3>\n");
 			if (staff.level >= 100) sb.append("<p>Admin</p>\n");
 			else if (staff.level >= 10) sb.append("<p>Moderator</p>\n");
 			sb.append("<p>Member since " + Dates.outputDateFormat2(staff.date) + "</p>\n");
@@ -735,7 +735,7 @@ public class Accounts {
 			
 			html.append("<table><tr><th>User</th><th>Blocked since</th><th></th>\n");
 			for (RecentUserBlock block : blockedUsers) {
-				html.append("<tr><td><a href='/fb/user/"+block.blockedUser.id+"'>"+escape(block.blockedUser.authorUnsafe)+"</a></td>");
+				html.append("<tr><td><a title='" + block.blockedUser.id + "' href='/fb/user/"+block.blockedUser.id+"'>"+escape(block.blockedUser.authorUnsafe)+"</a></td>");
 				html.append("<td>"+Dates.plainDate(block.date)+"</td>");
 				html.append("<td><a href='/fb/unblockfromrecents2/"+block.blockedUser.id+"'>Unblock</a></td></tr>\n");
 			}
@@ -748,7 +748,7 @@ public class Accounts {
 			html.setLength(0);
 			html.append("<table><tr><th>User</th><th>Subscribed since</th><th></th>\n");
 			for (AuthorSubscription sub : subscribedToUsers) {
-				html.append("<tr><td><a href='/fb/user/"+sub.subscribedTo.id+"'>"+escape(sub.subscribedTo.authorUnsafe)+"</a></td>");
+				html.append("<tr><td><a title='" + sub.subscribedTo.id + "' href='/fb/user/"+sub.subscribedTo.id+"'>"+escape(sub.subscribedTo.authorUnsafe)+"</a></td>");
 				html.append("<td>"+Dates.plainDate(new Date(sub.date))+"</td>");
 				html.append("<td><a href='/fb/unsubscribefromauthor2/"+sub.subscribedTo.id+"'>Unsubscribe</a></td></tr>\n");
 			}
@@ -1036,7 +1036,7 @@ public class Accounts {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1> Flag queue</h1>\n");
 		for (FlaggedEpisode flag : DB.getFlags()) {
-			sb.append("<a href=/fb/getflag/" + flag.id + ">" + escape(flag.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + escape(flag.user.authorUnsafe) + "</a> on " + Dates.outputDateFormat2(flag.date) + "<br/>\n");
+			sb.append("<a href=/fb/getflag/" + flag.id + ">" + escape(flag.episode.link) + "</a> flagged by <a title='" + flag.user.id + "' href='/fb/user/" + flag.user.id + "'>" + escape(flag.user.authorUnsafe) + "</a> on " + Dates.outputDateFormat2(flag.date) + "<br/>\n");
 		}
 		return Strings.getFile("generic.html", user).replace("$EXTRA", sb.toString());
 	}
@@ -1052,7 +1052,7 @@ public class Accounts {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1> Mod queue</h1>\n");
 		for (ModEpisode mod : DB.getMods()) {
-			sb.append("<a href=/fb/getmod/" + mod.modId + ">" + escape(mod.link) + "</a> submitted by <a href=/fb/user/" + mod.userId + ">" + escape(mod.author) + "</a> on " + Dates.outputDateFormat2(mod.date) + "<br/>\n");
+			sb.append("<a href=/fb/getmod/" + mod.modId + ">" + escape(mod.link) + "</a> submitted by <a title='" + mod.userId + "' href='/fb/user/" + mod.userId + "'>" + escape(mod.author) + "</a> on " + Dates.outputDateFormat2(mod.date) + "<br/>\n");
 		}
 		return Strings.getFile("generic.html", user).replace("$EXTRA", sb.toString());
 	}
@@ -1068,7 +1068,7 @@ public class Accounts {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1>Comment flag queue</h1>\n");
 		for (FlaggedComment c : DB.getFlaggedComments()) {
-			sb.append("<a href=/fb/getflaggedcomment/" + c.id + ">" + c.id + "</a> submitted by <a href=/fb/user/" + c.user.id + ">" + escape(c.user.authorUnsafe) + "</a> on " + Dates.outputDateFormat2(c.date) + "<br/>\n");
+			sb.append("<a href=/fb/getflaggedcomment/" + c.id + ">" + c.id + "</a> submitted by <a title='" + c.user.id + "' href='/fb/user/" + c.user.id + "'>" + escape(c.user.authorUnsafe) + "</a> on " + Dates.outputDateFormat2(c.date) + "<br/>\n");
 		}
 		return Strings.getFile("generic.html", user).replace("$EXTRA", sb.toString());
 	}
@@ -1094,13 +1094,13 @@ public class Accounts {
 			Comment c = flag.comment;
 			commentHTML.append("<div class=\"fbcomment\">\n");
 			commentHTML.append("<p>" + Markdown.formatBody(c.text) + "</p><hr/>");
-			commentHTML.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatarUnsafe) + "\" /><a href=/fb/user/" + c.user.id + ">" + escape(c.user.authorUnsafe) + "</a><br/>\n");
+			commentHTML.append("<img class=\"avatarsmall\" alt=\"avatar\" src=\""+escape(c.user.avatarUnsafe) + "\" /><a title='" + c.user.id + "' href='/fb/user/" + c.user.id + "'>" + escape(c.user.authorUnsafe) + "</a><br/>\n");
 			commentHTML.append(Dates.outputDateFormat2(c.date));
 			commentHTML.append("</div>\n");
 			
 		sb.append("<h1>Flag text:</h1>");
 		
-		sb.append("<a href=/fb/story/" + flag.comment.episode.generatedId + ">" + escape(flag.comment.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + escape(flag.user.authorUnsafe) + "</a> on " + 
+		sb.append("<a href=/fb/story/" + flag.comment.episode.generatedId + ">" + escape(flag.comment.episode.link) + "</a> flagged by <a title='" + flag.user.id + "' href='/fb/user/" + flag.user.id + "'>" + escape(flag.user.authorUnsafe) + "</a> on " + 
 				Dates.outputDateFormat2(flag.date) + "<br/>\n");
 		sb.append("<a href=/fb/clearflaggedcomment/" + flag.id + ">Delete this flag</a><br/>\n");
 		sb.append("<p>" + escape(flag.text) + "</p>");
@@ -1138,7 +1138,7 @@ public class Accounts {
 		}
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1> Flagged episode</h1>\n");
-		sb.append("<a href=/fb/story/" + flag.episode.generatedId + ">" + escape(flag.episode.link) + "</a> flagged by <a href=/fb/user/" + flag.user.id + ">" + escape(flag.user.authorUnsafe) + "</a> on " + 
+		sb.append("<a href=/fb/story/" + flag.episode.generatedId + ">" + escape(flag.episode.link) + "</a> flagged by <a title='" + flag.user.id + "' href='/fb/user/" + flag.user.id + "'>" + escape(flag.user.authorUnsafe) + "</a> on " + 
 				Dates.outputDateFormat2(flag.date) + "<br/>\n");
 		sb.append("<a href=/fb/clearflag/" + flag.id + ">Delete this flag</a><br/>\n");
 		sb.append("<p>" + escape(flag.text) + "</p>");
@@ -1164,7 +1164,7 @@ public class Accounts {
 		sb.append("<p>This is the proposed new version. The current version is available " + "<a href=/fb/story/" + mod.episodeGeneratedId + ">here</a></p>");
 		if (doDiff) sb.append("<p><a href=/fb/getmod/" + id + ">Get complete modification</a></p>");
 		else sb.append("<p><a href=/fb/getmod/" + id + "?diff>Get diff</a></p>");
-		sb.append("<p><a href=/fb/story/" + mod.episodeGeneratedId + ">" + escape(mod.oldLink) + "</a> submitted by <a href=/fb/user/" + mod.userId + ">" + escape(mod.author) + "</a> on " + 
+		sb.append("<p><a href=/fb/story/" + mod.episodeGeneratedId + ">" + escape(mod.oldLink) + "</a> submitted by <a title='" + mod.userId + "' href='/fb/user/" + mod.userId + "'>" + escape(mod.author) + "</a> on " + 
 				Dates.outputDateFormat2(mod.date) + "</p>\n");
 		sb.append("<p><a href=/fb/acceptmod/" + mod.modId + ">Accept this modification</a></p>\n");
 		sb.append("<p><a href=/fb/rejectmod/" + mod.modId + ">Reject this modification</a></p>\n");
@@ -1333,7 +1333,7 @@ public class Accounts {
 		String prevNext = sb.toString();
 		sb.append("<table class=\"fbtable\">");
 		for (FlatUser fu : result) {
-			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\"><a href=/fb/user/" + fu.id + ">"+escape(fu.authorUnsafe)+"</td>" 
+			sb.append("<tr class=\"fbtable\"><td class=\"fbtable\"><a title='" + fu.id + "' href='/fb/user/" + fu.id + "'>"+escape(fu.authorUnsafe)+"</td>" 
 					+ "<td class=\"fbtable\">" + Dates.simpleDateFormat2(fu.date) + "</td></tr>\n");
 		}
 		sb.append("</table>");
@@ -1534,7 +1534,7 @@ public class Accounts {
 							"<td class=\"fbtable\">" + (ep.title.toLowerCase().trim().equals(ep.link.toLowerCase().trim())?"":(escape(ep.title) + "<br/>")) + 
 								"<a href=/fb/story/" + ep.generatedId + " title='" + escape(ep.body.substring(0, Integer.min(140, ep.body.length()))) + "'>" + escape(ep.link) + "</a></td>" + 
 							"<td class='fbtable'>" + Story.tagsHtmlView(tags) + "</td>" + 
-							"<td class=\"fbtable\"><a href=/fb/user/" + ep.authorId + ">" + escape(ep.authorName) + "</a></td>" + 
+							"<td class=\"fbtable\"><a title='" + ep.authorId + "' href='/fb/user/" + ep.authorId + "'>" + escape(ep.authorName) + "</a></td>" + 
 							"<td class=\"fbtable\">" + Dates.simpleDateFormat2(ep.date) + "</td><td class=\"textalignright\">"+ep.depth+"</td></tr>\n";
 				sb.append(row);
 			}
